@@ -27,7 +27,7 @@
       "properties": {"id": "kouty", "name": "Bikepark Kouty", "kind": "bikepark", "town": "Kouty nad Desnou", "region": "Olomoucký", "web": "https://kouty.cz/en/bike-park/", "lift": true, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [17.288, 50.042] },
       "properties": {"id": "koprivna", "name": "Bikepark Kopřivná", "kind": "bikepark", "town": "Malá Morávka", "region": "Moravskoslezský", "web": "https://www.koprivna.cz/en/bikepark/information-about-bikepark-koprivna/", "lift": true, "trails_count": 9, "verified": false} },
-    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [14.6, 49.535] },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [14.5106, 49.5423] },
       "properties": {"id": "moninec", "name": "Bikepark Monínec", "kind": "bikepark", "town": "Sedlec-Prčice", "region": "Středočeský", "web": "https://moninec.nhr.cz/cs/bikepark", "lift": true, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [14.2324, 48.6537] },
       "properties": {"id": "lipno", "name": "Bikepark Lipno", "kind": "bikepark", "town": "Lipno nad Vltavou", "region": "Jihočeský", "web": "https://www.lipno.info/zazitky/bikepark.html", "lift": true, "trails_count": 2, "verified": false} },
@@ -54,6 +54,8 @@
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [16.0528, 49.5798] },
       "properties": {"id": "vysocina-singletracky", "name": "Singletracky Vysočina", "kind": "trail_center", "town": "Nové Město na Moravě", "region": "Vysočina", "web": "https://www.vysocina.bike/singletracky/", "lift": false, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [16.4441, 49.9043] },
-      "properties": {"id": "peklak", "name": "Bikepark Peklák", "kind": "bikepark", "town": "Česká Třebová", "region": "Pardubický", "web": null, "lift": true, "trails_count": null, "verified": false} }
+      "properties": {"id": "peklak", "name": "Bikepark Peklák", "kind": "bikepark", "town": "Česká Třebová", "region": "Pardubický", "web": null, "lift": true, "trails_count": null, "verified": false} },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [17.2873, 50.0159] },
+      "properties": {"id": "express-bikepark-karlov", "name": "Express Bikepark Karlov", "kind": "bikepark", "town": "Malá Morávka", "region": "Moravskoslezský", "web": "https://www.skikarlov.cz", "lift": true, "trails_count": null, "verified": false} }
   ]
 }
