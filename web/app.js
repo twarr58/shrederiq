@@ -127,10 +127,12 @@
   }
   $("toggle-list").addEventListener("click", () => setListOpen(!listOpen));
 
-  // Karta: hlavička, tři čísla a záložky. Jen Lajny se načtou hned (kreslí se do mapy),
-  // počasí až po otevření záložky – karta tak nezabírá celou výšku okna.
-  let cardTab = "trails";
-  try { cardTab = localStorage.getItem("shrederiq.cardTab") || "trails"; } catch (_) { /* bez storage */ }
+  // Karta: hlavička, tři čísla a sbalitelné sekce (Lajny otevřené, ostatní zavřené).
+  // Jen Lajny se načtou hned (kreslí se do mapy), počasí až po rozbalení sekce –
+  // karta tak nezabírá celou výšku okna a sekce jdou mít otevřené i vedle sebe.
+  const SECTIONS = { trails: "Lajny", weather: "Počasí", nav: "Navigace", info: "Info" };
+  let openSections = { trails: true };
+  try { openSections = { ...openSections, ...JSON.parse(localStorage.getItem("shrederiq.sections") || "{}") }; } catch (_) { /* bez storage */ }
 
   function renderCard(p) {
     const close = el("button", { className: "close", type: "button", title: "Zavřít", ariaLabel: "Zavřít" }, "×");
@@ -143,31 +145,24 @@
     const stats = el("div", { className: "card-stats" });
 
     const trails = el("section", { className: "trails" }, el("p", { className: "muted" }, "Načítám lajny…"));
-    const weather = el("section", { className: "weather" }, el("p", { className: "muted" }, "Počasí se načte po otevření záložky."));
-    const info = renderInfo(p);
-    const panels = { trails, weather, nav: renderNav(p.id), info };
-    const labels = { trails: "Lajny", weather: "Počasí", nav: "Navigace", info: "Info" };
+    const weather = el("section", { className: "weather" }, el("p", { className: "muted" }, "Načítám počasí…"));
+    const bodies = { trails, weather, nav: renderNav(p.id), info: renderInfo(p) };
     const loaded = new Set();
-    const panel = el("div", { className: "tab-panel", role: "tabpanel" });
-    const tabs = el("div", { className: "tabs", role: "tablist", ariaLabel: "Části karty" });
-    const open = (key) => {
-      cardTab = key;
-      try { localStorage.setItem("shrederiq.cardTab", key); } catch (_) { /* bez storage */ }
-      for (const b of tabs.children) b.setAttribute("aria-selected", String(b.dataset.key === key));
-      panel.replaceChildren(panels[key]);
-      if (key === "weather" && !loaded.has(key)) { loaded.add(key); loadWeather(p.id, weather); }
-    };
-    for (const key of Object.keys(panels)) {
-      const b = el("button", { className: "tab", type: "button", role: "tab" }, labels[key]);
-      b.dataset.key = key;
-      b.addEventListener("click", () => open(key));
-      tabs.append(b);
-    }
+    const sections = Object.keys(SECTIONS).map((key) => {
+      const d = el("details", { className: "section", open: !!openSections[key] });
+      d.append(el("summary", {}, SECTIONS[key]), bodies[key]);
+      d.addEventListener("toggle", () => {
+        openSections[key] = d.open;
+        try { localStorage.setItem("shrederiq.sections", JSON.stringify(openSections)); } catch (_) { /* bez storage */ }
+        if (d.open && key === "weather" && !loaded.has(key)) { loaded.add(key); loadWeather(p.id, weather); }
+      });
+      if (d.open && key === "weather") { loaded.add(key); loadWeather(p.id, weather); }
+      return d;
+    });
 
-    $("card").replaceChildren(close, head, stats, tabs, panel);
+    $("card").replaceChildren(close, head, stats, ...sections);
     $("card").hidden = false;
     $("card").scrollTop = 0;
-    open(panels[cardTab] ? cardTab : "trails");
     loadTrails(p.id, trails, stats);
   }
 

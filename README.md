@@ -43,7 +43,11 @@ Statický web bez buildu (stejný stack jako emhadecko), nasazený na GitHub Pag
 
 V aplikaci:
 
-- mapa a seznam parků, hledání bez ohledu na diakritiku, odkaz `#id` na park,
+- mapa na prvním místě: seznam parků se otevře tlačítkem „Seznam parků“ (nebo
+  psaním do hledání), karta parku začíná hlavičkou a třemi čísly (km, lajn, nejdelší)
+  a má sbalitelné sekce Lajny / Počasí / Navigace / Info – počasí se stáhne až po
+  rozbalení, otevřené sekce si prohlížeč pamatuje,
+- hledání bez ohledu na diakritiku, odkaz `#id` na park,
 - **počasí** v panelu parku z [Open-Meteo](https://open-meteo.com/) (zdarma, bez klíče):
   aktuální stav, 24 h po hodině nebo po 3 h, výhled na 3 dny,
   odhad stavu trailů podle srážek za 48 h,

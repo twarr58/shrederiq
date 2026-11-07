@@ -50,17 +50,21 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 .card-sub { margin: 0; color: var(--muted); font-size: 13px; }
 .card-sub .dot { margin-right: 5px; }
 .card-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 0 14px 10px; }
-.tabs { display: flex; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.tab { flex: 1; font: inherit; font-size: 13px; font-weight: 500; padding: 9px 0; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); cursor: pointer; }
-.tab[aria-selected="true"] { color: var(--fg); font-weight: 600; border-bottom-color: var(--accent); }
-.tab-panel { padding: 10px 14px 12px; }
-.tab-panel > .trails, .tab-panel > .weather { border-top: 0; padding-top: 0; margin-bottom: 0; }
-.tab-panel > .trails h3, .tab-panel > .weather h3 { display: none; }
-.tab-panel .trail-list { max-height: none; }
+.section { border-top: 1px solid var(--line); }
+.section summary { padding: 9px 14px; font-size: 13px; font-weight: 600; cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; min-height: 36px; }
+.section summary::-webkit-details-marker { display: none; }
+.section summary::before { content: ""; width: 6px; height: 6px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg); transition: transform .15s; }
+.section[open] summary::before { transform: rotate(45deg); }
+.section summary:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.section > :not(summary) { padding: 0 14px 12px; }
+.section > .trails, .section > .weather { border-top: 0; padding-top: 0; margin-bottom: 0; }
+.section > .trails h3, .section > .weather h3 { display: none; }
+.section .trail-list { max-height: none; }
+.section .nav { margin-bottom: 0; }
 #card dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 10px; }
 #card dt { color: var(--muted); }
 #card dd { margin: 0; }
-#card .close { position: absolute; top: 6px; right: 8px; border: 0; background: none; font-size: 20px; cursor: pointer; color: var(--muted); }
+#card .close { position: absolute; top: 4px; right: 4px; width: 36px; height: 36px; line-height: 36px; text-align: center; border: 0; background: none; font-size: 20px; cursor: pointer; color: var(--muted); }
 #card .note { color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 8px; margin: 8px 0 0; }
 #card dl { margin-bottom: 0; }
 #card a { color: var(--accent); }
@@ -114,7 +118,7 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 .trail-list .name { flex: 1 1 auto; min-width: 0; }
 .trail-list .len { flex: 0 0 auto; font-variant-numeric: tabular-nums; color: var(--muted); margin-left: 8px; }
 .slope-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--muted); margin-bottom: 6px; }
-.swatch { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.swatch { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; box-shadow: 0 0 0 1px color-mix(in srgb, var(--fg) 25%, transparent); } /* černá i bílá lajna viditelná v obou režimech */
 
 .parking-icon { background: #1f6fd1; color: #fff; font: 700 13px/20px system-ui, sans-serif; text-align: center; border-radius: 4px; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
 
