@@ -20,8 +20,8 @@ def way(id_, lat, lon, tags, n=5, dlat=0.001, dlon=0.0):
 # singltrek jako relace route=mtb z obyčejných pěšin, lesní cesta, dlouhá cyklotrasa, parkoviště u dolní stanice.
 DATA = {"elements": [
     way(1, 50.090, 17.120, {"aerialway": "chair_lift", "name": "LD Medvědí hora"}, n=10),
-    way(2, 50.098, 17.1205, {"highway": "path", "mtb:scale": "2", "name": "Flow"}, n=8, dlat=-0.001),
-    way(3, 50.098, 17.1215, {"highway": "path", "mtb:scale": "3"}, n=8, dlat=-0.001),
+    way(2, 50.098, 17.1205, {"highway": "path", "mtb:scale": "2", "name": "Flow"}, n=16, dlat=-0.0005),
+    way(3, 50.098, 17.1215, {"highway": "path", "mtb:scale": "3"}, n=16, dlat=-0.0005),
     way(4, 50.095, 17.1300, {"highway": "track", "mtb:scale": "0"}, n=5),                 # lesní cesta u lanovky
     way(5, 50.080, 17.1000, {"highway": "path"}, n=5),                                       # člen singltrek relace
     way(6, 50.080, 17.1020, {"highway": "path"}, n=5),
@@ -90,6 +90,30 @@ class ParkOsm(unittest.TestCase):
         # stejná lanovka 4 km od bodu už se nebere → základnou je parkoviště u bodu parku
         _, info2, _ = po.build([park("kop", 17.140, 50.125, lift=True)], po.parse(data))
         self.assertEqual(info2["kop"]["base_source"], "parking")
+
+    def test_lift_choice_rules(self):
+        # Černá hora: sedačka Protěž (0 lajn, 280 m), gondola Černohorský Express (0, 680 m),
+        # Hofmanky Express (3 body lajn = šum, 1,5 km) → gondola
+        gondola = way(1, 50.6305, 15.7900, {"aerialway": "gondola", "name": "Černohorský Express"}, n=10)
+        protez = way(2, 50.6330, 15.7820, {"aerialway": "chair_lift", "name": "Protěž"}, n=6)
+        hofmanky = way(3, 50.6450, 15.7700, {"aerialway": "chair_lift", "name": "Hofmanky Express"}, n=8)
+        trail = way(4, 50.6460, 15.7705, {"highway": "path", "mtb:scale": "1"}, n=3)  # 3 body u Hofmanek
+        osm = po.parse({"elements": [gondola, protez, hofmanky, trail]})
+        _, info, _ = po.build([park("ch", 15.7840, 50.6310, "Bikepark Černá hora", lift=True)], osm)
+        self.assertEqual(info["ch"]["lift"], "Černohorský Express")
+        # Kopřivná: lanovka se jménem parku 1,8 km od bodu vyhraje i bez lajn
+        kop = way(5, 50.0300, 17.3000, {"aerialway": "chair_lift", "name": "Kopřivná"}, n=8)
+        other = way(6, 50.0400, 17.2850, {"aerialway": "chair_lift", "name": "Olomoučák"}, n=8)
+        osm2 = po.parse({"elements": [kop, other]})
+        _, info2, _ = po.build([park("kop", 17.288, 50.042, "Bikepark Kopřivná", lift=True)], osm2)
+        self.assertEqual(info2["kop"]["lift"], "Kopřivná")
+
+    def test_parking_fallback_from_park_point(self):
+        # lajny daleko od parkovišť, ale u bodu parku parkoviště je
+        els = [way(i, 50.20, 15.90 + i * 0.001, {"highway": "path", "mtb:scale:imba": "2"}, n=4) for i in range(1, 5)]
+        els.append({"type": "node", "id": 40, "lat": 50.185, "lon": 15.905, "tags": {"amenity": "parking", "name": "P centrum"}})
+        _, info, _ = po.build([park("tt", 15.906, 50.186, "Trutnov Trails", lift=False)], po.parse({"elements": els}))
+        self.assertEqual((info["tt"]["base_source"], info["tt"].get("parking_name")), ("parking", "P centrum"))
 
     def test_way_goes_to_nearest_park(self):
         parks = self.parks + [park("jiny", 17.101, 50.081, lift=False)]  # trailpark bez lanovky
