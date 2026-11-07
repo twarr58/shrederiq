@@ -43,6 +43,42 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 #card .note { color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 8px; margin: 0; }
 #card a { color: var(--accent); }
 
+#card { max-height: calc(100% - 24px); overflow-y: auto; }
+.muted { color: var(--muted); }
+.row { display: flex; gap: 6px; }
+#locate { flex: 0 0 auto; border: 1px solid var(--line); background: var(--bg); border-radius: 6px; cursor: pointer; font-size: 16px; padding: 0 8px; }
+.nav { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.btn { font: inherit; font-size: 12px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); text-decoration: none; cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+#card a.btn.primary { color: #fff; }
+.btn:disabled { opacity: .5; cursor: wait; }
+.nav-info { flex-basis: 100%; margin: 0; font-size: 12px; }
+.nav-info:empty { display: none; }
+.weather { border-top: 1px solid var(--line); padding-top: 8px; margin-bottom: 10px; }
+.weather h3 { margin: 0 0 6px; font-size: 15px; }
+.weather h4 { margin: 10px 0 4px; font-size: 13px; }
+.wx-now { display: flex; align-items: center; gap: 10px; }
+.wx-now .wx-icon { font-size: 32px; }
+.wx-temp { font-size: 24px; font-weight: 600; }
+.wx-now .muted { font-size: 12px; line-height: 1.3; }
+.wx-trail { margin: 8px 0 0; padding: 4px 8px; border-radius: 6px; font-size: 12px; }
+.wx-trail.dry { background: color-mix(in srgb, #2a9d8f 15%, transparent); }
+.wx-trail.damp { background: color-mix(in srgb, #e9c46a 25%, transparent); }
+.wx-trail.wet { background: color-mix(in srgb, #8d5524 25%, transparent); }
+.wx-head { display: flex; justify-content: space-between; align-items: baseline; }
+.wx-toggle button { font: inherit; font-size: 11px; border: 1px solid var(--line); background: none; color: var(--muted); padding: 2px 6px; cursor: pointer; }
+.wx-toggle button:first-child { border-radius: 4px 0 0 4px; }
+.wx-toggle button:last-child { border-radius: 0 4px 4px 0; border-left: 0; }
+.wx-toggle button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.wx-hours { display: flex; overflow-x: auto; gap: 2px; padding-bottom: 4px; }
+.wx-hour { flex: 0 0 44px; display: flex; flex-direction: column; align-items: center; font-size: 12px; }
+.wx-hour .wx-icon { font-size: 18px; }
+.wx-days { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.wx-day { display: flex; flex-direction: column; align-items: center; font-size: 12px; border: 1px solid var(--line); border-radius: 6px; padding: 4px; }
+.wx-day .wx-icon { font-size: 22px; }
+.rain { color: #3a86ff; }
+.attr { font-size: 11px; color: var(--muted); margin: 6px 0 0; }
+
 .mapy-logo { display: block; }
 .mapy-logo img { display: block; height: 20px; }
 

@@ -30,9 +30,9 @@ test("validace odhalí prohozené souřadnice, duplicitní id a špatný kind", 
 });
 
 test("validace kontroluje volitelná metadata", () => {
-  const errors = P.validateParks(fc(park({ web: "http://example.com", lift: "ano", trails_count: -1 })));
-  assert.equal(errors.length, 3);
-  assert.deepEqual(P.validateParks(fc(park({ web: "https://example.com", lift: null, trails_count: 12 }))), []);
+  const errors = P.validateParks(fc(park({ web: "http://example.com", lift: "ano", trails_count: -1, parking: [50.1, 17.1] })));
+  assert.equal(errors.length, 4);
+  assert.deepEqual(P.validateParks(fc(park({ web: "https://example.com", lift: null, trails_count: 12, parking: [17.1, 50.1] }))), []);
 });
 
 test("vyhledávání ignoruje diakritiku a hledá i v obci a kraji, výsledek je seřazený", () => {

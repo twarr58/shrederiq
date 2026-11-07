@@ -40,6 +40,12 @@
       if (typeof p.name !== "string" || !p.name.trim()) errors.push(`${at}: chybí name`);
       if (!(p.kind in KINDS)) errors.push(`${at}: kind musí být ${Object.keys(KINDS).join(" | ")}`);
       if (p.web != null && !/^https:\/\//.test(p.web)) errors.push(`${at}: web musí začínat https://`);
+      if (p.parking != null) {
+        const [plon, plat] = Array.isArray(p.parking) ? p.parking : [];
+        if (!(plon >= CZ_BOUNDS.minLon && plon <= CZ_BOUNDS.maxLon && plat >= CZ_BOUNDS.minLat && plat <= CZ_BOUNDS.maxLat)) {
+          errors.push(`${at}: parking musí být [lon, lat] v ČR`);
+        }
+      }
       if (p.lift != null && typeof p.lift !== "boolean") errors.push(`${at}: lift musí být true / false / null`);
       if (p.trails_count != null && !(Number.isInteger(p.trails_count) && p.trails_count >= 0)) {
         errors.push(`${at}: trails_count musí být nezáporné celé číslo nebo null`);

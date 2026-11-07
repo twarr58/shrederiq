@@ -13,7 +13,10 @@
   <aside id="panel">
     <h1>shrederiq</h1>
     <p class="sub">Bikeparky a trail centra v ČR</p>
-    <input id="search" type="search" placeholder="Hledat park, obec, kraj…" autocomplete="off">
+    <div class="row">
+      <input id="search" type="search" placeholder="Hledat park, obec, kraj…" autocomplete="off">
+      <button id="locate" type="button" title="Seřadit podle mé polohy" aria-label="Moje poloha">📍</button>
+    </div>
     <div id="legend">
       <span><i class="dot bikepark"></i> Bikepark</span>
       <span><i class="dot trail_center"></i> Trail centrum</span>
@@ -27,6 +30,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="config.js"></script>
   <script src="parks.js"></script>
+  <script src="weather.js"></script>
+  <script src="nav.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

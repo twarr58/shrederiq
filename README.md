@@ -41,15 +41,28 @@ Bonus: lajny obarvené podle sklonu.
 
 Statický web bez buildu (stejný stack jako emhadecko), nasazený na GitHub Pages.
 
+V aplikaci:
+
+- mapa a seznam parků, hledání bez ohledu na diakritiku, odkaz `#id` na park,
+- **počasí** v panelu parku z [Open-Meteo](https://open-meteo.com/) (zdarma, bez klíče):
+  aktuální stav, 24 h po hodině nebo po 3 h, výhled na 3 dny,
+  odhad stavu trailů podle srážek za 48 h,
+- **navigace**: 📍 seřadí parky podle vzdálenosti. „Navigovat“ otevře Mapy.com
+  nebo Google Maps. S klíčem Mapy.com umí vykreslit trasu autem přímo v mapě
+  (routing API).
+
 ```text
 web/
   index.html          # stránka
   app.js              # mapa (Leaflet), seznam, vyhledávání, info panel, #odkaz na park
   parks.js            # čisté funkce: validace dat, filtr, popis parku (testované)
+  weather.js          # počasí z Open-Meteo: hodinová / 3h předpověď, 3 dny, stav trailů
+  nav.js              # navigace: odkazy do Mapy.com / Google Maps, Mapy.com routing
   config.js           # runtime konfigurace (klíč Mapy.com), přepisuje ji pages workflow
   style.css
   data/parks.geojson  # seznam parků – zdroj pravdy, needitovat jinde
-tests/parks.test.js   # unit testy + validace web/data/parks.geojson
+tests/*.test.js       # unit testy JS (parks.test.js validuje i web/data/parks.geojson)
+tests/test_*.py       # unit testy Python skriptů
 ```
 
 Formát `web/data/parks.geojson` – `FeatureCollection` bodů (`[lon, lat]`), vlastnosti:
@@ -63,6 +76,7 @@ Formát `web/data/parks.geojson` – `FeatureCollection` bodů (`[lon, lat]`), v
 | `web` | `https://…` \| null | oficiální web |
 | `lift` | bool \| null | lanovka / vlek |
 | `trails_count` | int \| null | počet trailů |
+| `parking` | `[lon, lat]` \| null | cíl navigace (parkoviště / dolní stanice); bez něj se naviguje na bod parku |
 | `verified` | bool | `false` = poloha a údaje jsou orientační |
 
 Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
@@ -87,7 +101,7 @@ python3 -m http.server -d web 8000
 Pak otevři <http://localhost:8000>. Bez klíče Mapy.com se použije podklad OpenStreetMap.
 
 ```bash
-node --test tests/parks.test.js
+node --test tests/*.test.js
 python3 -m unittest discover -s tests -p 'test_*.py'
 ```
 
