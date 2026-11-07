@@ -1,0 +1,20 @@
+{
+  "source": "https://www.skijizerky.cz/cz/leto/bikepark-tanvaldsky-spicak",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Modrý flow trail",
+      "difficulty": "blue"
+    },
+    {
+      "name": "Červený flow trail",
+      "difficulty": "red"
+    },
+    {
+      "name": "Hrabankový trail"
+    },
+    {
+      "name": "Skákací trail"
+    }
+  ]
+}

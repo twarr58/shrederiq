@@ -1,0 +1,25 @@
+{
+  "source": "https://kliny.cz/enduro-traily/",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Ore trail"
+    },
+    {
+      "name": "Dam trail"
+    },
+    {
+      "name": "Shorty trail"
+    },
+    {
+      "name": "Deer trail"
+    },
+    {
+      "name": "Ethylen trail"
+    },
+    {
+      "name": "Hamr trail",
+      "difficulty": "green"
+    }
+  ]
+}

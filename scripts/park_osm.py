@@ -5,9 +5,10 @@ Na rozdíl od fetch_osm_parks.py (hledá parky v celé ČR) se tady ptáme Overp
 přímo kolem každého parku z web/data/parks.geojson (RADIUS_M):
 
   lajny       – cesty s mtb:scale:imba / mtb:scale:dh / mtb=designated,
+                jednosměrné pěšiny a cyklostezky se zákazem chůze (šlapací traily),
                 pěšiny a cesty s mtb:scale do LIFT_TRAIL_M od lanovky (bikeparky),
                 členové relací route=mtb (lajny trail center bývají zmapované jen
-                jako relace; název lajny se vezme z relace). Dlouhé cyklotrasy
+                jako relace; název a barva značení (colour=*) se vezmou z relace). Dlouhé cyklotrasy
                 (network=lcn/rcn/ncn/icn bez „trailového“ názvu, > MAX_ROUTE_KM) se vyřadí.
   základna    – dolní stanice lanovky, u které je nejvíc lajn (cesta aerialway se
                 v OSM kreslí směrem nahoru, takže dolní stanice je její první bod);
@@ -33,7 +34,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fetch_osm_parks import (  # noqa: E402
-    PARKS, OverpassError, difficulty, fetch_overpass, haversine_m, name_tokens, simplify,
+    DIFFICULTIES, PARKS, OverpassError, difficulty, fetch_overpass, haversine_m, is_purpose_built, name_tokens, simplify,
 )
 
 RADIUS_M = 3000
@@ -149,8 +150,16 @@ def parse(data: dict) -> dict:
     return {"ways": ways, "rels": rels, "lifts": lifts, "parkings": parkings}
 
 
-def trail_relations(osm: dict) -> dict[int, str | None]:
-    """Way id → název relace pro členy „trailových“ relací route=mtb."""
+def relation_difficulty(tags: dict) -> str | None:
+    """Obtížnost z relace route=mtb: značení parku (colour=blue…) má přednost před
+    mtb:scale jednotlivých úseků – Peklák má Koridu s mtb:scale 3 (černá), ale značenou červeně."""
+    colour = (tags.get("colour") or tags.get("color") or "").lower()
+    return colour if colour in DIFFICULTIES else difficulty(tags)
+
+
+def trail_relations(osm: dict, difficulties: dict[int, str] | None = None) -> dict[int, str | None]:
+    """Way id → název relace pro členy „trailových“ relací route=mtb.
+    Do `difficulties` (way id → obtížnost) doplní barvu značení z relace, pokud ji má."""
     out: dict[int, str | None] = {}
     for rel in osm["rels"].values():
         tags, name = rel["tags"], rel["tags"].get("name")
@@ -162,8 +171,11 @@ def trail_relations(osm: dict) -> dict[int, str | None]:
         beyond = len(members) < len(rel["ways"])
         if not trailish and (tags.get("network") in LONG_NETWORKS or km > MAX_ROUTE_KM or beyond):
             continue
+        diff = relation_difficulty(tags)
         for w in rel["ways"]:
             out.setdefault(w, name)
+            if diff and difficulties is not None:
+                difficulties.setdefault(w, diff)
     return out
 
 
@@ -191,6 +203,8 @@ def select_trails(park_pt, osm, rel_names, radius=RADIUS_M, has_lift=None):
         in_rel = wid in rel_names
         hw, name = tags.get("highway"), tags.get("name") or tags.get("mtb:name") or ""
         strong = ("mtb:scale:imba" in tags or "mtb:scale:dh" in tags
+                  # jednosměrná pěšina / cyklostezka se zákazem chůze je postavená pro kola (šlapací traily)
+                  or is_purpose_built(tags)
                   # pěšina s jakýmkoli mtb=* (designated, single track, yes…) je MTB lajna;
                   # bicycle=designated pěšina jen s mtb:scale nebo s „lajnovým“ názvem (Gravity Line, Fun Trail)
                   or (hw == "path" and tags.get("mtb") not in (None, "no"))
@@ -287,7 +301,8 @@ def choose_parking(base, osm):
 
 
 def build(parks: list[dict], osm: dict):
-    rel_names = trail_relations(osm)
+    rel_diff: dict[int, str] = {}
+    rel_names = trail_relations(osm, rel_diff)
     pts = {f["properties"]["id"]: (f["geometry"]["coordinates"][1], f["geometry"]["coordinates"][0]) for f in parks}
     has_lift = {f["properties"]["id"]: f["properties"].get("lift") for f in parks}
     park_names = {f["properties"]["id"]: f["properties"].get("name") for f in parks}
@@ -334,7 +349,7 @@ def build(parks: list[dict], osm: dict):
                 "type": "Feature",
                 "geometry": {"type": "LineString",
                              "coordinates": [[round(lon, 5), round(lat, 5)] for lat, lon in simplify(w["coords"])]},
-                "properties": {"park_id": pid, "name": name, "difficulty": difficulty(tags), "access": access,
+                "properties": {"park_id": pid, "name": name, "difficulty": rel_diff.get(wid) or difficulty(tags), "access": access,
                                "length_m": round(_length(w["coords"])), "osm": f"way/{wid}"},
             })
         moved = round(haversine_m(*pts[pid], *base["base"])) if base["base"] else None

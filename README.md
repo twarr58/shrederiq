@@ -43,7 +43,12 @@ Statický web bez buildu (stejný stack jako emhadecko), nasazený na GitHub Pag
 
 V aplikaci:
 
-- mapa a seznam parků, hledání bez ohledu na diakritiku, odkaz `#id` na park,
+- mapa na prvním místě: seznam parků se otevře tlačítkem „Seznam parků“ (nebo
+  psaním do hledání). Karta parku: hlavička, chipy (stav trailů a teplota, lanovka,
+  parkoviště, nadmořská výška), jedna věta s čísly (km, lajn, nejdelší), pruh podílu
+  obtížností a sbalitelné sekce Lajny (tabulka) / Počasí / Navigace / Info; otevřené
+  sekce si prohlížeč pamatuje,
+- hledání bez ohledu na diakritiku, odkaz `#id` na park,
 - **počasí** v panelu parku z [Open-Meteo](https://open-meteo.com/) (zdarma, bez klíče):
   aktuální stav, 24 h po hodině nebo po 3 h, výhled na 3 dny,
   odhad stavu trailů podle srážek za 48 h,
@@ -85,10 +90,12 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
 
 - **Data parků z OSM** (`scripts/park_osm.py`): jeden dotaz na Overpass kolem každého
   parku (3 km):
-  - **lajny**: cesty s `mtb:scale:imba` nebo `mtb=designated`, pěšiny a cesty s
-    `mtb:scale` u lanovek a členové relací `route=mtb`. Lajny trail center bývají
-    zmapované jen jako relace, název lajny se pak vezme z relace. Dlouhé cyklotrasy
-    se vyřadí.
+  - **lajny**: cesty s `mtb:scale:imba` nebo `mtb=designated`, jednosměrné pěšiny
+    a cyklostezky se zákazem chůze (`foot=no` + `oneway=yes`, šlapací traily jako na
+    Pekláku), pěšiny a cesty s `mtb:scale` u lanovek a členové relací `route=mtb`.
+    Lajny trail center bývají zmapované jen jako relace, název lajny se pak vezme
+    z relace; má-li relace `colour=*`, určuje barvu lajny místo `mtb:scale` (značení
+    parku se od technické škály často liší). Dlouhé cyklotrasy se vyřadí.
   - **základna**: dolní stanice lanovky – nejdřív ta se jménem parku, pak ta s nejvíc
     lajnami, pak nejbližší do 2 km (gondola před sedačkou), pak vlek se jménem parku
     (Kyčerka, Peklák). U parku bez lanovky (`lift: false`), nebo když se žádná nenajde,
@@ -97,7 +104,7 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
 - **Zdroj dat**: denní výřez OSM Česka od [Geofabriku](https://download.geofabrik.de/europe/czech-republic.html).
   `scripts/osm_extract.sh` ho stáhne, `osmium tags-filter` vybere MTB cesty, lanovky,
   parkoviště a relace `route=mtb` a `scripts/osm_extract.py` (pyosmium) z toho vytáhne
-  okolí parků. Overpass je jen záloha, protože bývá přetížený a části dotazů občas tiše
+  okolí parků. Overpass se už nepoužívá (býval přetížený a části dotazů občas tiše
   vynechá.
 - Výstup je `web/data/trails.geojson` a `web/data/parks_osm.json`. Soubory nejsou v repu,
   generuje je workflow `pages` při deployi a jednou týdně (s cache pro výpadky Overpass).
@@ -105,7 +112,8 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   parkoviště („P“) a navigace vede na něj.
 - Kontrola: workflow `osm` vypíše pro každý park základnu, lanovku, posun bodu,
   parkoviště, počet lajn a kandidáty lanovek (Summary běhu). Ruční spuštění přeskočí
-  pomalý celorepublikový report přes Overpass, pokud nezaškrtneš vstup `overpass`.
+  celorepublikový report ze stejného výřezu (`osm_extract.py --country`); Overpass jen se
+  vstupem `overpass`.
 - **Pumptracky**: `osm_extract.py --pumptracks` vybere z celého výřezu objekty se
   `sport=pump_track`, BMX/cyklistické dráhy a cokoli s „pumptrack“ v názvu →
   `web/data/pumptracks.geojson`. Ve webu jsou jako samostatná vrstva s přepínačem
@@ -134,11 +142,13 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
 - **GPS stopy** (`scripts/gps_check.py`, #22): workflow `osm` stáhne veřejné GPS stopy
   z OSM kolem každého parku a každé lajně dá pokrytí (podíl bodů po 25 m s bodem stopy
   do 15 m). Tabulka v souhrnu běhu ukáže úseky pod 30 % – bez provozu, zavřené, nové,
-  nebo špatně zakreslené. Při nasazení se úseky pod 30 % narovnají podle stop
-  (těžiště bodů stop do 40 m kolem každého bodu lajny), když to pokrytí zvedne aspoň na
-  70 % (vlastnost `gps_fit`).
+  nebo špatně zakreslené. Při nasazení se navazující kousky stejné lajny nejdřív spojí
+  (vlastnost `segments`) a lajny pod 85 % delší než 50 m se narovnají podle stop
+  (těžiště bodů stop do 60 m kolem každého bodu lajny po 10 m), když to pokrytí zvedne
+  aspoň o 10 bodů a na 70 % (vlastnost `gps_fit`).
 - **Oficiální seznamy trailů** (`data/official/<park>.json`, `scripts/official_check.py`):
-  ručně opsané z webů provozovatelů; workflow `osm` ukáže, co z nich v OSM chybí, co je
+  opsané z webů provozovatelů (12 parků); při nasazení přepíšou obtížnost spárovaných
+  lajn barvou podle značení parku (`difficulty_source: "official"`) a workflow `osm` ukáže, co z nich v OSM chybí, co je
   v OSM navíc a kde se liší obtížnost nebo délka o víc než 30 %.
 - **Trailforks API** (`scripts/trailforks_trails.py`): park s vlastností `trailforks_rid`
   (id regionu na Trailforks) dostane lajny z API, když jsou v Actions secrets

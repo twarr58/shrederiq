@@ -1,0 +1,25 @@
+{
+  "source": "https://kouty.cz/bike-park/",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Uhlířská",
+      "difficulty": "blue",
+      "length_m": 7000
+    },
+    {
+      "name": "Hřebenovka",
+      "length_m": 4500
+    },
+    {
+      "name": "Stará Medvědice",
+      "difficulty": "red",
+      "length_m": 4000
+    },
+    {
+      "name": "Koutíkův sen",
+      "difficulty": "black",
+      "length_m": 3000
+    }
+  ]
+}

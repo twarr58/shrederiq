@@ -1,0 +1,26 @@
+{
+  "source": "https://sumava.spicak.cz/cz/bikepark/mapa-trailu/",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Struggle",
+      "length_m": 1100
+    },
+    {
+      "name": "Black Friday",
+      "length_m": 2300
+    },
+    {
+      "name": "Good Year Family Line",
+      "length_m": 3500
+    },
+    {
+      "name": "Air - Stone",
+      "length_m": 1046
+    },
+    {
+      "name": "Uphill Špičák 1202",
+      "length_m": 5022
+    }
+  ]
+}

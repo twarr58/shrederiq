@@ -8,9 +8,11 @@ TOL_M metrů aspoň jeden bod stopy. Nízké pokrytí znamená lajnu bez provozu
 novou, nebo špatně zakreslenou – ve všech případech stojí za ruční kontrolu.
 
 Výsledek jde do trails.geojson (vlastnost gps_cov, 0–100) a do markdown reportu.
-S --fit se lajny s pokrytím pod 30 % narovnají podle stop: každý bod po 25 m se posune
-do těžiště bodů stop do 40 m (aspoň 5 bodů), čára se vyhladí; výsledek se vezme jen
-když má pokrytí aspoň 70 % a není o víc než 30 % delší (vlastnost gps_fit).
+S --fit se navazující úseky stejné lajny nejdřív spojí (OSM je seká na kousky) a lajny
+s pokrytím pod 85 % se narovnají podle stop: každý bod po 25 m se posune do těžiště
+bodů stop do 60 m (aspoň 5 bodů), čára se vyhladí; výsledek se vezme jen když má
+pokrytí aspoň 70 %, o 10 bodů víc než předtím, a není o víc než 30 % delší
+(vlastnost gps_fit).
 Stopy se drží v cache podle obdélníku, ať se API nevolá při každém běhu.
 
   python3 scripts/gps_check.py web/data/trails.geojson --cache .osm-cache/gps.json --report out/gps.md
@@ -34,7 +36,8 @@ from elevation import Point, haversine_m, resample  # noqa: E402
 
 API = "https://api.openstreetmap.org/api/0.6/trackpoints"
 PAGE_POINTS = 5000
-MAX_PAGES = 20          # 100 000 bodů na park stačí, větší parky jsou stejně plné stop
+MAX_PAGES = 8           # 40 000 bodů na park stačí, větší parky jsou stejně plné stop
+WORKERS = 4             # parky se stahují paralelně (OSM API to snese, zdvořilý User-Agent)
 TOL_M = 15
 PAD_DEG = 0.003         # ~300 m okolo lajn
 LOW_COV = 30            # pod 30 % = k ruční kontrole
@@ -84,10 +87,15 @@ def load_traces(bbox, cache: dict, fetch) -> list[Point]:
     return pts
 
 
-FIT_R_M = 40          # jak daleko od bodu lajny hledat stopy při narovnávání
+FIT_R_M = 60          # jak daleko od bodu lajny hledat stopy při narovnávání
 FIT_MIN_PTS = 5       # méně bodů stop v okruhu = nespolehlivé, bod se nehýbe (konce lajn mívají půl oblaku)
 FIT_MIN_COV = 70      # narovnaná lajna musí mít aspoň takové pokrytí, jinak zůstane OSM
+FIT_MIN_GAIN = 10     # a pokrytí musí stoupnout aspoň o tolik bodů
+FIT_BELOW = 85        # narovnávají se lajny s pokrytím pod tuto hranici
 FIT_MAX_LONGER = 1.3
+JOIN_M = 8            # navazující úseky stejné lajny (konec–začátek do 8 m) se před hodnocením spojí
+FIT_STEP_M = 10       # hustota bodů při narovnávání (po 25 m by serpentiny ztratily zatáčky)
+FIT_MIN_LEN_M = 50    # kratší pahýly se nenarovnávají (pár bodů v oblaku stop je smrskne na nic)
 
 
 class Grid:
@@ -121,6 +129,10 @@ class Grid:
         return False
 
 
+def length(coords: list[Point]) -> float:
+    return sum(haversine_m(a, b) for a, b in zip(coords, coords[1:]))
+
+
 def coverage(coords: list[Point], grid: Grid) -> int:
     pts = resample(coords, 25)
     hit = sum(1 for p in pts if grid.near(p))
@@ -128,10 +140,10 @@ def coverage(coords: list[Point], grid: Grid) -> int:
 
 
 def fit_to_traces(coords: list[Point], grid: Grid) -> list[Point] | None:
-    """Narovná lajnu podle stop: každý bod (po 25 m) se posune do těžiště bodů stop do
+    """Narovná lajnu podle stop: každý bod (po FIT_STEP_M) se posune do těžiště bodů stop do
     FIT_R_M, pokud jich je aspoň FIT_MIN_PTS; pak se čára vyhladí (průměr sousedů).
     Vrací None, když se nic nepohnulo, výsledek je o moc delší, nebo pokrytí nestačí."""
-    pts = resample(coords, 25)
+    pts = resample(coords, FIT_STEP_M)
     moved, out = 0, []
     for p in pts:
         cloud = grid.within(p, FIT_R_M)
@@ -144,37 +156,96 @@ def fit_to_traces(coords: list[Point], grid: Grid) -> list[Point] | None:
         return None
     smooth = [out[0]] + [((a[0] + 2 * b[0] + c[0]) / 4, (a[1] + 2 * b[1] + c[1]) / 4)
                          for a, b, c in zip(out, out[1:], out[2:])] + [out[-1]]
-    length = lambda line: sum(haversine_m(a, b) for a, b in zip(line, line[1:]))  # noqa: E731
     if length(smooth) > FIT_MAX_LONGER * length(coords) or coverage(smooth, grid) < FIT_MIN_COV:
         return None
     return [(round(x, 6), round(y, 6)) for x, y in smooth]
 
 
+def join_segments(feats: list[dict]) -> list[dict]:
+    """Spojí navazující úseky stejné lajny (stejný park, název, obtížnost, zdroj) do jedné
+    LineString: OSM lajny bývají rozsekané na kousky po pár metrech, které se samostatně
+    nedají hodnotit ani narovnat. Pořadí a směr se dohledá podle koncových bodů."""
+    groups: dict[tuple, list[dict]] = defaultdict(list)
+    for f in feats:
+        p = f["properties"]
+        key = (p.get("park_id"), p.get("name"), p.get("difficulty"), p.get("source"), bool(p.get("access")))
+        groups[key].append(f)
+    out = []
+    for key, members in groups.items():
+        if key[1] is None or len(members) == 1:
+            out.extend(members)
+            continue
+        chains = [[tuple(c[:2]) for c in f["geometry"]["coordinates"]] for f in members]
+        ids = [[f["properties"].get("osm")] for f in members]
+        merged = True
+        while merged and len(chains) > 1:
+            merged = False
+            for i in range(len(chains)):
+                for j in range(len(chains)):
+                    if i == j:
+                        continue
+                    a, b = chains[i], chains[j]
+                    if haversine_m(a[-1], b[0]) <= JOIN_M:
+                        chains[i] = a + b[1:]
+                    elif haversine_m(a[-1], b[-1]) <= JOIN_M:
+                        chains[i] = a + b[::-1][1:]
+                    elif haversine_m(a[0], b[0]) <= JOIN_M:
+                        chains[i] = b[::-1] + a[1:]
+                    else:
+                        continue
+                    ids[i] += ids[j]
+                    del chains[j], ids[j]
+                    merged = True
+                    break
+                if merged:
+                    break
+        for chain, osm_ids in zip(chains, ids):
+            f = json.loads(json.dumps(members[0]))
+            f["geometry"]["coordinates"] = [list(c) for c in chain]
+            f["properties"]["length_m"] = round(length(chain))
+            f["properties"]["osm"] = "+".join(x for x in osm_ids if x)
+            f["properties"]["segments"] = len(osm_ids)
+            out.append(f)
+    return out
+
+
 def check(fc: dict, cache: dict, fetch, fit: bool = False) -> dict[str, dict]:
     """Doplní gps_cov do lajn; vrací souhrn po parcích."""
+    if fit:  # navazující úseky spojit, ať se hodnotí a narovnávají celé lajny
+        fc["features"] = join_segments(fc["features"])
     by_park: dict[str, list[dict]] = defaultdict(list)
     for f in fc["features"]:
         if not f["properties"].get("access"):
             by_park[f["properties"]["park_id"]].append(f)
     summary = {}
-    for pid, feats in sorted(by_park.items()):
-        bbox = bbox_of(feats)
+    # stopy všech parků najednou (sekvenčně to pro 32 parků trvalo 11 minut)
+    from concurrent.futures import ThreadPoolExecutor
+    boxes = {pid: bbox_of(feats) for pid, feats in by_park.items()}
+
+    def fetch_park(pid):
         try:
-            traces = load_traces(bbox, cache, fetch)
+            return pid, load_traces(boxes[pid], cache, fetch), None
         except Exception as e:  # noqa: BLE001 – park bez stop nesmí shodit report
-            print(f"gps: {pid}: {e}", file=sys.stderr)
-            summary[pid] = {"error": str(e)[:100], "trails": len(feats)}
+            return pid, None, str(e)[:100]
+
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        loaded = dict((pid, (traces, err)) for pid, traces, err in pool.map(fetch_park, sorted(by_park)))
+    for pid, feats in sorted(by_park.items()):
+        traces, err = loaded[pid]
+        if err:
+            print(f"gps: {pid}: {err}", file=sys.stderr)
+            summary[pid] = {"error": err, "trails": len(feats)}
             continue
         grid = Grid(traces)
         covs, fitted = [], 0
         for f in feats:
             coords = [tuple(c[:2]) for c in f["geometry"]["coordinates"]]
             cov = coverage(coords, grid)
-            if fit and cov < LOW_COV and not f["properties"].get("snapped"):
+            if fit and cov < FIT_BELOW and length(coords) >= FIT_MIN_LEN_M and not f["properties"].get("snapped"):
                 new = fit_to_traces(coords, grid)
-                if new:
+                if new and coverage(new, grid) >= cov + FIT_MIN_GAIN:
                     f["geometry"]["coordinates"] = [list(c) for c in new]
-                    f["properties"]["length_m"] = round(sum(haversine_m(a, b) for a, b in zip(new, new[1:])))
+                    f["properties"]["length_m"] = round(length(new))
                     f["properties"]["gps_fit"] = True
                     cov = coverage(new, grid)
                     fitted += 1

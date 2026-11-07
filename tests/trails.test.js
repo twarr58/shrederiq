@@ -44,6 +44,13 @@ test("seznam: seřazený podle obtížnosti, segmenty stejné lajny sloučené",
   ]);
 });
 
+test("stejné jméno jinak psané je jedna lajna, zobrazí se pravopis nejdelšího úseku", () => {
+  const fc = { features: [line("k", "Stará Medvědice", "red", 5), line("k", "Stará medvědice", "red", 3995), line("k", "stará  medvědice ", "red", 100)] };
+  const s = T.summarize(fc, "k");
+  assert.equal(s.namedCount, 1);
+  assert.deepEqual(s.rows.map((r) => [r.name, r.lengthM, r.segments]), [["Stará medvědice", 4100, 3]]);
+});
+
 test("park bez lajn / chybějící data", () => {
   assert.equal(T.summarize(FC, "lipno").count, 0);
   assert.equal(T.summarize(null, "kouty").count, 0);
