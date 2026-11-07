@@ -62,6 +62,8 @@
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [18.30, 49.35] },
       "properties": {"id": "kycerka", "name": "Traily Velké Karlovice (Kyčerka)", "kind": "trail_center", "town": "Velké Karlovice", "region": "Zlínský", "web": "https://www.trailforks.com/region/traily-velke-karlovice/", "lift": false, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [13.9931, 50.6733] },
-      "properties": {"id": "strizovicky-vrch", "name": "Singletrail Střížovický vrch", "kind": "trail_center", "town": "Ústí nad Labem", "region": "Ústecký", "web": null, "lift": false, "trails_count": 1, "verified": false} }
+      "properties": {"id": "strizovicky-vrch", "name": "Singletrail Střížovický vrch", "kind": "trail_center", "town": "Ústí nad Labem", "region": "Ústecký", "web": null, "lift": false, "trails_count": 1, "verified": false} },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [14.868, 50.055] },
+      "properties": {"id": "semberske-stezky", "name": "Šemberské stezky", "kind": "trail_center", "town": "Tuchoraz (Český Brod)", "region": "Středočeský", "web": "https://www.semberskestezky.cz", "lift": false, "trails_count": 4, "verified": false} }
   ]
 }
