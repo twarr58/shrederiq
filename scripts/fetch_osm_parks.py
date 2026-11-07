@@ -1,20 +1,30 @@
 #!/usr/bin/env python3
-"""Stáhne bikeparky v ČR z OpenStreetMap (Overpass API) a porovná je s web/data/parks.geojson.
+"""Najde bikeparky, trailparky a singltreky v ČR v OpenStreetMap (Overpass API)
+a porovná je s web/data/parks.geojson.
 
-Hledá:
-  - leisure=bike_park (bod / plocha / relace) – samotné bikeparky,
-  - cesty s mtb:scale / mtb:scale:dh v okruhu kolem nich – hrubý počet lajn.
+V OSM má tag leisure=bike_park jen malá část parků. Většina je zmapovaná jen jako
+jednotlivé lajny. Skript proto:
+
+  1. stáhne lajny, které jsou typické pro bikeparky a trail centra:
+       - mtb:scale:dh=*         sjezdové (bikepark) lajny,
+       - mtb:scale:imba=*       singltreky / trailparky (IMBA škála),
+       - highway=path + mtb=designated,
+  2. stáhne „kotvy“ s názvem: leisure=bike_park, sportoviště se sport=mtb / downhill
+     a MTB trasy (route=mtb) s názvem typu Singltrek / Trail / Bikepark,
+  3. lajny ležící blízko sebe spojí do shluků; shluk = kandidát na park
+     (střed, počet lajn, délka, typ podle převahy dh / imba lajn, název z kotvy),
+  4. shluky spáruje s naším seznamem podle vzdálenosti a podobnosti názvu.
 
 Výstup:
-  - --geojson: OSM bikeparky jako GeoJSON body (pro ruční kontrolu / budoucí import),
-  - --report:  Markdown report – shody s naším seznamem (vzdálenost, návrh polohy),
-               naše parky bez protějšku v OSM a OSM parky, které v seznamu chybí.
+  --report   Markdown report: shody (odchylka polohy), naše parky bez shluku,
+             shluky, které v seznamu chybí (kandidáti),
+  --geojson  shluky jako GeoJSON body,
+  --trails   lajny jako GeoJSON LineString s cluster_id (podklad pro fázi 2).
 
 Skript jen navrhuje, parks.geojson neupravuje. Bez závislostí (jen stdlib).
 
-Příklady:
-  python3 scripts/fetch_osm_parks.py --report osm-report.md
-  python3 scripts/fetch_osm_parks.py --cache osm.json --report -      # uloží / použije odpověď Overpass
+Příklad:
+  python3 scripts/fetch_osm_parks.py --cache osm.json --report - --geojson clusters.geojson
 """
 from __future__ import annotations
 
@@ -28,52 +38,42 @@ import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
 ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
 ]
 USER_AGENT = "shrederiq/0.1 (+https://github.com/twarr58/shrederiq)"
 ROOT = Path(__file__).resolve().parent.parent
 PARKS = ROOT / "web" / "data" / "parks.geojson"
 
-# okruh pro počítání MTB cest kolem bikeparku a pro párování s naším seznamem
-TRAIL_RADIUS_M = 1500
-MATCH_RADIUS_M = 5000
+LINK_M = 600            # lajny blíž než tohle patří do stejného shluku (vzdálenost bodů geometrie)
+MIN_TRAILS = 3          # menší shluky ignorovat (osamocené lajny, pumptracky)
+MIN_LENGTH_M = 1500
+ANCHOR_RADIUS_M = 1500  # kotva (název) se k shluku přiřadí do této vzdálenosti
+MATCH_RADIUS_M = 5000   # párování s naším seznamem
+
+ROUTE_NAME_RE = r"[Ss]ingl|[Ss]ingle|[Tt]rail|[Bb]ike ?park|[Ff]low|[Ee]ndur"
 
 QUERY = f"""
-[out:json][timeout:180];
+[out:json][timeout:240];
 area["ISO3166-1"="CZ"][admin_level=2]->.cz;
-nwr["leisure"="bike_park"](area.cz)->.bp;
-.bp out tags center;
-way(around.bp:{TRAIL_RADIUS_M})["highway"~"^(path|track|cycleway|footway|bridleway)$"]["mtb:scale"];
-way(around.bp:{TRAIL_RADIUS_M})["mtb:scale:dh"];
+(
+  way["mtb:scale:dh"](area.cz);
+  way["mtb:scale:imba"](area.cz);
+  way["highway"="path"]["mtb"="designated"](area.cz);
+);
+out tags geom;
+(
+  nwr["leisure"="bike_park"](area.cz);
+  nwr["sport"~"(^|;)(mtb|downhill|bmx)($|;)"]["leisure"~"^(sports_centre|track|pitch)$"](area.cz);
+  relation["route"="mtb"]["name"~"{ROUTE_NAME_RE}"](area.cz);
+);
 out tags center;
 """
-
-
-@dataclass
-class OsmPark:
-    osm_type: str
-    osm_id: int
-    lat: float
-    lon: float
-    name: str | None
-    tags: dict
-    trails: int = 0
-
-    @property
-    def url(self) -> str:
-        return f"https://www.openstreetmap.org/{self.osm_type}/{self.osm_id}"
-
-
-@dataclass
-class Match:
-    park: dict                     # Feature z parks.geojson
-    osm: OsmPark | None
-    distance_m: float | None
-    candidates: list = field(default_factory=list)
 
 
 # --- obecné pomůcky -----------------------------------------------------------
@@ -86,7 +86,7 @@ def fold(s: str | None) -> str:
 
 
 STOPWORDS = {"bikepark", "bike", "park", "trail", "trailpark", "trails", "singltrek", "singletrack",
-             "centrum", "center", "mtb", "areal", "pod", "nad", "na", "v", "u"}
+             "singltreky", "centrum", "center", "mtb", "areal", "pod", "nad", "na", "v", "u", "the"}
 
 
 def name_tokens(s: str | None) -> set[str]:
@@ -109,6 +109,11 @@ def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * r * math.asin(math.sqrt(a))
 
 
+def line_length_m(coords: list[tuple[float, float]]) -> float:
+    """coords = [(lat, lon), …]"""
+    return sum(haversine_m(*a, *b) for a, b in zip(coords, coords[1:]))
+
+
 # --- Overpass -----------------------------------------------------------------
 
 def fetch_overpass(query: str, retries: int = 3) -> dict:
@@ -118,127 +123,267 @@ def fetch_overpass(query: str, retries: int = 3) -> dict:
         for url in ENDPOINTS:
             req = urllib.request.Request(url, data=data, headers={"User-Agent": USER_AGENT})
             try:
-                with urllib.request.urlopen(req, timeout=240) as res:
+                with urllib.request.urlopen(req, timeout=300) as res:
                     return json.load(res)
             except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
                 last = e
                 print(f"overpass {url}: {e}", file=sys.stderr)
-        time.sleep(5 * 2 ** attempt)  # 429 / 504 jsou u Overpass běžné
+        time.sleep(5 * 2 ** attempt)  # 429 / 502 / 504 jsou u Overpass běžné
     raise RuntimeError(f"Overpass nedostupný: {last}")
 
 
-def parse_overpass(data: dict) -> list[OsmPark]:
-    """Rozdělí odpověď na bikeparky a MTB cesty; cesty přiřadí nejbližšímu parku v okruhu."""
-    parks: list[OsmPark] = []
-    trails: dict[int, tuple[float, float]] = {}
+# --- datový model -------------------------------------------------------------
+
+@dataclass
+class Trail:
+    osm_id: int
+    tags: dict
+    coords: list[tuple[float, float]]  # (lat, lon)
+
+    @property
+    def length_m(self) -> float:
+        return line_length_m(self.coords)
+
+    @property
+    def style(self) -> str:
+        """dh = sjezdová (bikepark), imba = singltrek / trailpark, other"""
+        if "mtb:scale:dh" in self.tags:
+            return "dh"
+        if "mtb:scale:imba" in self.tags:
+            return "imba"
+        return "other"
+
+
+@dataclass
+class Anchor:
+    osm_type: str
+    osm_id: int
+    lat: float
+    lon: float
+    tags: dict
+
+    @property
+    def name(self) -> str | None:
+        return self.tags.get("name")
+
+    @property
+    def url(self) -> str:
+        return f"https://www.openstreetmap.org/{self.osm_type}/{self.osm_id}"
+
+    @property
+    def website(self) -> str | None:
+        return self.tags.get("website") or self.tags.get("contact:website") or self.tags.get("url")
+
+
+@dataclass
+class Cluster:
+    id: str
+    trails: list[Trail]
+    anchors: list[Anchor] = field(default_factory=list)
+
+    @property
+    def center(self) -> tuple[float, float]:
+        """Těžiště bodů geometrie (lat, lon)."""
+        pts = [p for t in self.trails for p in t.coords]
+        return sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts)
+
+    @property
+    def length_m(self) -> float:
+        return sum(t.length_m for t in self.trails)
+
+    @property
+    def kind(self) -> str:
+        c = Counter(t.style for t in self.trails)
+        return "bikepark" if c["dh"] >= max(c["imba"], 1) else "trail_center"
+
+    @property
+    def name(self) -> str | None:
+        named = [a for a in self.anchors if a.name]
+        if named:
+            # leisure=bike_park má přednost před sportovištěm a trasou
+            named.sort(key=lambda a: (a.tags.get("leisure") != "bike_park", a.tags.get("type") == "route"))
+            return named[0].name
+        return None
+
+    @property
+    def website(self) -> str | None:
+        return next((a.website for a in self.anchors if a.website), None)
+
+
+def parse_overpass(data: dict) -> tuple[list[Trail], list[Anchor]]:
+    trails: dict[int, Trail] = {}
+    anchors: dict[tuple[str, int], Anchor] = {}
     for el in data.get("elements", []):
         tags = el.get("tags", {})
-        c = el.get("center") or {"lat": el.get("lat"), "lon": el.get("lon")}
-        if c.get("lat") is None:
+        if el["type"] == "way" and "geometry" in el:
+            coords = [(p["lat"], p["lon"]) for p in el["geometry"] if p]
+            if len(coords) >= 2:
+                trails[el["id"]] = Trail(el["id"], tags, coords)
             continue
-        if tags.get("leisure") == "bike_park":
-            parks.append(OsmPark(el["type"], el["id"], c["lat"], c["lon"], tags.get("name"), tags))
-        elif el["type"] == "way":
-            trails[el["id"]] = (c["lat"], c["lon"])  # dedup: cesta může přijít z obou dotazů
+        c = el.get("center") or ({"lat": el["lat"], "lon": el["lon"]} if "lat" in el else None)
+        if c:
+            anchors[(el["type"], el["id"])] = Anchor(el["type"], el["id"], c["lat"], c["lon"], tags)
+    return list(trails.values()), list(anchors.values())
 
-    for lat, lon in trails.values():
-        near = [(haversine_m(lat, lon, p.lat, p.lon), p) for p in parks]
-        near = [x for x in near if x[0] <= TRAIL_RADIUS_M]
-        if near:
-            min(near, key=lambda x: x[0])[1].trails += 1
-    return parks
+
+# --- shlukování ---------------------------------------------------------------
+
+def cluster_trails(trails: list[Trail], link_m: float = LINK_M) -> list[list[Trail]]:
+    """Single-linkage: dvě lajny jsou ve stejném shluku, když se některé jejich body
+    přiblíží na link_m. Body se třídí do mřížky, takže se nepočítá každý s každým."""
+    parent = list(range(len(trails)))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    cell = link_m / 111_000  # stupně šířky; délku stačí přibližně (v ČR cos(50°) ≈ 0,64)
+    grid: dict[tuple[int, int], list[tuple[int, float, float]]] = defaultdict(list)
+    for i, t in enumerate(trails):
+        for lat, lon in t.coords[:: max(1, len(t.coords) // 20)] + [t.coords[-1]]:
+            grid[(int(lat / cell), int(lon / (cell / 0.64)))].append((i, lat, lon))
+
+    for (gy, gx), pts in grid.items():
+        neigh = [p for dy in (-1, 0, 1) for dx in (-1, 0, 1) for p in grid.get((gy + dy, gx + dx), ())]
+        for i, lat, lon in pts:
+            for j, lat2, lon2 in neigh:
+                if find(i) != find(j) and haversine_m(lat, lon, lat2, lon2) <= link_m:
+                    parent[find(i)] = find(j)
+
+    groups: dict[int, list[Trail]] = defaultdict(list)
+    for i, t in enumerate(trails):
+        groups[find(i)].append(t)
+    return list(groups.values())
+
+
+def build_clusters(trails: list[Trail], anchors: list[Anchor]) -> list[Cluster]:
+    groups = [g for g in cluster_trails(trails)
+              if len(g) >= MIN_TRAILS and sum(t.length_m for t in g) >= MIN_LENGTH_M]
+    clusters = []
+    for g in sorted(groups, key=lambda g: -sum(t.length_m for t in g)):
+        c = Cluster(id=f"c{min(t.osm_id for t in g)}", trails=g)
+        lat, lon = c.center
+        c.anchors = [a for a in anchors if haversine_m(lat, lon, a.lat, a.lon) <= ANCHOR_RADIUS_M
+                     or any(haversine_m(p[0], p[1], a.lat, a.lon) <= 300 for t in g for p in t.coords[::5])]
+        clusters.append(c)
+    return clusters
 
 
 # --- porovnání ----------------------------------------------------------------
 
-def match_parks(features: list[dict], osm: list[OsmPark]) -> tuple[list[Match], list[OsmPark]]:
-    """Každému našemu parku najde nejlepší OSM protějšek v okruhu MATCH_RADIUS_M.
+@dataclass
+class Match:
+    park: dict                  # Feature z parks.geojson
+    cluster: Cluster | None
+    distance_m: float | None
 
-    Skóre = podobnost názvu (0..1) + blízkost (0..1); bez shody v názvu se bere jen to,
-    co je do 1,5 km. Každý OSM park lze použít jen jednou (greedy podle skóre).
+
+def match_parks(features: list[dict], clusters: list[Cluster]) -> tuple[list[Match], list[Cluster]]:
+    """Každému našemu parku najde nejlepší shluk do MATCH_RADIUS_M.
+
+    Skóre = podobnost názvu + blízkost (0..1). Bez shody v názvu se páruje jen do 2 km.
+    Každý shluk lze použít jen jednou (greedy podle skóre).
     """
     scored = []
     for fi, f in enumerate(features):
         lon, lat = f["geometry"]["coordinates"][:2]
         names = [f["properties"].get("name"), f["properties"].get("town")]
-        for oi, o in enumerate(osm):
-            d = haversine_m(lat, lon, o.lat, o.lon)
+        for ci, c in enumerate(clusters):
+            clat, clon = c.center
+            d = haversine_m(lat, lon, clat, clon)
             if d > MATCH_RADIUS_M:
                 continue
-            ns = max(name_score(n, o.name) for n in names)
-            if ns == 0 and d > 1500:
+            ns = max(name_score(n, c.name) for n in names)
+            if ns == 0 and d > 2000:
                 continue
-            scored.append((ns + (1 - d / MATCH_RADIUS_M), fi, oi, d))
+            scored.append((ns + (1 - d / MATCH_RADIUS_M), fi, ci, d))
 
     scored.sort(reverse=True)
-    used_f, used_o, best = set(), set(), {}
-    for score, fi, oi, d in scored:
-        if fi in used_f or oi in used_o:
+    used_f, used_c, best = set(), set(), {}
+    for _, fi, ci, d in scored:
+        if fi in used_f or ci in used_c:
             continue
         used_f.add(fi)
-        used_o.add(oi)
-        best[fi] = (oi, d)
+        used_c.add(ci)
+        best[fi] = (ci, d)
 
-    matches = []
-    for fi, f in enumerate(features):
-        if fi in best:
-            oi, d = best[fi]
-            matches.append(Match(f, osm[oi], d))
-        else:
-            matches.append(Match(f, None, None))
-    unmatched = [o for oi, o in enumerate(osm) if oi not in used_o]
-    return matches, unmatched
+    matches = [Match(f, clusters[best[fi][0]], best[fi][1]) if fi in best else Match(f, None, None)
+               for fi, f in enumerate(features)]
+    return matches, [c for ci, c in enumerate(clusters) if ci not in used_c]
 
 
-def to_geojson(osm: list[OsmPark]) -> dict:
-    return {
-        "type": "FeatureCollection",
-        "features": [
-            {
-                "type": "Feature",
-                "geometry": {"type": "Point", "coordinates": [round(o.lon, 5), round(o.lat, 5)]},
-                "properties": {
-                    "osm": f"{o.osm_type}/{o.osm_id}",
-                    "name": o.name,
-                    "website": o.tags.get("website") or o.tags.get("contact:website"),
-                    "mtb_trails_nearby": o.trails,
-                },
-            }
-            for o in sorted(osm, key=lambda o: (o.name is None, fold(o.name), o.osm_id))
-        ],
-    }
+# --- výstupy ------------------------------------------------------------------
+
+KIND_LABEL = {"bikepark": "bikepark", "trail_center": "trailpark / singltrek"}
 
 
-def render_report(matches: list[Match], unmatched: list[OsmPark], moved_threshold_m: float = 300) -> str:
-    out = ["# OSM × parks.geojson", ""]
-    found = [m for m in matches if m.osm]
-    missing = [m for m in matches if not m.osm]
-    out.append(f"- parků v seznamu: **{len(matches)}**, nalezeno v OSM: **{len(found)}**, "
-               f"bez protějšku: **{len(missing)}**, v OSM navíc: **{len(unmatched)}**")
-    out.append("")
+def _pt(lat: float, lon: float) -> str:
+    return f"`[{lon:.5f}, {lat:.5f}]`"
+
+
+def _osm_link(c: Cluster) -> str:
+    lat, lon = c.center
+    return f"[mapa](https://www.openstreetmap.org/#map=15/{lat:.5f}/{lon:.5f})"
+
+
+def render_report(matches: list[Match], extra: list[Cluster], moved_threshold_m: float = 300) -> str:
+    found = [m for m in matches if m.cluster]
+    missing = [m for m in matches if not m.cluster]
+    out = ["# OSM × parks.geojson", "",
+           f"- parků v seznamu: **{len(matches)}**, se shlukem lajn v OSM: **{len(found)}**, "
+           f"bez shluku: **{len(missing)}**, shluků navíc (kandidáti): **{len(extra)}**", ""]
 
     out += ["## Shody", "",
-            "| id | název (my) | název (OSM) | odchylka | návrh [lon, lat] | MTB cest v okolí | OSM |",
-            "|---|---|---|---:|---|---:|---|"]
-    for m in sorted(found, key=lambda m: -(m.distance_m or 0)):
-        p, o = m.park["properties"], m.osm
+            "| id | název (my) | název (OSM) | odchylka | návrh [lon, lat] | lajn | km | typ (OSM) | web (OSM) | |",
+            "|---|---|---|---:|---|---:|---:|---|---|---|"]
+    for m in sorted(found, key=lambda m: -m.distance_m):
+        p, c = m.park["properties"], m.cluster
         flag = " ⚠️" if m.distance_m > moved_threshold_m else ""
-        out.append(f"| `{p['id']}` | {p['name']} | {o.name or '–'} | {m.distance_m:,.0f} m{flag} "
-                   f"| `[{o.lon:.5f}, {o.lat:.5f}]` | {o.trails} | [{o.osm_type}/{o.osm_id}]({o.url}) |")
-    out += ["", f"⚠️ = odchylka nad {moved_threshold_m:.0f} m – zvaž opravu polohy.", ""]
+        out.append(f"| `{p['id']}` | {p['name']} | {c.name or '–'} | {m.distance_m:,.0f} m{flag} | {_pt(*c.center)} "
+                   f"| {len(c.trails)} | {c.length_m / 1000:.1f} | {KIND_LABEL[c.kind]} | {c.website or ''} | {_osm_link(c)} |")
+    out += ["", f"⚠️ = odchylka nad {moved_threshold_m:.0f} m. Střed shluku nemusí být nástup do parku – posuď v mapě.", ""]
 
-    out += ["## Bez protějšku v OSM", ""]
+    out += ["## Bez shluku v OSM", ""]
     out += [f"- `{m.park['properties']['id']}` {m.park['properties']['name']}" for m in missing] or ["- (žádné)"]
     out.append("")
 
-    out += ["## V OSM navíc (kandidáti do seznamu)", "",
-            "| název | [lon, lat] | MTB cest v okolí | web | OSM |", "|---|---|---:|---|---|"]
-    for o in sorted(unmatched, key=lambda o: (-o.trails, fold(o.name))):
-        web = o.tags.get("website") or o.tags.get("contact:website") or ""
-        out.append(f"| {o.name or '–'} | `[{o.lon:.5f}, {o.lat:.5f}]` | {o.trails} | {web} | [{o.osm_type}/{o.osm_id}]({o.url}) |")
-    out.append("")
-    out.append("Data © přispěvatelé OpenStreetMap, ODbL.")
+    out += ["## Shluky, které v seznamu chybí (kandidáti)", "",
+            "| název (OSM) | [lon, lat] | lajn | km | typ | web | |", "|---|---|---:|---:|---|---|---|"]
+    for c in extra:
+        out.append(f"| {c.name or '–'} | {_pt(*c.center)} | {len(c.trails)} | {c.length_m / 1000:.1f} "
+                   f"| {KIND_LABEL[c.kind]} | {c.website or ''} | {_osm_link(c)} |")
+    out += ["", "Data © přispěvatelé OpenStreetMap, ODbL."]
     return "\n".join(out) + "\n"
+
+
+def clusters_geojson(clusters: list[Cluster]) -> dict:
+    feats = []
+    for c in clusters:
+        lat, lon = c.center
+        feats.append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [round(lon, 5), round(lat, 5)]},
+            "properties": {"cluster_id": c.id, "name": c.name, "kind": c.kind, "website": c.website,
+                           "trails": len(c.trails), "length_m": round(c.length_m),
+                           "anchors": [f"{a.osm_type}/{a.osm_id}" for a in c.anchors]},
+        })
+    return {"type": "FeatureCollection", "features": feats}
+
+
+def trails_geojson(clusters: list[Cluster]) -> dict:
+    keep = ("name", "mtb:scale", "mtb:scale:dh", "mtb:scale:imba", "mtb:name", "highway", "bicycle", "oneway:bicycle")
+    feats = []
+    for c in clusters:
+        for t in c.trails:
+            feats.append({
+                "type": "Feature",
+                "geometry": {"type": "LineString", "coordinates": [[round(lon, 6), round(lat, 6)] for lat, lon in t.coords]},
+                "properties": {"cluster_id": c.id, "osm": f"way/{t.osm_id}", "length_m": round(t.length_m),
+                               **{k: v for k, v in t.tags.items() if k in keep}},
+            })
+    return {"type": "FeatureCollection", "features": feats}
 
 
 # --- CLI ----------------------------------------------------------------------
@@ -247,8 +392,9 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--parks", type=Path, default=PARKS, help="náš seznam parků (default: %(default)s)")
     ap.add_argument("--cache", type=Path, help="JSON odpověď Overpass: když existuje, použije se místo dotazu; jinak se do něj uloží")
-    ap.add_argument("--geojson", type=Path, help="kam uložit OSM bikeparky jako GeoJSON")
-    ap.add_argument("--report", help="kam uložit Markdown report ('-' = stdout)")
+    ap.add_argument("--report", help="Markdown report ('-' = stdout)")
+    ap.add_argument("--geojson", type=Path, help="shluky jako GeoJSON body")
+    ap.add_argument("--trails", type=Path, help="lajny shluků jako GeoJSON LineString")
     args = ap.parse_args(argv)
 
     if args.cache and args.cache.exists():
@@ -258,15 +404,17 @@ def main(argv: list[str] | None = None) -> int:
         if args.cache:
             args.cache.write_text(json.dumps(data, ensure_ascii=False))
 
-    osm = parse_overpass(data)
-    print(f"OSM: {len(osm)} bikeparků (leisure=bike_park)", file=sys.stderr)
+    trails, anchors = parse_overpass(data)
+    clusters = build_clusters(trails, anchors)
+    print(f"OSM: {len(trails)} lajn, {len(anchors)} kotev, {len(clusters)} shluků", file=sys.stderr)
 
     if args.geojson:
-        args.geojson.write_text(json.dumps(to_geojson(osm), ensure_ascii=False, indent=1) + "\n")
-
+        args.geojson.write_text(json.dumps(clusters_geojson(clusters), ensure_ascii=False, indent=1) + "\n")
+    if args.trails:
+        args.trails.write_text(json.dumps(trails_geojson(clusters), ensure_ascii=False) + "\n")
     if args.report:
         features = json.loads(args.parks.read_text())["features"]
-        report = render_report(*match_parks(features, osm))
+        report = render_report(*match_parks(features, clusters))
         if args.report == "-":
             sys.stdout.write(report)
         else:
