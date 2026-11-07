@@ -478,6 +478,12 @@ def _scale(value: str | None) -> int | None:
     return int(m.group()) if m else None
 
 
+def is_purpose_built(tags: dict) -> bool:
+    """Jednosměrná pěšina / cyklostezka se zákazem chůze je lajna postavená pro kola
+    (Peklák: šlapací traily highway=cycleway, Růžovka s mtb:scale=0 bez bicycle=designated)."""
+    return tags.get("highway") in ("path", "cycleway") and tags.get("foot") == "no" and tags.get("oneway") == "yes"
+
+
 def difficulty(tags: dict) -> str | None:
     """Obtížnost lajny v barvách českých trail center (green / blue / red / black).
 

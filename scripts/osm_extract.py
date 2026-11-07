@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fetch_osm_parks import PARKS, haversine_m  # noqa: E402
+from fetch_osm_parks import PARKS, haversine_m, is_purpose_built  # noqa: E402
 from park_osm import LIFTS, RADIUS_M  # noqa: E402
 
 TRAIL_HIGHWAYS = {"path", "track", "cycleway", "bridleway", "footway"}
@@ -55,7 +55,8 @@ def is_trail(tags: dict) -> bool:
     hw = tags.get("highway")
     return (("mtb:scale" in tags and hw in TRAIL_HIGHWAYS)
             or "mtb:scale:imba" in tags or "mtb:scale:dh" in tags
-            or (hw == "path" and (tags.get("mtb") not in (None, "no") or tags.get("bicycle") == "designated")))
+            or (hw == "path" and (tags.get("mtb") not in (None, "no") or tags.get("bicycle") == "designated"))
+            or is_purpose_built(tags))
 
 
 class Near:

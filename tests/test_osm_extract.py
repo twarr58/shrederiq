@@ -75,6 +75,11 @@ class Helpers(unittest.TestCase):
         self.assertTrue(ox.is_trail({"highway": "path", "bicycle": "designated"}))
         self.assertTrue(ox.is_trail({"mtb:scale:imba": "2"}))
         self.assertTrue(ox.is_trail({"highway": "path", "mtb:scale:dh": "3"}))
+        # Peklák: šlapací trail jako cyklostezka a Růžovka s mtb:scale=0 bez bicycle=designated
+        self.assertTrue(ox.is_trail({"highway": "cycleway", "foot": "no", "oneway": "yes", "name": "Dechovka"}))
+        self.assertTrue(ox.is_trail({"highway": "path", "foot": "no", "oneway": "yes", "mtb:scale": "0"}))
+        self.assertFalse(ox.is_trail({"highway": "cycleway", "oneway": "yes"}))
+        self.assertFalse(ox.is_trail({"highway": "cycleway", "foot": "no"}))
         self.assertTrue(ox.is_trail({"highway": "path", "mtb": "single track"}))
         self.assertFalse(ox.is_trail({"highway": "path", "mtb": "no"}))
         self.assertFalse(ox.is_trail({"highway": "residential", "mtb:scale": "0"}))

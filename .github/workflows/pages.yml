@@ -47,7 +47,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: .osm-cache/mtb.osm.pbf
-          key: mtb-pbf-${{ steps.day.outputs.date }}
+          key: mtb-pbf-v2-${{ steps.day.outputs.date }}
       - name: Park data from OSM
         timeout-minutes: 30
         env:

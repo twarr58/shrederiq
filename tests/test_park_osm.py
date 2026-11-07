@@ -217,6 +217,20 @@ if __name__ == "__main__":
         fc, _, _ = po.build([park("p", 14.605, 49.50, "Bikepark P", lift=True)], osm)
         self.assertEqual(sorted(f["properties"]["name"] for f in fc["features"]), ["Jezerní Trail", "Jezerní Trail"])
 
+    def test_relation_colour_overrides_mtb_scale(self):
+        # Peklák: Korida má mtb:scale 3 (černá), relace ji značí červeně; šlapací Dechovka je cyklostezka
+        korida = way(60, 49.50, 14.60, {"highway": "path", "mtb:scale": "3", "name": "Korida", "bicycle": "designated"})
+        dechovka = way(61, 49.50, 14.605, {"highway": "cycleway", "foot": "no", "oneway": "yes", "name": "Dechovka"})
+        rel = {"type": "relation", "id": 1, "tags": {"route": "mtb", "name": "Korida", "colour": "red"},
+               "members": [{"type": "way", "ref": 60}]}
+        osm = po.parse({"elements": [korida, dechovka, rel]})
+        fc, _, _ = po.build([park("p", 14.602, 49.50, "Bikepark P", lift=True)], osm)
+        by_name = {f["properties"]["name"]: f["properties"] for f in fc["features"]}
+        self.assertEqual(by_name["Korida"]["difficulty"], "red")
+        self.assertIn("Dechovka", by_name)
+        self.assertIsNone(by_name["Dechovka"]["difficulty"])
+        self.assertEqual(po.relation_difficulty({"colour": "purple", "mtb:scale": "1"}), "blue")
+
     def test_named_track_with_mtb_scale_is_access_road(self):
         lift = way(1, 49.50, 14.60, {"aerialway": "chair_lift", "name": "Sedačka"}, n=6)
         track = way(2, 49.501, 14.601, {"highway": "track", "mtb:scale": "1", "name": "Jezerní cesta"}, n=6)

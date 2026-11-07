@@ -85,10 +85,12 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
 
 - **Data parků z OSM** (`scripts/park_osm.py`): jeden dotaz na Overpass kolem každého
   parku (3 km):
-  - **lajny**: cesty s `mtb:scale:imba` nebo `mtb=designated`, pěšiny a cesty s
-    `mtb:scale` u lanovek a členové relací `route=mtb`. Lajny trail center bývají
-    zmapované jen jako relace, název lajny se pak vezme z relace. Dlouhé cyklotrasy
-    se vyřadí.
+  - **lajny**: cesty s `mtb:scale:imba` nebo `mtb=designated`, jednosměrné pěšiny
+    a cyklostezky se zákazem chůze (`foot=no` + `oneway=yes`, šlapací traily jako na
+    Pekláku), pěšiny a cesty s `mtb:scale` u lanovek a členové relací `route=mtb`.
+    Lajny trail center bývají zmapované jen jako relace, název lajny se pak vezme
+    z relace; má-li relace `colour=*`, určuje barvu lajny místo `mtb:scale` (značení
+    parku se od technické škály často liší). Dlouhé cyklotrasy se vyřadí.
   - **základna**: dolní stanice lanovky – nejdřív ta se jménem parku, pak ta s nejvíc
     lajnami, pak nejbližší do 2 km (gondola před sedačkou), pak vlek se jménem parku
     (Kyčerka, Peklák). U parku bez lanovky (`lift: false`), nebo když se žádná nenajde,

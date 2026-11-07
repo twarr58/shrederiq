@@ -23,7 +23,7 @@ else
   mkdir -p "$(dirname "$MTB_PBF")"
   curl -sSfL --retry 3 --max-time 1200 -o "$TMP/cz.osm.pbf" "$URL"
   osmium tags-filter "$TMP/cz.osm.pbf" \
-    w/mtb:scale w/mtb:scale:imba w/mtb:scale:dh w/mtb w/bicycle=designated \
+    w/mtb:scale w/mtb:scale:imba w/mtb:scale:dh w/mtb w/bicycle=designated w/highway=cycleway \
     w/aerialway nwr/amenity=parking r/route=mtb \
     nwr/sport=pump_track nwr/leisure=track,pitch,sports_centre,bike_park \
     nwr/sport=mtb,downhill,bmx n/place=town,village \
