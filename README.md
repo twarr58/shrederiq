@@ -89,8 +89,10 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
     `mtb:scale` u lanovek a členové relací `route=mtb`. Lajny trail center bývají
     zmapované jen jako relace, název lajny se pak vezme z relace. Dlouhé cyklotrasy
     se vyřadí.
-  - **základna**: dolní stanice lanovky, u které je nejvíc lajn. U parku bez lanovky
-    (`lift: false`) je to parkoviště u lajn.
+  - **základna**: dolní stanice lanovky – nejdřív ta se jménem parku, pak ta s nejvíc
+    lajnami, pak nejbližší do 2 km (gondola před sedačkou), pak vlek se jménem parku
+    (Kyčerka, Peklák). U parku bez lanovky (`lift: false`), nebo když se žádná nenajde,
+    je to parkoviště u lajn.
   - **parkoviště**: nejbližší `amenity=parking` do 700 m od základny.
 - **Zdroj dat**: denní výřez OSM Česka od [Geofabriku](https://download.geofabrik.de/europe/czech-republic.html).
   `scripts/osm_extract.sh` ho stáhne, `osmium tags-filter` vybere MTB cesty, lanovky,

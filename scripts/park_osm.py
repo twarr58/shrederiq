@@ -229,7 +229,8 @@ def choose_base(park_pt, trails, osm, has_lift=True, park_name=None, town=None):
          (Kopřivná, Špičák); mezi víc takovými ta s nejvíc lajnami, pak nejbližší,
       2. lanovka s nejvíc lajnami do 400 m, pokud jich je aspoň MIN_LIFT_SCORE bodů,
       3. jinak lanovka do NEAR_LIFT_M od bodu parku: gondola před sedačkou, pak nejbližší,
-      4. jinak parkoviště nejblíž lajnám (když jich je dost), případně bodu parku.
+      4. jinak vlek (kotva, poma) se jménem parku do NEAR_LIFT_M (Kyčerka, Peklák),
+      5. jinak parkoviště nejblíž lajnám (když jich je dost), případně bodu parku.
     Vrací i kandidáty lanovek pro kontrolu v reportu."""
     cands = lift_candidates(park_pt, trails, osm, has_lift)
     cand_info = [(l["tags"].get("name") or f"way/{lid}", score, round(dist))
@@ -249,6 +250,12 @@ def choose_base(park_pt, trails, osm, has_lift=True, park_name=None, town=None):
     if not best:
         near = [(LIFT_PRIORITY.get(l["tags"].get("aerialway"), 2), dist, l) for l, _, dist in cands if dist <= NEAR_LIFT_M]
         best = min(near, key=lambda x: (x[0], x[1]))[2] if near else None
+    if not best and has_lift is not False:
+        # 5. vlek (kotva, poma) se jménem parku do NEAR_LIFT_M – menší bikeparky vozí kola vlekem (Kyčerka, Peklák)
+        drag = [(haversine_m(*park_pt, *l["coords"][0]), l) for l in osm["lifts"].values()
+                if l["tags"].get("aerialway") not in BIKE_LIFTS and keywords & name_tokens(l["tags"].get("name"))]
+        drag = [x for x in drag if x[0] <= NEAR_LIFT_M]
+        best = min(drag, key=lambda x: x[0])[1] if drag else None
     if best:
         return {"base": best["coords"][0], "base_source": "lift", "lift": best["tags"].get("name"), "candidates": cand_info}
 
@@ -361,7 +368,7 @@ def render_summary(rows) -> str:
                    f"| {parking} | {named} | {segs} | {cands_l} |")
     out += ["", "Kandidáti = lanovky pro kola do 3 km od bodu parku, nejvýš tři. Základna: lanovka se jménem parku (ne obce); "
                 "jinak ta s nejvíc lajnami (aspoň 10 bodů); jinak do 2 km od bodu gondola před sedačkou, pak nejbližší; "
-                "jinak parkoviště. Vlek v hranatých závorkách = v okolí není lanovka pro kola, jen tenhle typ.",
+                "jinak vlek se jménem parku; jinak parkoviště. Vlek v hranatých závorkách = v okolí není lanovka pro kola, jen tenhle typ.",
             "", "Data © přispěvatelé OpenStreetMap, ODbL."]
     return "\n".join(out) + "\n"
 

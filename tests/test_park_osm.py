@@ -144,11 +144,20 @@ class ParkOsm(unittest.TestCase):
         self.assertEqual(info2["sm"]["lift"], "Hromovka")
 
     def test_other_aerialways_listed_when_no_bike_lift(self):
-        tbar = way(1, 49.536, 14.598, {"aerialway": "t-bar", "name": "Vlek Monínec"}, n=6)
+        tbar = way(1, 49.536, 14.598, {"aerialway": "t-bar", "name": "Vlek U lesa"}, n=6)
         _, info, rows = po.build([park("mon", 14.6, 49.535, "Bikepark Monínec", lift=True)], po.parse({"elements": [tbar]}))
         self.assertIsNone(info["mon"]["base_source"])
-        self.assertEqual(rows[0][8], [("Vlek Monínec [t-bar]", -1, rows[0][8][0][2])])
-        self.assertIn("Vlek Monínec [t-bar] (", po.render_summary(rows))
+        self.assertEqual(rows[0][8], [("Vlek U lesa [t-bar]", -1, rows[0][8][0][2])])
+        self.assertIn("Vlek U lesa [t-bar] (", po.render_summary(rows))
+
+    def test_drag_lift_named_after_park_is_base(self):
+        # Kyčerka: kola vozí kotva „Kyčerka“, sedačka tam není; vlek s cizím jménem základnou není
+        tbar = way(1, 49.352, 18.303, {"aerialway": "t-bar", "name": "Kyčerka"}, n=6)
+        other = way(2, 49.351, 18.301, {"aerialway": "platter", "name": "Funpark"}, n=6)
+        _, info, _ = po.build([park("ky", 18.30, 49.35, "Bikepark Kyčerka", lift=True, town="Velké Karlovice")],
+                              po.parse({"elements": [tbar, other]}))
+        self.assertEqual((info["ky"]["base_source"], info["ky"]["lift"]), ("lift", "Kyčerka"))
+        self.assertEqual(info["ky"]["base"], [round(tbar["geometry"][0]["lon"], 5), round(tbar["geometry"][0]["lat"], 5)])
 
     def test_parking_fallback_from_park_point(self):
         # lajny daleko od parkovišť, ale u bodu parku parkoviště je
