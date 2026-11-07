@@ -31,9 +31,17 @@
       "properties": {"id": "moninec", "name": "Bikepark Monínec", "kind": "bikepark", "town": "Sedlec-Prčice", "region": "Středočeský", "web": "https://moninec.nhr.cz/cs/bikepark", "lift": true, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [14.205, 48.63] },
       "properties": {"id": "lipno", "name": "Bikepark Lipno", "kind": "bikepark", "town": "Lipno nad Vltavou", "region": "Jihočeský", "web": "https://www.lipno.info/en/adventures/bikepark.html", "lift": true, "trails_count": 2, "verified": false} },
-    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [12.841, 50.356] },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [12.8315, 50.3589] },
       "properties": {"id": "plesivec", "name": "TrailPark Plešivec", "kind": "trail_center", "town": "Abertamy", "region": "Karlovarský", "web": "https://plesivec.eu/en/attractions/other-activities", "lift": true, "trails_count": null, "verified": false} },
-    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [15.9788, 50.5768] },
-      "properties": {"id": "trutnov-trails", "name": "Trutnov Trails", "kind": "trail_center", "town": "Trutnov", "region": "Královéhradecký", "web": "https://trutnovtrails.cz/traily/", "lift": false, "trails_count": 18, "verified": false} }
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [15.9843, 50.5632] },
+      "properties": {"id": "trutnov-trails", "name": "Trutnov Trails", "kind": "trail_center", "town": "Trutnov", "region": "Královéhradecký", "web": "https://trutnovtrails.cz/traily/", "lift": false, "trails_count": 18, "verified": false} },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [16.7597, 49.326] },
+      "properties": {"id": "moravsky-kras", "name": "Singletrail Moravský kras", "kind": "trail_center", "town": "Sloup", "region": "Jihomoravský", "web": "https://singlekras.cz/", "lift": false, "trails_count": null, "verified": false} },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [15.9858, 50.1717] },
+      "properties": {"id": "marokanka", "name": "Marokánka Trail", "kind": "trail_center", "town": "Hradec Králové", "region": "Královéhradecký", "web": "https://www.facebook.com/marokankatrails/", "lift": false, "trails_count": null, "verified": false} },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [14.4821, 48.8731] },
+      "properties": {"id": "rimov", "name": "Minibikepark Římov", "kind": "trail_center", "town": "Římov", "region": "Jihočeský", "web": null, "lift": false, "trails_count": null, "verified": false} },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [17.897, 49.066] },
+      "properties": {"id": "slavex", "name": "Slavex Trails", "kind": "trail_center", "town": "Slavičín", "region": "Zlínský", "web": null, "lift": false, "trails_count": null, "verified": false} }
   ]
 }
