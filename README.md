@@ -147,7 +147,8 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   (těžiště bodů stop do 60 m kolem každého bodu lajny po 10 m), když to pokrytí zvedne
   aspoň o 10 bodů a na 70 % (vlastnost `gps_fit`).
 - **Oficiální seznamy trailů** (`data/official/<park>.json`, `scripts/official_check.py`):
-  opsané z webů provozovatelů (12 parků); workflow `osm` ukáže, co z nich v OSM chybí, co je
+  opsané z webů provozovatelů (12 parků); při nasazení přepíšou obtížnost spárovaných
+  lajn barvou podle značení parku (`difficulty_source: "official"`) a workflow `osm` ukáže, co z nich v OSM chybí, co je
   v OSM navíc a kde se liší obtížnost nebo délka o víc než 30 %.
 - **Trailforks API** (`scripts/trailforks_trails.py`): park s vlastností `trailforks_rid`
   (id regionu na Trailforks) dostane lajny z API, když jsou v Actions secrets

@@ -316,7 +316,7 @@
       el("p", { className: "attr" },
         s.sources.osm ? ["Lajny: © přispěvatelé ",
           el("a", { href: "https://www.openstreetmap.org/copyright", target: "_blank", rel: "noopener" }, "OpenStreetMap"),
-          " (ODbL). Obtížnost podle mtb:scale, může se lišit od značení v parku."] : "",
+          " (ODbL). ", s.official ? "Barvy podle značení parku (oficiální seznam), zbytek podle mtb:scale." : "Obtížnost podle mtb:scale, může se lišit od značení v parku."] : "",
         s.sources.trailforks ? [" Lajny z GPX: © ", el("a", { href: "https://www.trailforks.com/", target: "_blank", rel: "noopener" }, "Trailforks"),
           ` (${plural(s.sources.trailforks, "úsek", "úseky", "úseků")}, jen pro nekomerční použití).`] : "",
         s.sources.gpx ? ` ${plural(s.sources.gpx, "úsek", "úseky", "úseků")} z ručně dodaných GPX.` : "",

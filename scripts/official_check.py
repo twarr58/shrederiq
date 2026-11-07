@@ -9,6 +9,11 @@ Pro každý park se souborem data/official/<park_id>.json:
     kde se liší obtížnost nebo délka o víc než LENGTH_TOL.
 
   python3 scripts/official_check.py web/data/trails.geojson --report out/official.md
+  python3 scripts/official_check.py web/data/trails.geojson --apply   # barvy z oficiálních seznamů do lajn
+
+--apply přepíše obtížnost spárovaných lajn barvou ze seznamu provozovatele (vlastnost
+`difficulty_source: "official"`): značení parku je to, co jezdec vidí na místě, mtb:scale
+v OSM je technická škála a často se liší.
 """
 from __future__ import annotations
 
@@ -115,6 +120,28 @@ def compare(fc: dict, official_dir: Path = OFFICIAL_DIR) -> dict[str, dict]:
     return out
 
 
+def apply(fc: dict, official_dir: Path = OFFICIAL_DIR) -> int:
+    """Obtížnost spárovaných lajn podle oficiálního seznamu; vrací počet změněných úseků."""
+    by_park = osm_trails(fc)
+    want: dict[tuple[str, str], str] = {}  # (park_id, fold(name)) → difficulty
+    for path in sorted(official_dir.glob("*.json")):
+        pid = path.stem
+        data = json.loads(path.read_text())
+        for off, name, _ in match(data.get("trails", []), by_park.get(pid, {}))["matched"]:
+            if off.get("difficulty"):
+                want[(pid, fold(name))] = off["difficulty"]
+    changed = 0
+    for f in fc.get("features", []):
+        p = f["properties"]
+        d = want.get((p.get("park_id"), fold(p.get("name"))))
+        if d and not p.get("access"):
+            if p.get("difficulty") != d:
+                changed += 1
+            p["difficulty"] = d
+            p["difficulty_source"] = "official"
+    return changed
+
+
 def render(result: dict[str, dict]) -> str:
     out = ["# Lajny × oficiální seznamy trailů", ""]
     if not result:
@@ -133,12 +160,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("trails", type=Path)
     ap.add_argument("--official", type=Path, default=OFFICIAL_DIR)
     ap.add_argument("--report", type=Path)
+    ap.add_argument("--apply", action="store_true", help="zapsat obtížnost z oficiálních seznamů do trails.geojson")
     args = ap.parse_args(argv)
-    result = compare(json.loads(args.trails.read_text()), args.official)
+    fc = json.loads(args.trails.read_text())
+    result = compare(fc, args.official)
     text = render(result)
     if args.report:
         args.report.write_text(text)
     print(text, file=sys.stderr)
+    if args.apply:
+        n = apply(fc, args.official)
+        args.trails.write_text(json.dumps(fc, ensure_ascii=False, separators=(",", ":")))
+        print(f"official: obtížnost podle značení parku u {n} úseků", file=sys.stderr)
     return 0
 
 

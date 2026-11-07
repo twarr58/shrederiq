@@ -50,6 +50,20 @@ class Official(unittest.TestCase):
         self.assertEqual([m[1] for m in res["matched"]], ["Stará medvědice", "Koutíkův sen"])
         self.assertEqual(res["extra"], ["Koutíkův sen, Stará medvědice"])
 
+    def test_apply_sets_official_difficulty(self):
+        fc = {"features": [
+            {"properties": {"park_id": "k", "name": "Koutíkův sen", "difficulty": "red", "length_m": 3000}},
+            {"properties": {"park_id": "k", "name": "Koutíkův sen", "difficulty": "red", "length_m": 10}},
+            {"properties": {"park_id": "k", "name": "Zevl Line", "difficulty": "blue", "length_m": 500}},
+            {"properties": {"park_id": "k", "name": "Koutíkův sen", "difficulty": "red", "length_m": 90, "access": True}}]}
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "k.json").write_text(json.dumps({"trails": [{"name": "Koutíkův sen", "difficulty": "black"}, {"name": "Zevl Line"}]}))
+            self.assertEqual(oc.apply(fc, Path(d)), 2)
+        ps = [f["properties"] for f in fc["features"]]
+        self.assertEqual([p["difficulty"] for p in ps], ["black", "black", "blue", "red"])
+        self.assertEqual(ps[0]["difficulty_source"], "official")
+        self.assertNotIn("difficulty_source", ps[2])  # bez barvy v seznamu zůstává OSM
+
     def test_fold_and_same(self):
         self.assertEqual(oc.fold("Modrý Flowčko "), "modry flowcko")
         self.assertTrue(oc.same("Modrá trať", "Modrý trail"))
