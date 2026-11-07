@@ -80,7 +80,10 @@ def match(official: list[dict], osm: dict[str, dict]) -> dict:
     """Vrací {"matched": [(off, name, osm_row)], "missing": [off], "extra": [name]}."""
     used, matched, missing = set(), [], []
     for off in official:
-        hit = next((n for n in osm if n not in used and same(off["name"], n)), None)
+        # přesná shoda slov má přednost před podmnožinou („Koutíkův sen, Stará medvědice“ je
+        # společný kousek dvou lajn, ne Stará Medvědice), při víc kandidátech ten nejdelší
+        cands = [n for n in osm if n not in used and same(off["name"], n)]
+        hit = max(cands, key=lambda n: (tokens(n) == tokens(off["name"]), osm[n]["length_m"]), default=None)
         if hit:
             used.add(hit)
             matched.append((off, hit, osm[hit]))

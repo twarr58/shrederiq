@@ -42,6 +42,14 @@ class Official(unittest.TestCase):
         self.assertEqual(list(rows), ["Stará Medvědice"])
         self.assertEqual(rows["Stará Medvědice"]["length_m"], 4000)
 
+    def test_exact_name_beats_shared_segment(self):
+        osm = {"Koutíkův sen, Stará medvědice": {"length_m": 5, "difficulty": "red"},
+               "Stará medvědice": {"length_m": 4000, "difficulty": "red"},
+               "Koutíkův sen": {"length_m": 3000, "difficulty": "black"}}
+        res = oc.match([{"name": "Stará Medvědice"}, {"name": "Koutíkův sen"}], osm)
+        self.assertEqual([m[1] for m in res["matched"]], ["Stará medvědice", "Koutíkův sen"])
+        self.assertEqual(res["extra"], ["Koutíkův sen, Stará medvědice"])
+
     def test_fold_and_same(self):
         self.assertEqual(oc.fold("Modrý Flowčko "), "modry flowcko")
         self.assertTrue(oc.same("Modrá trať", "Modrý trail"))
