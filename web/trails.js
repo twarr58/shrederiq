@@ -67,19 +67,25 @@
     const lengthM = trails.reduce((a, f) => a + (f.properties.length_m || 0), 0);
     const accessLengthM = access.reduce((a, f) => a + (f.properties.length_m || 0), 0);
 
-    const named = new Map(); // "name|difficulty" → { name, difficulty, lengthM, segments }
+    // Pojmenovaná lajna = jeden řádek bez ohledu na obtížnost úseků (OSM mívá krátký úsek
+    // s jiným mtb:scale, např. nájezd); obtížnost řádku je ta s největší délkou.
+    // Úseky bez názvu se slučují podle obtížnosti.
+    const named = new Map(); // name nebo "|difficulty" → { name, difficulty, lengthM, segments, byDiff }
     for (const f of trails) {
       const p = f.properties;
-      const key = `${p.name || ""}|${p.difficulty || ""}`;
-      const row = named.get(key) || { name: p.name || null, difficulty: p.difficulty || null, lengthM: 0, segments: 0, slopeMax: null, eleMin: null, eleMax: null };
+      const key = p.name ? p.name : `|${p.difficulty || ""}`;
+      const row = named.get(key) || { name: p.name || null, difficulty: p.difficulty || null, lengthM: 0, segments: 0, slopeMax: null, eleMin: null, eleMax: null, byDiff: {} };
       row.lengthM += p.length_m || 0;
       row.segments += 1;
+      const d = p.difficulty || "";
+      row.byDiff[d] = (row.byDiff[d] || 0) + (p.length_m || 0);
+      row.difficulty = Object.entries(row.byDiff).sort((a, b) => b[1] - a[1])[0][0] || null;
       if (p.slope_max != null) row.slopeMax = Math.max(row.slopeMax ?? 0, p.slope_max);
       if (p.ele_min != null) row.eleMin = Math.min(row.eleMin ?? Infinity, p.ele_min);
       if (p.ele_max != null) row.eleMax = Math.max(row.eleMax ?? -Infinity, p.ele_max);
       named.set(key, row);
     }
-    const rows = [...named.values()].sort((a, b) =>
+    const rows = [...named.values()].map(({ byDiff, ...r }) => r).sort((a, b) =>
       ORDER.indexOf(a.difficulty) - ORDER.indexOf(b.difficulty)
       || (a.name === null) - (b.name === null)
       || (a.name || "").localeCompare(b.name || "", "cs"));

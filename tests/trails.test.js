@@ -105,3 +105,19 @@ test("statistiky: nejdelší lajna a rozsah výšek", () => {
   assert.deepEqual([e.eleMin, e.eleMax, e.longest.name], [700, 900, "A"]);
   assert.equal(T.summarize(FC, "lipno").longest, null);
 });
+
+test("stejná lajna s úseky různé obtížnosti je jeden řádek", () => {
+  const fc = { features: [
+    line("klinovec", "Azur", "green", 9500), line("klinovec", "Azur", "blue", 20),
+    line("klinovec", "Rubín", "blue", 310), line("klinovec", "Rubín", "red", 7000),
+    line("klinovec", null, "blue", 100), line("klinovec", null, "red", 100),
+  ] };
+  const rows = T.summarize(fc, "klinovec").rows;
+  assert.deepEqual(rows.map((r) => [r.name, r.difficulty, r.lengthM, r.segments]), [
+    ["Azur", "green", 9520, 2],
+    [null, "blue", 100, 1],
+    ["Rubín", "red", 7310, 2],
+    [null, "red", 100, 1],
+  ]);
+  assert.equal(T.summarize(fc, "klinovec").namedCount, 2);
+});
