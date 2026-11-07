@@ -61,9 +61,11 @@ class ParkOsm(unittest.TestCase):
         k = info["kouty"]
         self.assertEqual((k["base_source"], k["lift"], k["base"]), ("lift", "LD Medvědí hora", [17.12, 50.09]))
         self.assertEqual((k["parking"], k["parking_name"]), ([17.1195, 50.0895], "P Kouty"))
-        pid, name, src, lift, moved, parking, named, segs = rows[0]
+        pid, name, src, lift, moved, parking, named, segs, cands = rows[0]
         self.assertEqual((src, parking, named, segs), ("lift", "P Kouty", 2, 5))
         self.assertGreater(moved, 1000)
+        self.assertEqual(cands[0][0], "LD Medvědí hora")
+        self.assertGreater(cands[0][1], 0)
 
     def test_trail_center_base_is_parking(self):
         data = {"elements": [e for e in DATA["elements"] if e["id"] not in (1,)]
@@ -74,6 +76,20 @@ class ParkOsm(unittest.TestCase):
         _, info2, _ = po.build([park("tc", 17.101, 50.081, lift=False)], self.osm)
         self.assertNotEqual(info2["tc"]["base_source"], "lift")
         self.assertEqual((info["tc"]["base_source"], info["tc"]["base"]), ("parking", [17.1035, 50.0815]))
+
+    def test_lift_without_trails_still_wins_when_close(self):
+        # lanovka bez lajn v okolí, 500 m od bodu parku → základna je ona, ne parkoviště kdesi
+        data = {"elements": [
+            way(1, 50.100, 17.100, {"aerialway": "chair_lift", "name": "LD Kopřivná"}, n=8),
+            way(2, 50.120, 17.130, {"highway": "path", "mtb:scale": "2"}, n=4),   # jediný úsek, 3 km od lanovky
+            {"type": "node", "id": 40, "lat": 50.121, "lon": 17.131, "tags": {"amenity": "parking"}},
+        ]}
+        _, info, rows = po.build([park("kop", 17.103, 50.104, lift=True)], po.parse(data))
+        self.assertEqual((info["kop"]["base_source"], info["kop"]["lift"]), ("lift", "LD Kopřivná"))
+        self.assertEqual(rows[0][8][0][1], 0)  # kandidát se skóre 0
+        # stejná lanovka 4 km od bodu už se nebere → základnou je parkoviště u bodu parku
+        _, info2, _ = po.build([park("kop", 17.140, 50.125, lift=True)], po.parse(data))
+        self.assertEqual(info2["kop"]["base_source"], "parking")
 
     def test_way_goes_to_nearest_park(self):
         parks = self.parks + [park("jiny", 17.101, 50.081, lift=False)]  # trailpark bez lanovky
@@ -106,6 +122,7 @@ class ParkOsm(unittest.TestCase):
         _, _, rows = po.build(self.parks, self.osm)
         text = po.render_summary(rows)
         self.assertIn("| `kouty` | Bikepark Kouty | lanovka | LD Medvědí hora |", text)
+        self.assertIn("LD Medvědí hora (", text)
 
 
 if __name__ == "__main__":

@@ -39,6 +39,7 @@ from fetch_osm_parks import (  # noqa: E402
 RADIUS_M = 3000
 LIFT_TRAIL_M = 1500
 PARKING_M = 700
+NEAR_LIFT_M = 1500   # lanovka bez lajn v okolí se vezme jako základna jen takhle blízko bodu parku
 MAX_ROUTE_KM = 25
 LIFTS = "chair_lift|gondola|cable_car|mixed_lift|drag_lift|t-bar|j-bar|platter"
 BIKE_LIFTS = {"chair_lift", "gondola", "cable_car", "mixed_lift"}  # kola vozí hlavně tyhle
@@ -191,29 +192,48 @@ def select_trails(park_pt, osm, rel_names, radius=RADIUS_M, has_lift=None):
     return out
 
 
-def choose_base(park_pt, trails, osm, has_lift=True):
-    """Dolní stanice lanovky s nejvíc lajnami do 400 m, jinak parkoviště nejblíž lajnám.
-    Park, který podle parks.geojson lanovku nemá (lift: false), se k lanovce nepřichytí."""
+def lift_candidates(park_pt, trails, osm, has_lift=True):
+    """Lanovky pro kola do RADIUS_M od bodu parku: (lanovka, počet bodů lajn do 400 m od ní,
+    vzdálenost dolní stanice od bodu parku). Park s lift: false lanovky nedostane."""
+    if has_lift is False:
+        return []
     pts = [c for w, _ in trails.values() for c in w["coords"][::3]]
-    best, best_score = None, 0.0
-    for lid, l in (osm["lifts"].items() if has_lift is not False else ()):
-        if l["tags"].get("aerialway") not in BIKE_LIFTS:
-            continue
-        if _dist_to_line(park_pt, l["coords"]) > RADIUS_M:
+    out = []
+    for l in osm["lifts"].values():
+        if l["tags"].get("aerialway") not in BIKE_LIFTS or _dist_to_line(park_pt, l["coords"]) > RADIUS_M:
             continue
         score = sum(1 for p in pts if _dist_to_line(p, l["coords"]) <= 400)
-        if score > best_score:
-            best, best_score = l, score
+        out.append((l, score, haversine_m(*park_pt, *l["coords"][0])))
+    # nejvíc lajn, při shodě nejblíž bodu parku
+    return sorted(out, key=lambda c: (-c[1], c[2]))
+
+
+def choose_base(park_pt, trails, osm, has_lift=True):
+    """Základna parku:
+      1. dolní stanice lanovky s nejvíc lajnami do 400 m (OSM kreslí lanovky zdola nahoru),
+      2. bez lajn u lanovek: nejbližší lanovka do NEAR_LIFT_M od bodu parku,
+      3. jinak parkoviště nejblíž lajnám (když jich je dost), resp. bodu parku.
+    Vrací i kandidáty lanovek pro kontrolu v reportu."""
+    cands = lift_candidates(park_pt, trails, osm, has_lift)
+    cand_info = [(l["tags"].get("name") or f"way/{lid}", score, round(dist))
+                 for (l, score, dist), lid in ((c, next(k for k, v in osm["lifts"].items() if v is c[0])) for c in cands[:3])]
+    best = next((l for l, score, _ in cands if score > 0), None)
+    if not best:
+        near = [(l, dist) for l, _, dist in cands if dist <= NEAR_LIFT_M]
+        best = min(near, key=lambda x: x[1])[0] if near else None
     if best:
-        return {"base": best["coords"][0], "base_source": "lift", "lift": best["tags"].get("name")}
-    if pts:
-        cx = sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts)
-        near = [(haversine_m(*cx, *pk["pos"]), pk) for pk in osm["parkings"].values()]
-        near = [x for x in near if x[0] <= 1500]
-        if near:
-            pk = min(near, key=lambda x: x[0])[1]
-            return {"base": pk["pos"], "base_source": "parking", "lift": None}
-    return {"base": None, "base_source": None, "lift": None}
+        return {"base": best["coords"][0], "base_source": "lift", "lift": best["tags"].get("name"), "candidates": cand_info}
+
+    pts = [c for w, _ in trails.values() for c in w["coords"][::3]]
+    ref = park_pt
+    if len(trails) >= 3:  # pár úseků nestačí – těžiště by ukázalo kamsi do lesa
+        ref = sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts)
+    near = [(haversine_m(*ref, *pk["pos"]), pk) for pk in osm["parkings"].values()]
+    near = [x for x in near if x[0] <= 1500]
+    if near:
+        pk = min(near, key=lambda x: x[0])[1]
+        return {"base": pk["pos"], "base_source": "parking", "lift": None, "candidates": cand_info}
+    return {"base": None, "base_source": None, "lift": None, "candidates": cand_info}
 
 
 def choose_parking(base, osm):
@@ -272,20 +292,23 @@ def build(parks: list[dict], osm: dict):
         moved = round(haversine_m(*pts[pid], *base["base"])) if base["base"] else None
         rows.append((pid, f["properties"]["name"], base["base_source"], base["lift"], moved,
                      parking["name"] if parking and parking["name"] else ("ano" if parking else "–"),
-                     len(names), len(trails)))
+                     len(names), len(trails), base["candidates"]))
     trails_fc = {"type": "FeatureCollection", "attribution": "© přispěvatelé OpenStreetMap, ODbL", "features": features}
     return trails_fc, info, rows
 
 
 def render_summary(rows) -> str:
     out = ["# Parky × OSM (lajny, základna, parkoviště)", "",
-           "| id | park | základna | lanovka | posun bodu | parkoviště | pojm. lajn | úseků OSM |",
-           "|---|---|---|---|---:|---|---:|---:|"]
-    for pid, name, src, lift, moved, parking, named, segs in rows:
+           "| id | park | základna | lanovka | posun bodu | parkoviště | pojm. lajn | úseků OSM | kandidáti lanovek (lajn u ní / m od bodu) |",
+           "|---|---|---|---|---:|---|---:|---:|---|"]
+    for pid, name, src, lift, moved, parking, named, segs, cands in rows:
         src_l = {"lift": "lanovka", "parking": "parkoviště", None: "–"}[src]
+        cands_l = "; ".join(f"{n} ({sc} / {d:,} m)" for n, sc, d in cands) or "–"
         out.append(f"| `{pid}` | {name} | {src_l} | {lift or '–'} | {f'{moved:,} m' if moved is not None else '–'} "
-                   f"| {parking} | {named} | {segs} |")
-    out += ["", "Data © přispěvatelé OpenStreetMap, ODbL."]
+                   f"| {parking} | {named} | {segs} | {cands_l} |")
+    out += ["", "Kandidáti = lanovky pro kola do 3 km od bodu parku, nejvýš tři. Základna je ta s nejvíc lajnami; "
+                "bez lajn u lanovek nejbližší do 1,5 km; jinak parkoviště.",
+            "", "Data © přispěvatelé OpenStreetMap, ODbL."]
     return "\n".join(out) + "\n"
 
 

@@ -13,6 +13,11 @@ on:
   schedule:
     - cron: "17 4 * * 1" # každé pondělí ráno
   workflow_dispatch:
+    inputs:
+      overpass:
+        description: "Spustit i celorepublikový report přes Overpass (pomalý)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -42,6 +47,7 @@ jobs:
           cat out/parks-summary.md
       # celorepublikový report přes Overpass – jen pro hledání nových parků, smí selhat
       - name: Fetch OSM bike parks
+        if: github.event_name != 'workflow_dispatch' || inputs.overpass
         continue-on-error: true
         timeout-minutes: 20
         run: |
