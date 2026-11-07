@@ -29,6 +29,9 @@ OVERPASS = {"elements": [
     way(20, 49.000, 15.000, DH),
     # dvojí výskyt stejné cesty v odpovědi
     way(1, 50.100, 17.100, DH),
+    # obce
+    {"type": "node", "id": 300, "lat": 50.106, "lon": 17.098, "tags": {"place": "village", "name": "Kouty nad Desnou"}},
+    {"type": "node", "id": 301, "lat": 50.561, "lon": 15.913, "tags": {"place": "town", "name": "Trutnov"}},
     # kotvy
     {"type": "way", "id": 100, "center": {"lat": 50.101, "lon": 17.103},
      "tags": {"leisure": "bike_park", "name": "Bikepark Kouty", "website": "https://example.cz"}},
@@ -63,7 +66,7 @@ class Response(unittest.TestCase):
 
 class Clustering(unittest.TestCase):
     def setUp(self):
-        self.trails, self.anchors = osm.parse_overpass(OVERPASS)
+        self.trails, self.anchors = osm.parse_overpass(OVERPASS)[:2]
         self.clusters = {c.trails[0].osm_id // 10 * 10 if c.trails[0].osm_id >= 10 else 0: c
                          for c in osm.build_clusters(self.trails, self.anchors)}
 
@@ -85,17 +88,28 @@ class Clustering(unittest.TestCase):
         self.assertEqual(trutnov.name, "Trutnov Trails – modrá")
         self.assertAlmostEqual(kouty.length_m, 4 * 445, delta=10)
 
+    def test_lift_trails_make_bikepark_and_unnamed_cluster_gets_place(self):
+        lift_path = {"highway": "path", "mtb:scale": "2"}
+        data = {"elements": [way(1, 50.3, 16.4, lift_path, n=6), way(2, 50.3, 16.402, lift_path, n=6), way(3, 50.3, 16.404, IMBA, n=6),
+                             {"type": "node", "id": 9, "lat": 50.31, "lon": 16.41, "tags": {"place": "town", "name": "Česká Třebová"}}]}
+        trails, anchors, places = osm.parse_overpass(data)
+        self.assertEqual([t.style for t in trails], ["lift", "lift", "imba"])
+        (c,) = osm.build_clusters(trails, anchors, places)
+        self.assertEqual(c.kind, "bikepark")
+        self.assertIsNone(c.name)
+        self.assertEqual(c.label, "u obce Česká Třebová")
+
     def test_link_distance(self):
         far = {"elements": [way(1, 50.0, 15.0, DH), way(2, 50.0, 15.02, DH)]}  # ~1,4 km od sebe
-        trails, _ = osm.parse_overpass(far)
+        trails = osm.parse_overpass(far)[0]
         self.assertEqual(len(osm.cluster_trails(trails)), 2)
         self.assertEqual(len(osm.cluster_trails(trails, link_m=2000)), 1)
 
 
 class MatchAndReport(unittest.TestCase):
     def setUp(self):
-        trails, anchors = osm.parse_overpass(OVERPASS)
-        self.clusters = osm.build_clusters(trails, anchors)
+        trails, anchors, places = osm.parse_overpass(OVERPASS)
+        self.clusters = osm.build_clusters(trails, anchors, places)
         self.features = [
             feature("kouty", "Bikepark Kouty", 17.098, 50.106, "Kouty nad Desnou"),  # ~400 m od středu shluku
             feature("lipno", "Bikepark Lipno", 14.205, 48.630, "Lipno nad Vltavou"),  # v OSM není
