@@ -156,7 +156,7 @@ def check_response(data: dict) -> dict:
     return data
 
 
-def fetch_overpass(query: str, retries: int = 3, check=None) -> dict:
+def fetch_overpass(query: str, retries: int = 3, check=None, timeout: int = 960) -> dict:
     check = check or check_response
     data = urllib.parse.urlencode({"data": query}).encode()
     last: Exception | None = None
@@ -164,7 +164,7 @@ def fetch_overpass(query: str, retries: int = 3, check=None) -> dict:
         for url in ENDPOINTS:
             req = urllib.request.Request(url, data=data, headers={"User-Agent": USER_AGENT})
             try:
-                with urllib.request.urlopen(req, timeout=960) as res:
+                with urllib.request.urlopen(req, timeout=timeout) as res:
                     return check(json.load(res))
             except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OverpassError) as e:
                 last = e

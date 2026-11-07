@@ -89,6 +89,19 @@ class ParkOsm(unittest.TestCase):
         self.assertIn('relation(around:3000,50.00000,15.00000)["route"="mtb"]', q)
         self.assertIn('["amenity"="parking"]', q)
 
+    def test_fetch_batched_merges_and_dedups(self):
+        parks = [park(f"p{i}", 15.0 + i, 50.0) for i in range(5)]
+        queries = []
+
+        def fake(q):
+            queries.append(q)
+            return {"elements": [{"type": "way", "id": 1}, {"type": "way", "id": 100 + len(queries)}]}
+
+        data = po.fetch_batched(parks, fetch=fake, batch=2)
+        self.assertEqual(len(queries), 3)            # 2 + 2 + 1 park
+        self.assertIn("around:3000,50.00000,19.00000", queries[2])
+        self.assertEqual(sorted(e["id"] for e in data["elements"]), [1, 101, 102, 103])
+
     def test_summary(self):
         _, _, rows = po.build(self.parks, self.osm)
         text = po.render_summary(rows)

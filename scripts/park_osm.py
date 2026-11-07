@@ -44,6 +44,8 @@ LIFTS = "chair_lift|gondola|cable_car|mixed_lift|drag_lift|t-bar|j-bar|platter"
 BIKE_LIFTS = {"chair_lift", "gondola", "cable_car", "mixed_lift"}  # kola vozí hlavně tyhle
 TRAIL_NAME_RE = re.compile(r"singl|single|trail|flow|bike ?park|enduro|downhill|freeride|\bdh\b", re.I)
 LONG_NETWORKS = {"lcn", "rcn", "ncn", "icn"}
+BATCH = 4            # parků na jeden dotaz – velký dotaz na všechny parky Overpass nezvládal
+QUERY_TIMEOUT = 300
 
 
 def build_query(parks: list[dict], radius: int = RADIUS_M) -> str:
@@ -59,7 +61,7 @@ def build_query(parks: list[dict], radius: int = RADIUS_M) -> str:
     rels = "\n".join(f'  relation({a})["route"="mtb"];' for a in ar)
     lifts = "\n".join(f'  way({a})["aerialway"~"^({LIFTS})$"];' for a in ar)
     parking = "\n".join(f'  nwr({a})["amenity"="parking"];' for a in ar)
-    return f"""[out:json][timeout:600][maxsize:536870912];
+    return f"""[out:json][timeout:{QUERY_TIMEOUT}][maxsize:536870912];
 (
 {ways}
 )->.w;
@@ -79,6 +81,25 @@ out tags geom;
 );
 out tags center;
 """
+
+
+def fetch_batched(parks: list[dict], fetch=None, batch: int = BATCH) -> dict:
+    """Dotazy po dávkách parků; prvky se sloučí (stejný prvek z víc dávek jen jednou)."""
+    fetch = fetch or (lambda q: fetch_overpass(q, check=check, timeout=QUERY_TIMEOUT + 60))
+    seen, elements = set(), []
+    for i in range(0, len(parks), batch):
+        chunk = parks[i:i + batch]
+        data = fetch(build_query(chunk))
+        new = 0
+        for el in data.get("elements", []):
+            key = (el["type"], el["id"])
+            if key not in seen:
+                seen.add(key)
+                elements.append(el)
+                new += 1
+        print(f"overpass dávka {i // batch + 1}/{-(-len(parks) // batch)} "
+              f"({', '.join(f['properties']['id'] for f in chunk)}): {new} nových prvků", file=sys.stderr)
+    return {"elements": elements}
 
 
 def check(data: dict) -> dict:
@@ -281,7 +302,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.cache and args.cache.exists():
         data = check(json.loads(args.cache.read_text()))
     else:
-        data = fetch_overpass(build_query(parks), check=check)
+        data = fetch_batched(parks)
         if args.cache:
             args.cache.write_text(json.dumps(data, ensure_ascii=False))
 
