@@ -92,7 +92,9 @@ class Clustering(unittest.TestCase):
         lift_path = {"highway": "path", "mtb:scale": "2"}
         data = {"elements": [way(1, 50.3, 16.4, lift_path, n=6), way(2, 50.3, 16.402, lift_path, n=6), way(3, 50.3, 16.404, IMBA, n=6),
                              {"type": "node", "id": 9, "lat": 50.31, "lon": 16.41, "tags": {"place": "town", "name": "Česká Třebová"}}]}
+        data["elements"].append({"type": "node", "id": 10, "tags": {"place": "village", "name": "Bez souřadnic"}})
         trails, anchors, places = osm.parse_overpass(data)
+        self.assertEqual([p.name for p in places], ["Česká Třebová"])
         self.assertEqual([t.style for t in trails], ["lift", "lift", "imba"])
         (c,) = osm.build_clusters(trails, anchors, places)
         self.assertEqual(c.kind, "bikepark")

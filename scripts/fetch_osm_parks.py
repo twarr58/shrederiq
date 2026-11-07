@@ -77,7 +77,7 @@ way["aerialway"~"^(chair_lift|gondola|cable_car|mixed_lift)$"](area.cz)->.lifts;
 way(around.lifts:{LIFT_RADIUS_M})["highway"~"^(path|track)$"]["mtb:scale"];
 out tags geom;
 node["place"~"^(town|village)$"](area.cz);
-out tags;
+out;
 (
   .lifts;
   nwr["leisure"="bike_park"](area.cz);
@@ -260,7 +260,7 @@ def parse_overpass(data: dict) -> tuple[list[Trail], list[Anchor], list[Place]]:
     for el in data.get("elements", []):
         tags = el.get("tags", {})
         if "place" in tags and el["type"] == "node":
-            if tags.get("name"):
+            if tags.get("name") and "lat" in el:
                 places.append(Place(tags["name"], el["lat"], el["lon"]))
             continue
         if el["type"] == "way" and "geometry" in el:
