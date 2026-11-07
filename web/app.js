@@ -237,8 +237,8 @@
           el("a", { href: "https://www.openstreetmap.org/copyright", target: "_blank", rel: "noopener" }, "OpenStreetMap"),
           " (ODbL). Obtížnost podle mtb:scale, může se lišit od značení v parku."] : "",
         s.sources.trailforks ? [" Lajny z GPX: © ", el("a", { href: "https://www.trailforks.com/", target: "_blank", rel: "noopener" }, "Trailforks"),
-          ` (${s.sources.trailforks} úseků, jen pro nekomerční použití).`] : "",
-        s.sources.gpx ? ` ${s.sources.gpx} úseků z ručně dodaných GPX.` : "",
+          ` (${plural(s.sources.trailforks, "úsek", "úseky", "úseků")}, jen pro nekomerční použití).`] : "",
+        s.sources.gpx ? ` ${plural(s.sources.gpx, "úsek", "úseky", "úseků")} z ručně dodaných GPX.` : "",
         s.hasSlopes ? " Výšky: Mapy.com, sklon je orientační (výškový model, okno ~75 m)." : ""));
   }
 
