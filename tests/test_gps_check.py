@@ -68,6 +68,33 @@ class GpsCheck(unittest.TestCase):
         self.assertTrue(all(abs(c[0] - 14.6) < 0.00015 for c in drawn["geometry"]["coordinates"]))  # do ~11 m od stop
         self.assertIn("| 1 |", gc.render(summary))
 
+    def test_join_segments(self):
+        # Rodeo ve třech kouscích (prostřední obráceně), Zmije jeden kus, bez názvu se nespojuje
+        a = line("p", "Rodeo", n=3)
+        b = line("p", "Rodeo", lat0=50.002, n=3)
+        b["geometry"]["coordinates"].reverse()
+        c = line("p", "Rodeo", lat0=50.001, n=3)
+        for f, oid in zip((a, b, c), ("way/1", "way/2", "way/3")):
+            f["properties"]["osm"] = oid
+        z = line("p", "Zmije", lon=14.7)
+        u1, u2 = line("p", None), line("p", None, lat0=50.004)
+        out = gc.join_segments([a, b, c, z, u1, u2])
+        self.assertEqual(len(out), 4)
+        rodeo = [f for f in out if f["properties"]["name"] == "Rodeo"]
+        self.assertEqual(len(rodeo), 1)
+        self.assertEqual(rodeo[0]["properties"]["segments"], 3)
+        self.assertEqual(set(rodeo[0]["properties"]["osm"].split("+")), {"way/1", "way/2", "way/3"})
+        lats = [c[1] for c in rodeo[0]["geometry"]["coordinates"]]
+        self.assertEqual(lats, sorted(lats))
+        self.assertEqual(len(lats), 7)
+
+    def test_fit_skips_short_stubs(self):
+        drawn = line("p", "Pahýl", lon=14.6004, n=2)  # 55 m... n=2 → 0.0005° ≈ 56 m; zkrátit
+        drawn["geometry"]["coordinates"][1][1] = 50.0003  # ≈ 33 m
+        trace = "".join(f'<trkpt lat="{50.0 + i * 0.00004:.5f}" lon="14.60000"/>' for i in range(101))
+        gc.check({"features": [drawn]}, {}, lambda b, p: GPX.format(pts=trace), fit=True)
+        self.assertNotIn("gps_fit", drawn["properties"])
+
     def test_fit_leaves_line_without_traces(self):
         drawn = line("p", "Ghost", lon=14.62)
         trace = "".join(f'<trkpt lat="{50.0 + i * 0.0001:.5f}" lon="14.60003"/>' for i in range(41))

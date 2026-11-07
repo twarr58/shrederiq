@@ -135,9 +135,10 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
 - **GPS stopy** (`scripts/gps_check.py`, #22): workflow `osm` stáhne veřejné GPS stopy
   z OSM kolem každého parku a každé lajně dá pokrytí (podíl bodů po 25 m s bodem stopy
   do 15 m). Tabulka v souhrnu běhu ukáže úseky pod 30 % – bez provozu, zavřené, nové,
-  nebo špatně zakreslené. Při nasazení se úseky pod 30 % narovnají podle stop
-  (těžiště bodů stop do 40 m kolem každého bodu lajny), když to pokrytí zvedne aspoň na
-  70 % (vlastnost `gps_fit`).
+  nebo špatně zakreslené. Při nasazení se navazující kousky stejné lajny nejdřív spojí
+  (vlastnost `segments`) a lajny pod 85 % delší než 50 m se narovnají podle stop
+  (těžiště bodů stop do 60 m kolem každého bodu lajny po 10 m), když to pokrytí zvedne
+  aspoň o 10 bodů a na 70 % (vlastnost `gps_fit`).
 - **Oficiální seznamy trailů** (`data/official/<park>.json`, `scripts/official_check.py`):
   ručně opsané z webů provozovatelů; workflow `osm` ukáže, co z nich v OSM chybí, co je
   v OSM navíc a kde se liší obtížnost nebo délka o víc než 30 %.
