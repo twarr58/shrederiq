@@ -81,12 +81,19 @@ Formát `web/data/parks.geojson` – `FeatureCollection` bodů (`[lon, lat]`), v
 
 Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
 
-### Fáze 2 – trailové lajny (až budou data)
+### Fáze 2 – trailové lajny (rozpracováno)
 
-- `web/data/trails.geojson` – `LineString` s `park_id`, `name`, `difficulty`, `length_m`, `source`,
-- skript(y) v `scripts/` pro import GPX z Trailforks a Overpass → normalizovaný GeoJSON,
-- výpočet sklonu přes Mapy.com Elevation API (segmenty se sklonem v %),
-- ve frontendu: po kliknutí na park načíst jeho lajny a obarvit je podle sklonu / obtížnosti.
+- Lajny jsou z OpenStreetMap: `scripts/fetch_osm_parks.py --park-trails web/data/trails.geojson`
+  vezme shluky MTB lajn spárované s parky a ke každé lajně uloží `park_id`, název,
+  obtížnost (`green` / `blue` / `red` / `black` podle `mtb:scale:imba`, `mtb:scale`)
+  a délku.
+- Soubor se do repa necommituje. Generuje ho workflow `pages` při deployi a jednou
+  týdně. Poslední úspěšnou odpověď Overpass drží v cache pro případ, že Overpass
+  zrovna nejde.
+- Ve webu: po otevření parku se lajny vykreslí barvou podle obtížnosti a v panelu
+  je jejich seznam s délkami.
+- Dál: sklon přes Mapy.com Elevation API, lajny z Trailforks pro parky, které v OSM
+  chybí.
 
 ### Fáze 3 – metadata
 
@@ -99,6 +106,11 @@ python3 -m http.server -d web 8000
 ```
 
 Pak otevři <http://localhost:8000>. Bez klíče Mapy.com se použije podklad OpenStreetMap.
+Lajny se lokálně zobrazí až po vygenerování dat (stahování z Overpass trvá pár minut):
+
+```bash
+python3 scripts/fetch_osm_parks.py --cache /tmp/overpass.json --park-trails web/data/trails.geojson
+```
 
 ```bash
 node --test tests/*.test.js

@@ -22,7 +22,9 @@ Výstup:
   --report   Markdown report: shody (odchylka polohy), naše parky bez shluku,
              shluky, které v seznamu chybí (kandidáti),
   --geojson  shluky jako GeoJSON body,
-  --trails   lajny jako GeoJSON LineString s cluster_id (podklad pro fázi 2).
+  --trails   lajny všech shluků jako GeoJSON LineString s cluster_id,
+  --park-trails  lajny spárovaných parků s park_id a obtížností pro web
+             (web/data/trails.geojson, generuje workflow pages).
 
 Skript jen navrhuje, parks.geojson neupravuje. Bez závislostí (jen stdlib).
 
@@ -74,7 +76,7 @@ area["ISO3166-1"="CZ"][admin_level=2]->.cz;
 out tags geom;
 // bikeparky u lanovek mívají lajny jen s mtb:scale – bereme MTB cesty do 1,5 km od lanovky
 way["aerialway"~"^(chair_lift|gondola|cable_car|mixed_lift)$"](area.cz)->.lifts;
-way(around.lifts:{LIFT_RADIUS_M})["highway"~"^(path|track)$"]["mtb:scale"];
+way(around.lifts:{LIFT_RADIUS_M})["highway"="path"]["mtb:scale"];
 out tags geom;
 node["place"~"^(town|village)$"](area.cz);
 out;
@@ -436,6 +438,65 @@ def trails_geojson(clusters: list[Cluster]) -> dict:
     return {"type": "FeatureCollection", "features": feats}
 
 
+# --- lajny parků pro web (fáze 2) --------------------------------------------
+
+DIFFICULTIES = ("green", "blue", "red", "black")
+
+
+def _scale(value: str | None) -> int | None:
+    m = re.match(r"\d", value or "")
+    return int(m.group()) if m else None
+
+
+def difficulty(tags: dict) -> str | None:
+    """Obtížnost lajny v barvách českých trail center (green / blue / red / black).
+
+    mtb:scale:imba 0–4 (IMBA) má přednost, pak mtb:scale 0–6 (STS), pak mtb:scale:dh."""
+    imba = _scale(tags.get("mtb:scale:imba"))
+    if imba is not None:
+        return DIFFICULTIES[max(0, min(imba, 4) - 1)] if imba else "green"
+    sts = _scale(tags.get("mtb:scale"))
+    if sts is not None:
+        return DIFFICULTIES[min(sts, 3)]
+    dh = _scale(tags.get("mtb:scale:dh"))
+    if dh is not None:
+        return DIFFICULTIES[min(dh, 3)]
+    return None
+
+
+def simplify(coords: list[tuple[float, float]], min_m: float = 8) -> list[tuple[float, float]]:
+    """Vynechá body bližší než min_m od předchozího ponechaného (menší soubor pro web)."""
+    out = [coords[0]]
+    for p in coords[1:-1]:
+        if haversine_m(*out[-1], *p) >= min_m:
+            out.append(p)
+    out.append(coords[-1])
+    return out
+
+
+def park_trails_geojson(matches: list[Match]) -> dict:
+    """Lajny shluků spárovaných s našimi parky – web/data/trails.geojson."""
+    feats = []
+    for m in matches:
+        if not m.cluster:
+            continue
+        park_id = m.park["properties"]["id"]
+        for t in sorted(m.cluster.trails, key=lambda t: t.osm_id):
+            feats.append({
+                "type": "Feature",
+                "geometry": {"type": "LineString",
+                             "coordinates": [[round(lon, 5), round(lat, 5)] for lat, lon in simplify(t.coords)]},
+                "properties": {
+                    "park_id": park_id,
+                    "name": t.tags.get("name") or t.tags.get("mtb:name"),
+                    "difficulty": difficulty(t.tags),
+                    "length_m": round(t.length_m),
+                    "osm": f"way/{t.osm_id}",
+                },
+            })
+    return {"type": "FeatureCollection", "attribution": "© přispěvatelé OpenStreetMap, ODbL", "features": feats}
+
+
 # --- CLI ----------------------------------------------------------------------
 
 def main(argv: list[str] | None = None) -> int:
@@ -444,7 +505,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cache", type=Path, help="JSON odpověď Overpass: když existuje, použije se místo dotazu; jinak se do něj uloží")
     ap.add_argument("--report", help="Markdown report ('-' = stdout)")
     ap.add_argument("--geojson", type=Path, help="shluky jako GeoJSON body")
-    ap.add_argument("--trails", type=Path, help="lajny shluků jako GeoJSON LineString")
+    ap.add_argument("--trails", type=Path, help="lajny všech shluků jako GeoJSON LineString")
+    ap.add_argument("--park-trails", type=Path, help="lajny shluků spárovaných s našimi parky (web/data/trails.geojson)")
     args = ap.parse_args(argv)
 
     if args.cache and args.cache.exists():
@@ -462,9 +524,15 @@ def main(argv: list[str] | None = None) -> int:
         args.geojson.write_text(json.dumps(clusters_geojson(clusters), ensure_ascii=False, indent=1) + "\n")
     if args.trails:
         args.trails.write_text(json.dumps(trails_geojson(clusters), ensure_ascii=False) + "\n")
-    if args.report:
+    if args.report or args.park_trails:
         features = json.loads(args.parks.read_text())["features"]
-        report = render_report(*match_parks(features, clusters))
+        matches, extra = match_parks(features, clusters)
+    if args.park_trails:
+        pt = park_trails_geojson(matches)
+        args.park_trails.write_text(json.dumps(pt, ensure_ascii=False, separators=(",", ":")) + "\n")
+        print(f"trails.geojson: {len(pt['features'])} lajn, {len({f['properties']['park_id'] for f in pt['features']})} parků", file=sys.stderr)
+    if args.report:
+        report = render_report(matches, extra)
         if args.report == "-":
             sys.stdout.write(report)
         else:

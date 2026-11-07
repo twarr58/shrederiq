@@ -145,5 +145,31 @@ class MatchAndReport(unittest.TestCase):
         self.assertIn("mtb:scale:dh", f["properties"])
 
 
+class ParkTrails(unittest.TestCase):
+    def test_difficulty(self):
+        self.assertEqual(osm.difficulty({"mtb:scale:imba": "0"}), "green")
+        self.assertEqual(osm.difficulty({"mtb:scale:imba": "2"}), "blue")
+        self.assertEqual(osm.difficulty({"mtb:scale:imba": "4", "mtb:scale": "0"}), "black")
+        self.assertEqual(osm.difficulty({"mtb:scale": "2+"}), "red")
+        self.assertEqual(osm.difficulty({"mtb:scale": "5"}), "black")
+        self.assertEqual(osm.difficulty({"mtb:scale:dh": "1"}), "blue")
+        self.assertIsNone(osm.difficulty({"highway": "path"}))
+
+    def test_simplify(self):
+        pts = [(50.0, 15.0), (50.00001, 15.0), (50.00002, 15.0), (50.001, 15.0), (50.00101, 15.0)]
+        self.assertEqual(osm.simplify(pts), [(50.0, 15.0), (50.001, 15.0), (50.00101, 15.0)])
+
+    def test_park_trails_only_matched(self):
+        trails, anchors, places = osm.parse_overpass(OVERPASS)
+        clusters = osm.build_clusters(trails, anchors, places)
+        features = [feature("kouty", "Bikepark Kouty", 17.098, 50.106, "Kouty nad Desnou")]
+        gj = osm.park_trails_geojson(osm.match_parks(features, clusters)[0])
+        self.assertEqual({f["properties"]["park_id"] for f in gj["features"]}, {"kouty"})
+        self.assertEqual(len(gj["features"]), 4)
+        f = gj["features"][0]["properties"]
+        self.assertEqual((f["osm"], f["difficulty"], f["length_m"]), ("way/1", "red", 445))
+        self.assertIn("ODbL", gj["attribution"])
+
+
 if __name__ == "__main__":
     unittest.main()

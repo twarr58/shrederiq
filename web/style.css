@@ -79,6 +79,12 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 .rain { color: #3a86ff; }
 .attr { font-size: 11px; color: var(--muted); margin: 6px 0 0; }
 
+.trails { border-top: 1px solid var(--line); padding-top: 8px; margin-bottom: 10px; }
+.trails h3 { margin: 0 0 6px; font-size: 15px; }
+.trail-list { list-style: none; margin: 0; padding: 0; max-height: 180px; overflow-y: auto; font-size: 13px; }
+.trail-list li { padding: 2px 0; }
+.swatch { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+
 .mapy-logo { display: block; }
 .mapy-logo img { display: block; height: 20px; }
 

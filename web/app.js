@@ -5,6 +5,7 @@
   const P = window.ShrederiqParks;
   const W = window.ShrederiqWeather;
   const N = window.ShrederiqNav;
+  const T = window.ShrederiqTrails;
   const CZ_CENTER = [49.8, 15.5];
   const PARK_ZOOM = 14;
 
@@ -114,14 +115,63 @@
     const close = el("button", { className: "close", type: "button", title: "Zavřít", ariaLabel: "Zavřít" }, "×");
     close.addEventListener("click", () => selectPark(null));
 
-    const notes = [el("p", { className: "note" }, "Trasy jednotlivých lajn zatím nejsou k dispozici – doplníme z Trailforks / OSM.")];
+    const notes = [];
     if (p.verified === false) notes.push(el("p", { className: "note" }, "Údaje o parku (včetně polohy) jsou orientační a čekají na ověření."));
 
     const weather = el("section", { className: "weather" }, el("p", { className: "muted" }, "Načítám počasí…"));
-    $("card").replaceChildren(close, el("h2", {}, p.name), dl, renderNav(p.id), weather, ...notes);
+    const trails = el("section", { className: "trails" }, el("p", { className: "muted" }, "Načítám lajny…"));
+    $("card").replaceChildren(close, el("h2", {}, p.name), dl, renderNav(p.id), trails, weather, ...notes);
     $("card").hidden = false;
     $("card").scrollTop = 0;
+    loadTrails(p.id, trails);
     loadWeather(p.id, weather);
+  }
+
+  // --- lajny (OSM, web/data/trails.geojson generuje workflow pages) ------------
+  let trailsData = null; // Promise<FeatureCollection | null>
+  let trailLayer = null;
+
+  function fetchTrails() {
+    trailsData = trailsData || fetch("data/trails.geojson")
+      .then((res) => (res.ok ? res.json() : null))
+      .catch((err) => { console.warn("trails", err); return null; });
+    return trailsData;
+  }
+
+  function clearTrails() {
+    if (trailLayer) map.removeLayer(trailLayer);
+    trailLayer = null;
+  }
+
+  async function loadTrails(id, box) {
+    const s = T.summarize(await fetchTrails(), id);
+    if (activeId !== id || !box.isConnected) return;
+    clearTrails();
+    if (!s.count) {
+      box.replaceChildren(el("p", { className: "note" },
+        "Lajny tohoto parku zatím v datech nejsou (OpenStreetMap je pro něj nemá). Doplníme z Trailforks."));
+      return;
+    }
+    trailLayer = L.geoJSON({ type: "FeatureCollection", features: s.features }, {
+      style: (f) => ({ color: T.difficultyInfo(f.properties.difficulty).color, weight: 4, opacity: 0.9 }),
+      onEachFeature: (f, layer) => {
+        const p = f.properties;
+        layer.bindTooltip(`${p.name || "bez názvu"} · ${T.difficultyInfo(p.difficulty).label} · ${N.formatDistance(p.length_m)}`, { sticky: true });
+      },
+    }).addTo(map);
+    map.fitBounds(trailLayer.getBounds(), { padding: [30, 30], maxZoom: 15 });
+
+    const list = el("ul", { className: "trail-list" }, ...s.rows.map((r) =>
+      el("li", {},
+        el("i", { className: "swatch", style: `background:${T.difficultyInfo(r.difficulty).color}`, title: T.difficultyInfo(r.difficulty).label }),
+        r.name ? r.name : el("span", { className: "muted" }, r.segments > 1 ? `${r.segments}× bez názvu` : "bez názvu"),
+        el("small", { className: "muted" }, ` ${N.formatDistance(r.lengthM)}`))));
+    box.replaceChildren(
+      el("h3", {}, `Lajny `, el("small", { className: "muted" }, `${s.count} úseků · ${N.formatDistance(s.lengthM)}`)),
+      list,
+      el("p", { className: "attr" }, "Lajny: © přispěvatelé ",
+        el("a", { href: "https://www.openstreetmap.org/copyright", target: "_blank", rel: "noopener" }, "OpenStreetMap"),
+        " (ODbL). Obtížnost podle mtb:scale, může se lišit od značení v parku."));
   }
 
   // --- navigace ---------------------------------------------------------------
@@ -281,6 +331,7 @@
     if (activeId && markers.has(activeId)) markers.get(activeId).setStyle({ weight: 2, radius: 7 });
     activeId = f ? id : null;
 
+    clearTrails();
     if (f) {
       markers.get(id).setStyle({ weight: 4, radius: 10 }).bringToFront();
       const [lon, lat] = f.geometry.coordinates;
