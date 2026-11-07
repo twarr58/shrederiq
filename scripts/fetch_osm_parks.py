@@ -76,7 +76,7 @@ area["ISO3166-1"="CZ"][admin_level=2]->.cz;
 out tags geom;
 // bikeparky u lanovek mívají lajny jen s mtb:scale – bereme MTB cesty do 1,5 km od lanovky
 way["aerialway"~"^(chair_lift|gondola|cable_car|mixed_lift)$"](area.cz)->.lifts;
-way(around.lifts:{LIFT_RADIUS_M})["highway"="path"]["mtb:scale"];
+way(around.lifts:{LIFT_RADIUS_M})["highway"~"^(path|track)$"]["mtb:scale"];
 out tags geom;
 node["place"~"^(town|village)$"](area.cz);
 out;
