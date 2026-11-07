@@ -3,3 +3,4 @@ __pycache__/
 out/
 web/data/trails.geojson
 .osm-cache/
+web/data/parks_osm.json

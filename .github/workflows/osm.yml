@@ -38,6 +38,13 @@ jobs:
             --geojson out/osm-clusters.geojson --trails out/osm-trails.geojson
           cat out/osm-report.md >> "$GITHUB_STEP_SUMMARY"
           cat out/osm-report.md
+      # lajny, základna a parkoviště kolem našich parků (to, co jde na web)
+      - name: Park data from OSM
+        run: |
+          python3 scripts/park_osm.py --cache out/parks-overpass.json \
+            --trails out/trails.geojson --info out/parks_osm.json --summary out/parks-summary.md
+          cat out/parks-summary.md >> "$GITHUB_STEP_SUMMARY"
+          cat out/parks-summary.md
       - uses: actions/upload-artifact@v5
         with:
           name: osm-report

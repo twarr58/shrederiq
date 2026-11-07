@@ -112,6 +112,8 @@
     const dl = el("dl");
     for (const [k, v] of P.describePark(p)) dl.append(el("dt", {}, k), el("dd", {}, v));
     if (p.web) dl.append(el("dt", {}, "Web"), el("dd", {}, el("a", { href: p.web, target: "_blank", rel: "noopener" }, new URL(p.web).hostname)));
+    if (p.osm_base_source === "lift") dl.append(el("dt", {}, "Základna"), el("dd", {}, p.osm_lift ? `dolní stanice – ${p.osm_lift}` : "dolní stanice lanovky"));
+    if (p.parking) dl.append(el("dt", {}, "Parkoviště"), el("dd", {}, p.parking_name || "ano", el("small", { className: "muted" }, " (P v mapě, navigace vede sem)")));
 
     const close = el("button", { className: "close", type: "button", title: "Zavřít", ariaLabel: "Zavřít" }, "×");
     close.addEventListener("click", () => selectPark(null));
@@ -386,14 +388,23 @@
       el("p", { className: "attr" }, "Předpověď: ", el("a", { href: "https://open-meteo.com/", target: "_blank", rel: "noopener" }, "Open-Meteo"), " (CC BY 4.0)"));
   }
 
+  let parkingMarker = null;
+  const parkingIcon = L.divIcon({ className: "parking-icon", html: "P", iconSize: [20, 20] });
+
   function selectPark(id, { fly = true } = {}) {
     const f = parks.find((x) => x.properties.id === id);
     if (activeId && markers.has(activeId)) markers.get(activeId).setStyle({ weight: 2, radius: 7 });
     activeId = f ? id : null;
 
     clearTrails();
+    if (parkingMarker) { map.removeLayer(parkingMarker); parkingMarker = null; }
     if (f) {
       markers.get(id).setStyle({ weight: 4, radius: 10 }).bringToFront();
+      const pk = f.properties.parking;
+      if (pk) {
+        parkingMarker = L.marker([pk[1], pk[0]], { icon: parkingIcon, keyboard: false })
+          .bindTooltip(f.properties.parking_name || "Parkoviště", { direction: "top" }).addTo(map);
+      }
       const [lon, lat] = f.geometry.coordinates;
       if (fly) map.setView([lat, lon], PARK_ZOOM); // bez flyTo: nenačítá dlaždice mezilehlých zoomů
       renderCard(f.properties);
@@ -413,7 +424,9 @@
     const fc = await res.json();
     const errors = P.validateParks(fc);
     if (errors.length) console.warn("parks.geojson:", errors);
-    parks = fc.features;
+    // základna a parkoviště z OSM (generuje build, lokálně nemusí existovat)
+    const osmInfo = await fetch("data/parks_osm.json").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    parks = P.applyOsm(fc.features, osmInfo);
 
     for (const f of parks) {
       const p = f.properties;

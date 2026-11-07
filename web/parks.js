@@ -85,7 +85,29 @@
     ];
   }
 
-  const api = { KINDS, CZ_BOUNDS, fold, validateParks, filterParks, describePark };
+  // Doplní data z OSM (web/data/parks_osm.json, generuje build): bod neověřeného parku
+  // se posune na základnu (dolní stanice lanovky / parkoviště), parkoviště se doplní,
+  // pokud ho park nemá zadané ručně. Vrací nové objekty, vstup nemění.
+  function applyOsm(features, info) {
+    if (!info) return features;
+    return features.map((f) => {
+      const o = info[f.properties.id];
+      if (!o) return f;
+      const p = { ...f.properties, osm_lift: o.lift || null, osm_base_source: o.base_source || null };
+      let coordinates = f.geometry.coordinates;
+      if (o.base && p.verified !== true) {
+        p.point_orig = coordinates;
+        coordinates = o.base;
+      }
+      if (o.parking && !p.parking) {
+        p.parking = o.parking;
+        p.parking_name = o.parking_name || null;
+      }
+      return { ...f, geometry: { ...f.geometry, coordinates }, properties: p };
+    });
+  }
+
+  const api = { KINDS, CZ_BOUNDS, fold, validateParks, filterParks, describePark, applyOsm };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.ShrederiqParks = api;
 })(typeof window !== "undefined" ? window : globalThis);
