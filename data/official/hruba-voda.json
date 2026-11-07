@@ -1,0 +1,12 @@
+{
+  "source": "https://resorthrubavoda.cz/bikepark/",
+  "checked": "2026-11-07",
+  "trails": [
+    {"name": "Modrý flow trail", "difficulty": "blue", "length_m": 2300},
+    {"name": "Červená jump lajna", "difficulty": "red", "length_m": 1320},
+    {"name": "#3", "difficulty": "red", "length_m": 400},
+    {"name": "#4", "difficulty": "red", "length_m": 80},
+    {"name": "#5", "difficulty": "black", "length_m": 640},
+    {"name": "Jump lajna", "difficulty": "black", "length_m": 100}
+  ]
+}

@@ -137,6 +137,9 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   nebo špatně zakreslené. Při nasazení se úseky pod 30 % narovnají podle stop
   (těžiště bodů stop do 40 m kolem každého bodu lajny), když to pokrytí zvedne aspoň na
   70 % (vlastnost `gps_fit`).
+- **Oficiální seznamy trailů** (`data/official/<park>.json`, `scripts/official_check.py`):
+  ručně opsané z webů provozovatelů; workflow `osm` ukáže, co z nich v OSM chybí, co je
+  v OSM navíc a kde se liší obtížnost nebo délka o víc než 30 %.
 - **Trailforks API** (`scripts/trailforks_trails.py`): park s vlastností `trailforks_rid`
   (id regionu na Trailforks) dostane lajny z API, když jsou v Actions secrets
   `TRAILFORKS_APP_ID` a `TRAILFORKS_APP_SECRET`. Bez nich se krok přeskočí. Obtížnost

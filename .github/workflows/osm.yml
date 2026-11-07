@@ -71,6 +71,11 @@ jobs:
         with:
           path: .osm-cache/gps.json
           key: gps-traces-${{ steps.week.outputs.week }}
+      # porovnání s oficiálními seznamy trailů (data/official/*.json), #22
+      - name: Trails vs official trail lists
+        run: |
+          python3 scripts/official_check.py out/trails.geojson --report out/official.md
+          cat out/official.md >> "$GITHUB_STEP_SUMMARY"
       - name: Trails vs OSM GPS traces
         continue-on-error: true
         timeout-minutes: 15

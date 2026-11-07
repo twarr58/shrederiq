@@ -1,0 +1,8 @@
+{
+  "source": "https://www.lipno.info/zazitky/bikepark.html",
+  "checked": "2026-11-07",
+  "trails": [
+    {"name": "Modrá trať", "difficulty": "blue", "length_m": 1800},
+    {"name": "Červená trať", "difficulty": "red", "length_m": 1200}
+  ]
+}
