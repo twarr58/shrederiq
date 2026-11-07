@@ -196,7 +196,10 @@ def select_trails(park_pt, osm, rel_names, radius=RADIUS_M, has_lift=None):
                   or (hw == "path" and tags.get("mtb") not in (None, "no"))
                   or (hw == "path" and tags.get("bicycle") == "designated"
                       and ("mtb:scale" in tags or TRAIL_NAME_RE.search(name))))
-        near_lift = "mtb:scale" in tags and any(
+        # pěšina s mtb:scale u lanovky – ale ne zákaz vjezdu (bicycle=no) a ne skialpová /
+        # běžkařská stopa s mtb:scale=0 (Špičák: piste:type=skitour)
+        rideable = tags.get("bicycle") != "no" and not (tags.get("mtb:scale") == "0" and "piste:type" in tags)
+        near_lift = "mtb:scale" in tags and rideable and any(
             _dist_to_line(c, l) <= LIFT_TRAIL_M for l in lifts for c in coords[::4] + [coords[-1]])
         if in_rel or strong or near_lift:
             out[wid] = (w, rel_names.get(wid))
