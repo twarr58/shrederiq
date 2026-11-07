@@ -88,7 +88,27 @@ Pak otevři <http://localhost:8000>. Bez klíče Mapy.com se použije podklad Op
 
 ```bash
 node --test tests/parks.test.js
+python3 -m unittest discover -s tests -p 'test_*.py'
 ```
+
+## Kontrola seznamu parků proti OSM
+
+`scripts/fetch_osm_parks.py` stáhne z Overpass API bikeparky v ČR (`leisure=bike_park`)
+a spočítá MTB cesty (`mtb:scale`, `mtb:scale:dh`) v jejich okolí. Pak je porovná
+s `web/data/parks.geojson`. Report ukáže:
+
+- odchylky poloh našich parků,
+- naše parky, které v OSM chybí,
+- bikeparky z OSM, které nejsou v našem seznamu.
+
+Skript jen navrhuje, `parks.geojson` neupravuje.
+
+```bash
+python3 scripts/fetch_osm_parks.py --report osm-report.md --geojson osm-bike-parks.geojson
+```
+
+Workflow `osm` ho pouští u PR, které mění data nebo skript, a každé pondělí.
+Report najdeš v souhrnu běhu (Summary) a jako artifact `osm-report`.
 
 ## Nasazení
 

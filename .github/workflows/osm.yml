@@ -1,0 +1,41 @@
+name: osm
+
+# Porovnání web/data/parks.geojson s bikeparky v OpenStreetMap (Overpass API).
+# Report se zobrazí v souhrnu běhu (Summary) a je ke stažení jako artifact.
+# Skript nic necommituje – opravy parks.geojson se dělají ručně podle reportu.
+
+on:
+  pull_request:
+    paths: [scripts/**, tests/test_*.py, web/data/parks.geojson, .github/workflows/osm.yml]
+  push:
+    branches: [main]
+    paths: [scripts/**, tests/test_*.py, .github/workflows/osm.yml]
+  schedule:
+    - cron: "17 4 * * 1" # každé pondělí ráno
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+
+  report:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Fetch OSM bike parks
+        run: |
+          mkdir -p out
+          python3 scripts/fetch_osm_parks.py \
+            --cache out/overpass.json --geojson out/osm-bike-parks.geojson --report out/osm-report.md
+          cat out/osm-report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: osm-report
+          path: out/
