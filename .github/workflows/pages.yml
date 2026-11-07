@@ -113,6 +113,8 @@ jobs:
           path: |
             .osm-cache/parks.json
             .osm-cache/elevation.json
+            .osm-cache/trailforks.json
+            .osm-cache/snap.json
           key: osm-parks-${{ github.run_id }}
 
       # Mapový podklad:
