@@ -323,6 +323,28 @@ def build(parks: list[dict], osm: dict):
     return trails_fc, info, rows
 
 
+def dump_park(pid: str, parks: list[dict], osm: dict, trails_fc: dict, radius_m: float = 2000) -> None:
+    """Diagnostika: každá cesta do radius_m od bodu parku, její tagy a kam ji build zařadil."""
+    f = next((f for f in parks if f["properties"]["id"] == pid), None)
+    if not f:
+        print(f"dump: park {pid} není v parks.geojson", file=sys.stderr)
+        return
+    pt = (f["geometry"]["coordinates"][1], f["geometry"]["coordinates"][0])
+    owner = {int(x["properties"]["osm"].split("/")[1]): x["properties"]["park_id"] for x in trails_fc["features"]}
+    keep = ("highway", "name", "mtb:name", "mtb:scale", "mtb:scale:imba", "mtb:scale:dh", "mtb", "bicycle", "piste:type", "access")
+    print(f"dump {pid}: cesty do {radius_m:.0f} m od bodu {pt}", file=sys.stderr)
+    for wid, w in sorted(osm["ways"].items(), key=lambda kv: _dist_to_line(pt, kv[1]["coords"])):
+        d = _dist_to_line(pt, w["coords"])
+        if d > radius_m:
+            break
+        tags = " ".join(f"{k}={v}" for k, v in w["tags"].items() if k in keep)
+        print(f"  way/{wid} {d:5.0f} m {len(w['coords']):3d} b  → {owner.get(wid, '–'):24} {tags}", file=sys.stderr)
+    for lid, l in osm["lifts"].items():
+        d = _dist_to_line(pt, l["coords"])
+        if d <= radius_m:
+            print(f"  lift way/{lid} {d:5.0f} m {l['tags'].get('aerialway')} {l['tags'].get('name', '')}", file=sys.stderr)
+
+
 def render_summary(rows) -> str:
     out = ["# Parky × OSM (lajny, základna, parkoviště)", "",
            "| id | park | základna | lanovka | posun bodu | parkoviště | pojm. lajn | úseků OSM | kandidáti lanovek (lajn u ní / m od bodu) |",
@@ -346,6 +368,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--trails", type=Path)
     ap.add_argument("--info", type=Path)
     ap.add_argument("--summary", help="Markdown souhrn ('-' = stdout)")
+    ap.add_argument("--dump-park", help="diagnostika: vypsat cesty do 2 km od bodu parku s tagy a výsledkem výběru")
     args = ap.parse_args(argv)
 
     parks = json.loads(args.parks.read_text())["features"]
@@ -360,6 +383,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"OSM kolem parků: {len(osm['ways'])} úseků, {len(osm['rels'])} relací route=mtb, "
           f"{len(osm['lifts'])} lanovek a vleků, {len(osm['parkings'])} parkovišť", file=sys.stderr)
     trails_fc, info, rows = build(parks, osm)
+    if args.dump_park:
+        dump_park(args.dump_park, parks, osm, trails_fc)
     with_trails = sum(1 for r in rows if r[7])
     print(f"trails.geojson: {len(trails_fc['features'])} úseků, lajny má {with_trails} z {len(rows)} parků; "
           f"základna u {sum(1 for r in rows if r[2])} parků", file=sys.stderr)
