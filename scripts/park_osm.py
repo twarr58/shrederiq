@@ -45,7 +45,7 @@ LIFT_PRIORITY = {"gondola": 0, "cable_car": 0, "mixed_lift": 0, "chair_lift": 1}
 MAX_ROUTE_KM = 25
 LIFTS = "chair_lift|gondola|cable_car|mixed_lift|drag_lift|t-bar|j-bar|platter"
 BIKE_LIFTS = {"chair_lift", "gondola", "cable_car", "mixed_lift"}  # kola vozí hlavně tyhle
-TRAIL_NAME_RE = re.compile(r"singl|single|trail|flow|bike ?park|enduro|downhill|freeride|\bdh\b", re.I)
+TRAIL_NAME_RE = re.compile(r"singl|single|trail|flow|bike ?park|enduro|downhill|freeride|gravity|pump ?track|\bline\b|\bdh\b", re.I)
 LONG_NETWORKS = {"lcn", "rcn", "ncn", "icn"}
 BATCH = 4            # parků na jeden dotaz – velký dotaz na všechny parky Overpass nezvládal
 QUERY_TIMEOUT = 300
@@ -59,7 +59,7 @@ def build_query(parks: list[dict], radius: int = RADIUS_M) -> str:
         f'  way({a})["highway"~"^(path|track|cycleway|bridleway|footway)$"]["mtb:scale"];\n'
         f'  way({a})["mtb:scale:imba"];\n'
         f'  way({a})["mtb:scale:dh"];\n'
-        f'  way({a})["highway"="path"]["mtb"="designated"];\n'
+        f'  way({a})["highway"="path"]["mtb"];\n'
         f'  way({a})["highway"="path"]["bicycle"="designated"];'
         for a in ar)
     rels = "\n".join(f'  relation({a})["route"="mtb"];' for a in ar)
@@ -186,8 +186,13 @@ def select_trails(park_pt, osm, rel_names, radius=RADIUS_M, has_lift=None):
         if _dist_to_line(park_pt, coords[::3] + [coords[-1]]) > radius:
             continue
         in_rel = wid in rel_names
-        strong = ("mtb:scale:imba" in tags or "mtb:scale:dh" in tags or tags.get("mtb") == "designated"
-                  or (tags.get("bicycle") == "designated" and tags.get("highway") == "path" and "mtb:scale" in tags))
+        hw, name = tags.get("highway"), tags.get("name") or tags.get("mtb:name") or ""
+        strong = ("mtb:scale:imba" in tags or "mtb:scale:dh" in tags
+                  # pěšina s jakýmkoli mtb=* (designated, single track, yes…) je MTB lajna;
+                  # bicycle=designated pěšina jen s mtb:scale nebo s „lajnovým“ názvem (Gravity Line, Fun Trail)
+                  or (hw == "path" and tags.get("mtb") not in (None, "no"))
+                  or (hw == "path" and tags.get("bicycle") == "designated"
+                      and ("mtb:scale" in tags or TRAIL_NAME_RE.search(name))))
         near_lift = "mtb:scale" in tags and any(
             _dist_to_line(c, l) <= LIFT_TRAIL_M for l in lifts for c in coords[::4] + [coords[-1]])
         if in_rel or strong or near_lift:

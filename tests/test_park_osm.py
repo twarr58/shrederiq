@@ -74,6 +74,15 @@ class ParkOsm(unittest.TestCase):
         self.assertEqual([f["properties"]["name"] for f in fc["features"]], ["Expres DH"])
         self.assertEqual(fc["features"][0]["properties"]["difficulty"], "black")
 
+    def test_bikepark_lines_without_mtb_scale(self):
+        # Express Bikepark Karlov: path + bicycle=designated + mtb=single track, bez mtb:scale, daleko od lanovky
+        ways = [way(1, 50.0, 17.30, {"highway": "path", "bicycle": "designated", "mtb": "single track", "name": "Gravity Line"}, n=6),
+                way(2, 50.0, 17.302, {"highway": "path", "bicycle": "designated", "name": "Fun Trail"}, n=6),
+                way(3, 50.0, 17.304, {"highway": "path", "bicycle": "designated", "name": "Lesní pěšina"}, n=6),  # obyčejná cyklopěšina
+                way(4, 50.0, 17.306, {"highway": "path", "mtb": "no", "mtb:scale": "1"}, n=6)]
+        fc, _, _ = po.build([park("k", 17.302, 50.002, "Express Bikepark Karlov", lift=True)], po.parse({"elements": ways}))
+        self.assertEqual(sorted(f["properties"]["name"] for f in fc["features"]), ["Fun Trail", "Gravity Line"])
+
     def test_trail_center_base_is_parking(self):
         data = {"elements": [e for e in DATA["elements"] if e["id"] not in (1,)]
                 + [{"type": "node", "id": 202, "lat": 50.0815, "lon": 17.1035, "tags": {"amenity": "parking"}}]}
