@@ -70,7 +70,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: .osm-cache/gps.json
-          key: gps-traces-${{ steps.week.outputs.week }}
+          key: gps-traces-v2-${{ steps.week.outputs.week }}
       # porovnání s oficiálními seznamy trailů (data/official/*.json), #22
       - name: Trails vs official trail lists
         run: |

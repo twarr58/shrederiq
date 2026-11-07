@@ -143,9 +143,14 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   z OSM kolem každého parku a každé lajně dá pokrytí (podíl bodů po 25 m s bodem stopy
   do 15 m). Tabulka v souhrnu běhu ukáže úseky pod 30 % – bez provozu, zavřené, nové,
   nebo špatně zakreslené. Při nasazení se navazující kousky stejné lajny nejdřív spojí
-  (vlastnost `segments`) a lajny pod 85 % delší než 50 m se narovnají podle stop
-  (těžiště bodů stop do 60 m kolem každého bodu lajny po 10 m), když to pokrytí zvedne
-  aspoň o 10 bodů a na 70 % (vlastnost `gps_fit`).
+  (vlastnost `segments`) a lajny pod 85 % delší než 50 m se narovnají podle stop: každý
+  bod lajny po 10 m se posune na nejbližší výrazný vrchol hustoty bodů stop napříč lajnou
+  (okno ±15 m podél, ±60 m napříč, posun nejvýš 30 m), takže sousední lajna 20–40 m vedle
+  má vlastní vrchol a čáru k sobě nepřitáhne; přednost mají stopy, které jedou podél aspoň
+  poloviny lajny, a body se skokem o víc než 20 m proti sousedům zůstanou podle OSM.
+  Výsledek se vezme, když pokrytí stoupne aspoň o 10 bodů na 70 %, délka zůstane
+  v 0,8–1,3× OSM a medián posunu je do 40 m (vlastnosti `gps_fit`, `gps_fit_shift_m`;
+  souhrn běhu ukáže medián posunu a počty odmítnutých lajn podle důvodu).
 - **Oficiální seznamy trailů** (`data/official/<park>.json`, `scripts/official_check.py`):
   opsané z webů provozovatelů (12 parků); při nasazení přepíšou obtížnost spárovaných
   lajn barvou podle značení parku (`difficulty_source: "official"`) a workflow `osm` ukáže, co z nich v OSM chybí, co je
