@@ -92,6 +92,11 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   - **základna**: dolní stanice lanovky, u které je nejvíc lajn. U parku bez lanovky
     (`lift: false`) je to parkoviště u lajn.
   - **parkoviště**: nejbližší `amenity=parking` do 700 m od základny.
+- **Zdroj dat**: denní výřez OSM Česka od [Geofabriku](https://download.geofabrik.de/europe/czech-republic.html).
+  `scripts/osm_extract.sh` ho stáhne, `osmium tags-filter` vybere MTB cesty, lanovky,
+  parkoviště a relace `route=mtb` a `scripts/osm_extract.py` (pyosmium) z toho vytáhne
+  okolí parků. Overpass je jen záloha, protože bývá přetížený a části dotazů občas tiše
+  vynechá.
 - Výstup je `web/data/trails.geojson` a `web/data/parks_osm.json`. Soubory nejsou v repu,
   generuje je workflow `pages` při deployi a jednou týdně (s cache pro výpadky Overpass).
   Web posune bod neověřeného parku (`verified` není `true`) na základnu, ukáže

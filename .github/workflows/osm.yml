@@ -22,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq python3-pyosmium >/dev/null
       - run: python3 -m unittest discover -s tests -p 'test_*.py' -v
 
   report:
@@ -30,21 +31,25 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
-      - name: Fetch OSM bike parks
+      # lajny, základna a parkoviště kolem našich parků (to, co jde na web)
+      - name: Park data from OSM
         run: |
           mkdir -p out
+          scripts/osm_extract.sh out/parks-osm.json
+          python3 scripts/park_osm.py --cache out/parks-osm.json \
+            --trails out/trails.geojson --info out/parks_osm.json --summary out/parks-summary.md
+          cat out/parks-summary.md >> "$GITHUB_STEP_SUMMARY"
+          cat out/parks-summary.md
+      # celorepublikový report přes Overpass – jen pro hledání nových parků, smí selhat
+      - name: Fetch OSM bike parks
+        continue-on-error: true
+        timeout-minutes: 20
+        run: |
           python3 scripts/fetch_osm_parks.py \
             --cache out/overpass.json --report out/osm-report.md \
             --geojson out/osm-clusters.geojson --trails out/osm-trails.geojson
           cat out/osm-report.md >> "$GITHUB_STEP_SUMMARY"
           cat out/osm-report.md
-      # lajny, základna a parkoviště kolem našich parků (to, co jde na web)
-      - name: Park data from OSM
-        run: |
-          python3 scripts/park_osm.py --cache out/parks-overpass.json \
-            --trails out/trails.geojson --info out/parks_osm.json --summary out/parks-summary.md
-          cat out/parks-summary.md >> "$GITHUB_STEP_SUMMARY"
-          cat out/parks-summary.md
       - uses: actions/upload-artifact@v5
         with:
           name: osm-report
