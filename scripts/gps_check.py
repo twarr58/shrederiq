@@ -34,7 +34,8 @@ from elevation import Point, haversine_m, resample  # noqa: E402
 
 API = "https://api.openstreetmap.org/api/0.6/trackpoints"
 PAGE_POINTS = 5000
-MAX_PAGES = 20          # 100 000 bodů na park stačí, větší parky jsou stejně plné stop
+MAX_PAGES = 8           # 40 000 bodů na park stačí, větší parky jsou stejně plné stop
+WORKERS = 4             # parky se stahují paralelně (OSM API to snese, zdvořilý User-Agent)
 TOL_M = 15
 PAD_DEG = 0.003         # ~300 m okolo lajn
 LOW_COV = 30            # pod 30 % = k ruční kontrole
@@ -157,13 +158,23 @@ def check(fc: dict, cache: dict, fetch, fit: bool = False) -> dict[str, dict]:
         if not f["properties"].get("access"):
             by_park[f["properties"]["park_id"]].append(f)
     summary = {}
-    for pid, feats in sorted(by_park.items()):
-        bbox = bbox_of(feats)
+    # stopy všech parků najednou (sekvenčně to pro 32 parků trvalo 11 minut)
+    from concurrent.futures import ThreadPoolExecutor
+    boxes = {pid: bbox_of(feats) for pid, feats in by_park.items()}
+
+    def fetch_park(pid):
         try:
-            traces = load_traces(bbox, cache, fetch)
+            return pid, load_traces(boxes[pid], cache, fetch), None
         except Exception as e:  # noqa: BLE001 – park bez stop nesmí shodit report
-            print(f"gps: {pid}: {e}", file=sys.stderr)
-            summary[pid] = {"error": str(e)[:100], "trails": len(feats)}
+            return pid, None, str(e)[:100]
+
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        loaded = dict((pid, (traces, err)) for pid, traces, err in pool.map(fetch_park, sorted(by_park)))
+    for pid, feats in sorted(by_park.items()):
+        traces, err = loaded[pid]
+        if err:
+            print(f"gps: {pid}: {err}", file=sys.stderr)
+            summary[pid] = {"error": err, "trails": len(feats)}
             continue
         grid = Grid(traces)
         covs, fitted = [], 0
