@@ -59,7 +59,7 @@ MATCH_RADIUS_M = 5000   # párování s naším seznamem
 ROUTE_NAME_RE = r"[Ss]ingl|[Ss]ingle|[Tt]rail|[Bb]ike ?park|[Ff]low|[Ee]ndur"
 
 QUERY = f"""
-[out:json][timeout:240];
+[out:json][timeout:900][maxsize:536870912];
 area["ISO3166-1"="CZ"][admin_level=2]->.cz;
 (
   way["mtb:scale:dh"](area.cz);
@@ -116,6 +116,21 @@ def line_length_m(coords: list[tuple[float, float]]) -> float:
 
 # --- Overpass -----------------------------------------------------------------
 
+class OverpassError(RuntimeError):
+    pass
+
+
+def check_response(data: dict) -> dict:
+    """Overpass při timeoutu / nedostatku paměti vrací HTTP 200 s chybou v `remark`
+    a prázdnými nebo neúplnými daty – takovou odpověď nelze použít."""
+    remark = data.get("remark") or ""
+    if "error" in remark.lower():
+        raise OverpassError(remark.strip())
+    if not data.get("elements"):
+        raise OverpassError("prázdná odpověď")
+    return data
+
+
 def fetch_overpass(query: str, retries: int = 3) -> dict:
     data = urllib.parse.urlencode({"data": query}).encode()
     last: Exception | None = None
@@ -123,9 +138,9 @@ def fetch_overpass(query: str, retries: int = 3) -> dict:
         for url in ENDPOINTS:
             req = urllib.request.Request(url, data=data, headers={"User-Agent": USER_AGENT})
             try:
-                with urllib.request.urlopen(req, timeout=300) as res:
-                    return json.load(res)
-            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
+                with urllib.request.urlopen(req, timeout=960) as res:
+                    return check_response(json.load(res))
+            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OverpassError) as e:
                 last = e
                 print(f"overpass {url}: {e}", file=sys.stderr)
         time.sleep(5 * 2 ** attempt)  # 429 / 502 / 504 jsou u Overpass běžné
@@ -398,7 +413,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     if args.cache and args.cache.exists():
-        data = json.loads(args.cache.read_text())
+        data = check_response(json.loads(args.cache.read_text()))
     else:
         data = fetch_overpass(QUERY)
         if args.cache:

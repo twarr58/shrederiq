@@ -52,6 +52,15 @@ class Helpers(unittest.TestCase):
         self.assertAlmostEqual(osm.line_length_m([(50.0, 15.0), (50.005, 15.0), (50.01, 15.0)]), 1112, delta=2)
 
 
+class Response(unittest.TestCase):
+    def test_check_response(self):
+        self.assertIs(osm.check_response(OVERPASS), OVERPASS)
+        with self.assertRaises(osm.OverpassError):
+            osm.check_response({"elements": [], "remark": "runtime error: Query timed out in \"query\" at line 4 after 241 seconds."})
+        with self.assertRaises(osm.OverpassError):
+            osm.check_response({"elements": []})
+
+
 class Clustering(unittest.TestCase):
     def setUp(self):
         self.trails, self.anchors = osm.parse_overpass(OVERPASS)
