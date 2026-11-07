@@ -26,6 +26,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: osm-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -40,8 +44,17 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+      - id: day
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: .osm-cache/mtb.osm.pbf
+          key: mtb-pbf-${{ steps.day.outputs.date }}
       # lajny, základna a parkoviště kolem našich parků (to, co jde na web)
       - name: Park data from OSM
+        timeout-minutes: 30
+        env:
+          MTB_PBF: .osm-cache/mtb.osm.pbf
         run: |
           mkdir -p out
           scripts/osm_extract.sh out/parks-osm.json out/pumptracks.geojson

@@ -37,8 +37,18 @@ jobs:
             .osm-cache/elevation.json
           key: osm-parks-${{ github.run_id }}
           restore-keys: osm-parks-
+      # Vyfiltrovaný výřez OSM (pár MB) se drží v cache po dnech – 800MB stahování
+      # z Geofabriku pak proběhne jen jednou denně, ne při každém běhu.
+      - id: day
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: .osm-cache/mtb.osm.pbf
+          key: mtb-pbf-${{ steps.day.outputs.date }}
       - name: Park data from OSM
         timeout-minutes: 30
+        env:
+          MTB_PBF: .osm-cache/mtb.osm.pbf
         run: |
           mkdir -p .osm-cache
           rm -f .osm-cache/fresh.json
