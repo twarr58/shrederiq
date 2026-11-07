@@ -102,7 +102,8 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   Web posune bod neověřeného parku (`verified` není `true`) na základnu, ukáže
   parkoviště („P“) a navigace vede na něj.
 - Kontrola: workflow `osm` vypíše pro každý park základnu, lanovku, posun bodu,
-  parkoviště a počet lajn (Summary běhu).
+  parkoviště, počet lajn a kandidáty lanovek (Summary běhu). Ruční spuštění přeskočí
+  pomalý celorepublikový report přes Overpass, pokud nezaškrtneš vstup `overpass`.
 - Lajna ≠ úsek: jedna lajna bývá v OSM rozdělená na víc cest (way). Panel počítá
   pojmenované lajny, úseky bez názvu ukazuje zvlášť a lesní cesty kreslí šedě čárkovaně.
 - **Sklon** (`scripts/elevation.py`): lajny se převzorkují po ~25 m a výšky bodů se
