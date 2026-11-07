@@ -62,3 +62,22 @@ test("kraj: Vysočina a Praha mají vlastní tvar", () => {
   assert.equal(loc("Vysočina"), "X, Kraj Vysočina");
   assert.equal(loc("Praha"), "X, Praha");
 });
+
+test("data z OSM: posun na základnu, parkoviště, ověřené parky se nehýbou", () => {
+  const parks = [park({ id: "kouty" }, [17.098, 50.106]), park({ id: "overeny", verified: true }, [15.5, 49.8]),
+    park({ id: "rucni", parking: [16.0, 50.0] }, [16.1, 50.1]), park({ id: "nic" })];
+  const info = {
+    kouty: { base: [17.12, 50.09], base_source: "lift", lift: "LD Medvědí hora", parking: [17.1195, 50.0895], parking_name: "P Kouty" },
+    overeny: { base: [15.6, 49.9], base_source: "lift", lift: "X" },
+    rucni: { base: [16.2, 50.2], base_source: "parking", parking: [16.2, 50.2] },
+  };
+  const [kouty, overeny, rucni, nic] = P.applyOsm(parks, info);
+  assert.deepEqual(kouty.geometry.coordinates, [17.12, 50.09]);
+  assert.deepEqual(kouty.properties.point_orig, [17.098, 50.106]);
+  assert.deepEqual([kouty.properties.parking, kouty.properties.parking_name, kouty.properties.osm_lift], [[17.1195, 50.0895], "P Kouty", "LD Medvědí hora"]);
+  assert.deepEqual(overeny.geometry.coordinates, [15.5, 49.8]);
+  assert.deepEqual(rucni.properties.parking, [16.0, 50.0]);
+  assert.equal(nic, parks[3]);
+  assert.deepEqual(parks[0].geometry.coordinates, [17.098, 50.106]); // vstup se nemění
+  assert.equal(P.applyOsm(parks, null), parks);
+});

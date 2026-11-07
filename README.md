@@ -83,15 +83,28 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
 
 ### Fáze 2 – trailové lajny (rozpracováno)
 
-- Lajny jsou z OpenStreetMap: `scripts/fetch_osm_parks.py --park-trails web/data/trails.geojson`
-  vezme shluky MTB lajn spárované s parky a ke každé lajně uloží `park_id`, název,
-  obtížnost (`green` / `blue` / `red` / `black` podle `mtb:scale:imba`, `mtb:scale`)
-  a délku.
-- Soubor se do repa necommituje. Generuje ho workflow `pages` při deployi a jednou
-  týdně. Poslední úspěšnou odpověď Overpass drží v cache pro případ, že Overpass
-  zrovna nejde.
-- Ve webu: po otevření parku se lajny vykreslí barvou podle obtížnosti a v panelu
-  je jejich seznam s délkami.
+- **Data parků z OSM** (`scripts/park_osm.py`): jeden dotaz na Overpass kolem každého
+  parku (3 km):
+  - **lajny**: cesty s `mtb:scale:imba` nebo `mtb=designated`, pěšiny a cesty s
+    `mtb:scale` u lanovek a členové relací `route=mtb`. Lajny trail center bývají
+    zmapované jen jako relace, název lajny se pak vezme z relace. Dlouhé cyklotrasy
+    se vyřadí.
+  - **základna**: dolní stanice lanovky, u které je nejvíc lajn. U parku bez lanovky
+    (`lift: false`) je to parkoviště u lajn.
+  - **parkoviště**: nejbližší `amenity=parking` do 700 m od základny.
+- **Zdroj dat**: denní výřez OSM Česka od [Geofabriku](https://download.geofabrik.de/europe/czech-republic.html).
+  `scripts/osm_extract.sh` ho stáhne, `osmium tags-filter` vybere MTB cesty, lanovky,
+  parkoviště a relace `route=mtb` a `scripts/osm_extract.py` (pyosmium) z toho vytáhne
+  okolí parků. Overpass je jen záloha, protože bývá přetížený a části dotazů občas tiše
+  vynechá.
+- Výstup je `web/data/trails.geojson` a `web/data/parks_osm.json`. Soubory nejsou v repu,
+  generuje je workflow `pages` při deployi a jednou týdně (s cache pro výpadky Overpass).
+  Web posune bod neověřeného parku (`verified` není `true`) na základnu, ukáže
+  parkoviště („P“) a navigace vede na něj.
+- Kontrola: workflow `osm` vypíše pro každý park základnu, lanovku, posun bodu,
+  parkoviště a počet lajn (Summary běhu).
+- Lajna ≠ úsek: jedna lajna bývá v OSM rozdělená na víc cest (way). Panel počítá
+  pojmenované lajny, úseky bez názvu ukazuje zvlášť a lesní cesty kreslí šedě čárkovaně.
 - **Sklon** (`scripts/elevation.py`): lajny se převzorkují po ~25 m a výšky bodů se
   zjistí z Mapy.com Elevation API (až 256 bodů na dotaz, výšky se ukládají do cache
   v Actions). Ke každému úseku se uloží sklon v %, počítaný přes okno ~75 m, protože

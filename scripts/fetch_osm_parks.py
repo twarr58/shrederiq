@@ -138,22 +138,34 @@ def check_response(data: dict) -> dict:
     """Overpass při timeoutu / nedostatku paměti vrací HTTP 200 s chybou v `remark`
     a prázdnými nebo neúplnými daty – takovou odpověď nelze použít."""
     remark = data.get("remark") or ""
+    if remark:
+        print(f"overpass remark: {remark.strip()}", file=sys.stderr)
     if "error" in remark.lower():
         raise OverpassError(remark.strip())
-    if not data.get("elements"):
+    elements = data.get("elements") or []
+    if not elements:
         raise OverpassError("prázdná odpověď")
+    # Neúplná odpověď bez chyby: lanovky přišly, ale MTB cesty kolem nich ne
+    # (dotaz „around“ je nejdražší část a Overpass ho občas tiše vynechá).
+    lifts = sum(1 for e in elements if "aerialway" in e.get("tags", {}))
+    ways = [e for e in elements if e.get("type") == "way" and "geometry" in e]
+    near_lift = sum(1 for e in ways if Trail(e["id"], e.get("tags", {}), [(0, 0), (0, 0)]).style == "lift")
+    print(f"overpass: {len(ways)} úseků, z toho {near_lift} jen s mtb:scale u lanovek; {lifts} lanovek", file=sys.stderr)
+    if lifts and not near_lift:
+        raise OverpassError(f"neúplná odpověď: {lifts} lanovek, ale žádné MTB cesty u nich")
     return data
 
 
-def fetch_overpass(query: str, retries: int = 3) -> dict:
+def fetch_overpass(query: str, retries: int = 3, check=None, timeout: int = 960) -> dict:
+    check = check or check_response
     data = urllib.parse.urlencode({"data": query}).encode()
     last: Exception | None = None
     for attempt in range(retries):
         for url in ENDPOINTS:
             req = urllib.request.Request(url, data=data, headers={"User-Agent": USER_AGENT})
             try:
-                with urllib.request.urlopen(req, timeout=960) as res:
-                    return check_response(json.load(res))
+                with urllib.request.urlopen(req, timeout=timeout) as res:
+                    return check(json.load(res))
             except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OverpassError) as e:
                 last = e
                 print(f"overpass {url}: {e}", file=sys.stderr)
