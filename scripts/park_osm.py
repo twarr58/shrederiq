@@ -33,7 +33,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fetch_osm_parks import (  # noqa: E402
-    PARKS, OverpassError, difficulty, fetch_overpass, haversine_m, name_score, simplify,
+    PARKS, OverpassError, difficulty, fetch_overpass, haversine_m, name_tokens, simplify,
 )
 
 RADIUS_M = 3000
@@ -211,9 +211,16 @@ def lift_candidates(park_pt, trails, osm, has_lift=True):
     return sorted(out, key=lambda c: (-c[1], c[2]))
 
 
-def choose_base(park_pt, trails, osm, has_lift=True, park_name=None):
+def park_keywords(park_name, town=None) -> str:
+    """Slova z názvu parku, která nejsou jménem obce – „Bikepark Špindlerův Mlýn“ v obci
+    Špindlerův Mlýn nedává nic (lanovky se jmenují po městě), „Bikepark Kopřivná“ dá kopřivná."""
+    return " ".join(name_tokens(park_name) - name_tokens(town))
+
+
+def choose_base(park_pt, trails, osm, has_lift=True, park_name=None, town=None):
     """Základna parku (OSM kreslí lanovky zdola nahoru, dolní stanice = první bod):
-      1. lanovka, jejíž název sdílí slovo s názvem parku (Kopřivná, Klíny, Špičák),
+      1. lanovka, jejíž název sdílí slovo s názvem parku, které není jménem obce
+         (Kopřivná, Špičák); mezi víc takovými ta s nejvíc lajnami, pak nejbližší,
       2. lanovka s nejvíc lajnami do 400 m, pokud jich je aspoň MIN_LIFT_SCORE bodů,
       3. jinak lanovka do NEAR_LIFT_M od bodu parku: gondola před sedačkou, pak nejbližší,
       4. jinak parkoviště nejblíž lajnám (když jich je dost), případně bodu parku.
@@ -222,9 +229,9 @@ def choose_base(park_pt, trails, osm, has_lift=True, park_name=None):
     cand_info = [(l["tags"].get("name") or f"way/{lid}", score, round(dist))
                  for (l, score, dist), lid in ((c, next(k for k, v in osm["lifts"].items() if v is c[0])) for c in cands[:3])]
 
-    named = [(name_score(park_name, l["tags"].get("name")), -score, dist, l) for l, score, dist in cands]
-    named = [x for x in named if x[0] > 0]
-    best = max(named, key=lambda x: (x[0], x[1], -x[2]))[3] if named else None
+    keywords = name_tokens(park_keywords(park_name, town))
+    named = [(score, dist, l) for l, score, dist in cands if keywords & name_tokens(l["tags"].get("name"))]
+    best = max(named, key=lambda x: (x[0], -x[1]))[2] if named else None
     if not best:
         best = next((l for l, score, _ in cands if score >= MIN_LIFT_SCORE), None)
     if not best:
@@ -259,11 +266,12 @@ def build(parks: list[dict], osm: dict):
     pts = {f["properties"]["id"]: (f["geometry"]["coordinates"][1], f["geometry"]["coordinates"][0]) for f in parks}
     has_lift = {f["properties"]["id"]: f["properties"].get("lift") for f in parks}
     park_names = {f["properties"]["id"]: f["properties"].get("name") for f in parks}
+    towns = {f["properties"]["id"]: f["properties"].get("town") for f in parks}
 
     # Každou cestu jen k jednomu parku – k tomu, jehož základně (nebo bodu, když základnu
     # nemá) je nejblíž. Naše body parků bývají mimo, proto se nejdřív hledá základna.
     per_park = {pid: select_trails(pt, osm, rel_names, has_lift=has_lift[pid]) for pid, pt in pts.items()}
-    anchor = {pid: choose_base(pts[pid], per_park[pid], osm, has_lift[pid], park_names[pid])["base"] or pts[pid] for pid in pts}
+    anchor = {pid: choose_base(pts[pid], per_park[pid], osm, has_lift[pid], park_names[pid], towns[pid])["base"] or pts[pid] for pid in pts}
     owner: dict[int, str] = {}
     for pid, cands in per_park.items():
         for wid, (w, _) in cands.items():
@@ -275,7 +283,7 @@ def build(parks: list[dict], osm: dict):
     for f in parks:
         pid = f["properties"]["id"]
         trails = {wid: v for wid, v in per_park[pid].items() if owner.get(wid) == pid}
-        base = choose_base(pts[pid], trails, osm, has_lift[pid], park_names[pid])
+        base = choose_base(pts[pid], trails, osm, has_lift[pid], park_names[pid], towns[pid])
         parking = choose_parking(base["base"], osm)
         entry = {"base_source": base["base_source"], "lift": base["lift"]}
         if base["base"]:
@@ -317,7 +325,7 @@ def render_summary(rows) -> str:
         cands_l = "; ".join(f"{n} ({sc} / {d:,} m)" for n, sc, d in cands) or "–"
         out.append(f"| `{pid}` | {name} | {src_l} | {lift or '–'} | {f'{moved:,} m' if moved is not None else '–'} "
                    f"| {parking} | {named} | {segs} | {cands_l} |")
-    out += ["", "Kandidáti = lanovky pro kola do 3 km od bodu parku, nejvýš tři. Základna: lanovka se jménem parku; "
+    out += ["", "Kandidáti = lanovky pro kola do 3 km od bodu parku, nejvýš tři. Základna: lanovka se jménem parku (ne obce); "
                 "jinak ta s nejvíc lajnami (aspoň 10 bodů); jinak do 2 km od bodu gondola před sedačkou, pak nejbližší; "
                 "jinak parkoviště.",
             "", "Data © přispěvatelé OpenStreetMap, ODbL."]

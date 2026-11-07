@@ -6,9 +6,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import park_osm as po  # noqa: E402
 
 
-def park(id_, lon, lat, name=None, lift=None):
+def park(id_, lon, lat, name=None, lift=None, town=None):
     return {"type": "Feature", "geometry": {"type": "Point", "coordinates": [lon, lat]},
-            "properties": {"id": id_, "name": name or id_, "lift": lift}}
+            "properties": {"id": id_, "name": name or id_, "lift": lift, "town": town}}
 
 
 def way(id_, lat, lon, tags, n=5, dlat=0.001, dlon=0.0):
@@ -107,6 +107,24 @@ class ParkOsm(unittest.TestCase):
         osm2 = po.parse({"elements": [kop, other]})
         _, info2, _ = po.build([park("kop", 17.288, 50.042, "Bikepark Kopřivná", lift=True)], osm2)
         self.assertEqual(info2["kop"]["lift"], "Kopřivná")
+
+    def test_name_rule_prefers_trails_and_ignores_town(self):
+        self.assertEqual(po.park_keywords("Bikepark Špindlerův Mlýn", "Špindlerův Mlýn"), "")
+        self.assertEqual(po.park_keywords("Bikepark Kopřivná", "Malá Morávka"), "koprivna")
+        # Špičák: dvě lanovky se jménem parku → ta s víc lajnami, i když je dál
+        far = way(1, 49.170, 13.230, {"aerialway": "chair_lift", "name": "Lanová dráha Špičák"}, n=8)
+        near = way(2, 49.164, 13.226, {"aerialway": "chair_lift", "name": "Špičák - Hofmanky"}, n=8)
+        trails = [way(10 + i, 49.171, 13.2305 + i * 0.0005, {"highway": "path", "mtb:scale": "2"}, n=16, dlat=0.0004) for i in range(3)]
+        osm = po.parse({"elements": [far, near] + trails})
+        _, info, _ = po.build([park("sp", 13.226, 49.163, "Bikepark Špičák", lift=True, town="Železná Ruda")], osm)
+        self.assertEqual(info["sp"]["lift"], "Lanová dráha Špičák")
+        # Špindl: lanovka pojmenovaná po městě nevyhrává jen kvůli jménu → rozhodnou lajny
+        medv = way(3, 50.730, 15.600, {"aerialway": "cable_car", "name": "Špindlerův Mlýn - Medvědín"}, n=8)
+        hrom = way(4, 50.717, 15.615, {"aerialway": "chair_lift", "name": "Hromovka"}, n=8)
+        tr = [way(20 + i, 50.7175, 15.6155 + i * 0.0005, {"highway": "path", "mtb:scale": "2"}, n=16, dlat=0.0004) for i in range(3)]
+        osm2 = po.parse({"elements": [medv, hrom] + tr})
+        _, info2, _ = po.build([park("sm", 15.605, 50.714, "Bikepark Špindlerův Mlýn", lift=True, town="Špindlerův Mlýn")], osm2)
+        self.assertEqual(info2["sm"]["lift"], "Hromovka")
 
     def test_parking_fallback_from_park_point(self):
         # lajny daleko od parkovišť, ale u bodu parku parkoviště je
