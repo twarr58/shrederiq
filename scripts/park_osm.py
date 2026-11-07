@@ -228,6 +228,12 @@ def choose_base(park_pt, trails, osm, has_lift=True, park_name=None, town=None):
     cands = lift_candidates(park_pt, trails, osm, has_lift)
     cand_info = [(l["tags"].get("name") or f"way/{lid}", score, round(dist))
                  for (l, score, dist), lid in ((c, next(k for k, v in osm["lifts"].items() if v is c[0])) for c in cands[:3])]
+    if not cands and has_lift is not False:
+        # žádná lanovka pro kola – ukázat aspoň vleky v okolí, ať je vidět, jestli v OSM chybí nebo je jinak otagovaná
+        others = sorted((haversine_m(*park_pt, *l["coords"][0]), l) for l in osm["lifts"].values()
+                        if l["tags"].get("aerialway") not in BIKE_LIFTS)
+        cand_info = [(f"{l['tags'].get('name') or 'bez názvu'} [{l['tags'].get('aerialway')}]", -1, round(d))
+                     for d, l in others[:3] if d <= NEAR_LIFT_M]
 
     keywords = name_tokens(park_keywords(park_name, town))
     named = [(score, dist, l) for l, score, dist in cands if keywords & name_tokens(l["tags"].get("name"))]
@@ -322,12 +328,12 @@ def render_summary(rows) -> str:
            "|---|---|---|---|---:|---|---:|---:|---|"]
     for pid, name, src, lift, moved, parking, named, segs, cands in rows:
         src_l = {"lift": "lanovka", "parking": "parkoviště", None: "–"}[src]
-        cands_l = "; ".join(f"{n} ({sc} / {d:,} m)" for n, sc, d in cands) or "–"
+        cands_l = "; ".join(f"{n} ({d:,} m)" if sc < 0 else f"{n} ({sc} / {d:,} m)" for n, sc, d in cands) or "–"
         out.append(f"| `{pid}` | {name} | {src_l} | {lift or '–'} | {f'{moved:,} m' if moved is not None else '–'} "
                    f"| {parking} | {named} | {segs} | {cands_l} |")
     out += ["", "Kandidáti = lanovky pro kola do 3 km od bodu parku, nejvýš tři. Základna: lanovka se jménem parku (ne obce); "
                 "jinak ta s nejvíc lajnami (aspoň 10 bodů); jinak do 2 km od bodu gondola před sedačkou, pak nejbližší; "
-                "jinak parkoviště.",
+                "jinak parkoviště. Vlek v hranatých závorkách = v okolí není lanovka pro kola, jen tenhle typ.",
             "", "Data © přispěvatelé OpenStreetMap, ODbL."]
     return "\n".join(out) + "\n"
 

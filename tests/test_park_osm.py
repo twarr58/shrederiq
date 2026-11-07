@@ -126,6 +126,13 @@ class ParkOsm(unittest.TestCase):
         _, info2, _ = po.build([park("sm", 15.605, 50.714, "Bikepark Špindlerův Mlýn", lift=True, town="Špindlerův Mlýn")], osm2)
         self.assertEqual(info2["sm"]["lift"], "Hromovka")
 
+    def test_other_aerialways_listed_when_no_bike_lift(self):
+        tbar = way(1, 49.536, 14.598, {"aerialway": "t-bar", "name": "Vlek Monínec"}, n=6)
+        _, info, rows = po.build([park("mon", 14.6, 49.535, "Bikepark Monínec", lift=True)], po.parse({"elements": [tbar]}))
+        self.assertIsNone(info["mon"]["base_source"])
+        self.assertEqual(rows[0][8], [("Vlek Monínec [t-bar]", -1, rows[0][8][0][2])])
+        self.assertIn("Vlek Monínec [t-bar] (", po.render_summary(rows))
+
     def test_parking_fallback_from_park_point(self):
         # lajny daleko od parkovišť, ale u bodu parku parkoviště je
         els = [way(i, 50.20, 15.90 + i * 0.001, {"highway": "path", "mtb:scale:imba": "2"}, n=4) for i in range(1, 5)]
