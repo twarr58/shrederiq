@@ -1,0 +1,23 @@
+name: web
+
+on:
+  push:
+    branches: [main]
+    paths: [web/**, tests/**, .github/workflows/web.yml]
+  pull_request:
+    paths: [web/**, tests/**, .github/workflows/web.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --check web/app.js && node --check web/parks.js
+      # testy zároveň validují web/data/parks.geojson
+      - run: node --test tests/parks.test.js

@@ -1,0 +1,52 @@
+:root {
+  --bg: #fff;
+  --fg: #1d2125;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --accent: #e4572e;
+  --bikepark: #e4572e;
+  --trail_center: #2a9d8f;
+  --shadow: 0 4px 16px rgba(0, 0, 0, .18);
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #1d2125; --fg: #eceff1; --muted: #9aa3ab; --line: #343a40; }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); }
+#map { position: fixed; inset: 0; }
+
+#panel, #card {
+  position: fixed; z-index: 1000; background: var(--bg); box-shadow: var(--shadow);
+  border-radius: 10px; padding: 12px 14px;
+}
+#panel { top: 12px; left: 12px; width: 300px; max-height: calc(100% - 24px); display: flex; flex-direction: column; }
+#panel h1 { margin: 0; font-size: 20px; color: var(--accent); }
+.sub { margin: 0 0 8px; color: var(--muted); }
+#search { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; font: inherit; background: var(--bg); color: var(--fg); }
+#legend { display: flex; gap: 12px; margin: 8px 0; color: var(--muted); font-size: 12px; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: -1px; }
+.dot.bikepark { background: var(--bikepark); }
+.dot.trail_center { background: var(--trail_center); }
+#list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+#list li { padding: 6px 4px; border-top: 1px solid var(--line); cursor: pointer; }
+#list li:hover, #list li.active { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+#list li small { display: block; color: var(--muted); }
+#status { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+#card { top: 12px; right: 12px; width: 320px; }
+#card h2 { margin: 0 32px 8px 0; font-size: 18px; }
+#card dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 10px; }
+#card dt { color: var(--muted); }
+#card dd { margin: 0; }
+#card .close { position: absolute; top: 8px; right: 8px; border: 0; background: none; font-size: 20px; cursor: pointer; color: var(--muted); }
+#card .note { color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 8px; margin: 0; }
+#card a { color: var(--accent); }
+
+.mapy-logo { display: block; }
+.mapy-logo img { display: block; height: 20px; }
+
+@media (max-width: 640px) {
+  #panel { left: 8px; right: 8px; width: auto; top: 8px; max-height: 40%; }
+  #card { left: 8px; right: 8px; top: auto; bottom: 24px; width: auto; max-height: 50%; overflow-y: auto; }
+}

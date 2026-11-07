@@ -1,0 +1,49 @@
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths: [web/**, .github/workflows/pages.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # Mapový podklad:
+      #  - secret MAPY_API_KEY → Mapy.com tiles (klíč je ve stránce veřejně čitelný,
+      #    v administraci Mapy.com ho omez na doménu GitHub Pages),
+      #  - jinak OpenStreetMap.
+      - name: Configure map tiles
+        env:
+          MAPY_API_KEY: ${{ secrets.MAPY_API_KEY }}
+        run: |
+          if [ -n "$MAPY_API_KEY" ]; then
+            jq -n --arg k "$MAPY_API_KEY" -r \
+              '"window.SHREDERIQ_CONFIG = " + ({mapyApiKey: $k, mapyMapset: "outdoor"} | tojson) + ";"' \
+              > web/config.js
+            echo "Using Mapy.com tiles"
+          else
+            echo "::warning::MAPY_API_KEY not set, falling back to OpenStreetMap tiles"
+          fi
+
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: web
+      - id: deployment
+        uses: actions/deploy-pages@v5
