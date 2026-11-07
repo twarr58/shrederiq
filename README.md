@@ -125,6 +125,11 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   doménu GitHub Pages z Actions nefunguje. Bez klíče nebo při chybě API se web
   nasadí bez sklonu.
 - Dál: lajny z Trailforks pro parky, které v OSM chybí.
+- **Trailforks API** (`scripts/trailforks_trails.py`): park s vlastností `trailforks_rid`
+  (id regionu na Trailforks) dostane lajny z API, když jsou v Actions secrets
+  `TRAILFORKS_APP_ID` a `TRAILFORKS_APP_SECRET`. Bez nich se krok přeskočí. Obtížnost
+  2–3 → zelená, 4 → modrá, 5 → červená, 6 a 8 → černá, 1 a 7 → přístupová cesta.
+  Data Trailforks jsou jen pro nekomerční použití s atribucí, web ji ukazuje.
 
 ### Fáze 3 – metadata
 

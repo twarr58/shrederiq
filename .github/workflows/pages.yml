@@ -35,6 +35,7 @@ jobs:
           path: |
             .osm-cache/parks.json
             .osm-cache/elevation.json
+            .osm-cache/trailforks.json
           key: osm-parks-${{ github.run_id }}
           restore-keys: osm-parks-
       # Vyfiltrovaný výřez OSM (pár MB) se drží v cache po dnech – 800MB stahování
@@ -69,6 +70,15 @@ jobs:
       # Ruční GPX (data/gpx/<park_id>/*.gpx) pro parky, které v OSM lajny nemají
       - name: Trails from GPX files
         run: python3 scripts/gpx_trails.py --merge web/data/trails.geojson
+      # Lajny z Trailforks API pro parky s trailforks_rid – jen když jsou secrets
+      # TRAILFORKS_APP_ID / TRAILFORKS_APP_SECRET; bez nich skript jen přeskočí.
+      - name: Trails from Trailforks API
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          TRAILFORKS_APP_ID: ${{ secrets.TRAILFORKS_APP_ID }}
+          TRAILFORKS_APP_SECRET: ${{ secrets.TRAILFORKS_APP_SECRET }}
+        run: python3 scripts/trailforks_trails.py --merge web/data/trails.geojson --cache .osm-cache/trailforks.json
       # Sklon lajn: výšky z Mapy.com Elevation API (klíč jen v Actions, do stránky se nedostane).
       # Klíč omezený na doménu z Actions nefunguje – pro elevation je lepší samostatný
       # klíč MAPY_ELEVATION_KEY jen se službou Elevation. Při chybě se nasadí bez sklonu.

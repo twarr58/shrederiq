@@ -50,6 +50,9 @@
       if (p.trails_count != null && !(Number.isInteger(p.trails_count) && p.trails_count >= 0)) {
         errors.push(`${at}: trails_count musí být nezáporné celé číslo nebo null`);
       }
+      if (p.trailforks_rid != null && !(Number.isInteger(p.trailforks_rid) && p.trailforks_rid > 0)) {
+        errors.push(`${at}: trailforks_rid musí být kladné celé číslo (id regionu na Trailforks)`);
+      }
     });
     return errors;
   }

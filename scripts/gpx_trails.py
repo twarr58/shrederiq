@@ -101,14 +101,17 @@ def load_all(gpx_dir: Path = GPX_DIR, park_ids: set[str] | None = None) -> list[
     return features
 
 
-def merge(trails_fc: dict, gpx_features: list[dict]) -> dict:
-    """Připojí GPX lajny k lajnám z OSM. Dříve připojené GPX lajny (source gpx/trailforks)
-    nejdřív odstraní, aby šel skript pouštět opakovaně."""
-    kept = [f for f in trails_fc.get("features", []) if f["properties"].get("source") not in ("gpx", "trailforks")]
+def merge(trails_fc: dict, features: list[dict], replace_key: str = "file") -> dict:
+    """Připojí lajny k lajnám z OSM. Dříve připojené lajny stejného původu (ty s vlastností
+    replace_key: GPX mají "file", Trailforks API "trailforks_id") nejdřív odstraní, aby šel
+    skript pouštět opakovaně; lajny z OSM i druhého zdroje nechá."""
+    kept = [f for f in trails_fc.get("features", []) if not f["properties"].get(replace_key)]
     out = dict(trails_fc)
-    out["features"] = kept + gpx_features
-    if any(f["properties"]["source"] == "trailforks" for f in gpx_features):
-        out["attribution_gpx"] = "Lajny z GPX © Trailforks (trailforks.com), jen pro nekomerční použití"
+    out["features"] = kept + features
+    if any(f["properties"].get("source") == "trailforks" for f in out["features"]):
+        out["attribution_gpx"] = "Lajny © Trailforks (trailforks.com), jen pro nekomerční použití"
+    else:
+        out.pop("attribution_gpx", None)
     return out
 
 
