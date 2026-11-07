@@ -31,7 +31,9 @@ jobs:
       # se poslední úspěšná odpověď drží v cache; bez ní se stránka nasadí bez lajn.
       - uses: actions/cache/restore@v4
         with:
-          path: .osm-cache/overpass.json
+          path: |
+            .osm-cache/overpass.json
+            .osm-cache/elevation.json
           key: overpass-${{ github.run_id }}
           restore-keys: overpass-
       - name: Trail lines from OSM
@@ -48,10 +50,25 @@ jobs:
           else
             echo "::warning::Overpass failed and there is no cache, deploying without trail lines"
           fi
+      # Sklon lajn: výšky z Mapy.com Elevation API (klíč jen v Actions, do stránky se nedostane).
+      # Klíč omezený na doménu z Actions nefunguje – pro elevation je lepší samostatný
+      # klíč MAPY_ELEVATION_KEY jen se službou Elevation. Při chybě se nasadí bez sklonu.
+      - name: Trail slopes from Mapy.com elevation
+        if: hashFiles('web/data/trails.geojson') != ''
+        timeout-minutes: 15
+        env:
+          MAPY_ELEVATION_KEY: ${{ secrets.MAPY_ELEVATION_KEY }}
+          MAPY_API_KEY: ${{ secrets.MAPY_API_KEY }}
+        run: |
+          cp web/data/trails.geojson /tmp/trails.bak
+          python3 scripts/elevation.py web/data/trails.geojson --cache .osm-cache/elevation.json \
+            || { echo "::warning::elevation failed, deploying trails without slope"; cp /tmp/trails.bak web/data/trails.geojson; }
       - if: hashFiles('.osm-cache/overpass.json') != ''
         uses: actions/cache/save@v4
         with:
-          path: .osm-cache/overpass.json
+          path: |
+            .osm-cache/overpass.json
+            .osm-cache/elevation.json
           key: overpass-${{ github.run_id }}
 
       # Mapový podklad:

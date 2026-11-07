@@ -83,6 +83,7 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 .trails h3 { margin: 0 0 6px; font-size: 15px; }
 .trail-list { list-style: none; margin: 0; padding: 0; max-height: 180px; overflow-y: auto; font-size: 13px; }
 .trail-list li { padding: 2px 0; }
+.slope-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--muted); margin-bottom: 6px; }
 .swatch { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
 
 .mapy-logo { display: block; }

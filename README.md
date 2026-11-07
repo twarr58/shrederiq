@@ -92,8 +92,16 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   zrovna nejde.
 - Ve webu: po otevření parku se lajny vykreslí barvou podle obtížnosti a v panelu
   je jejich seznam s délkami.
-- Dál: sklon přes Mapy.com Elevation API, lajny z Trailforks pro parky, které v OSM
-  chybí.
+- **Sklon** (`scripts/elevation.py`): lajny se převzorkují po ~25 m a výšky bodů se
+  zjistí z Mapy.com Elevation API (až 256 bodů na dotaz, výšky se ukládají do cache
+  v Actions). Ke každému úseku se uloží sklon v %, počítaný přes okno ~75 m, protože
+  výškový model je zašuměný. K lajně se uloží převýšení a průměrný a maximální sklon.
+  Ve webu jde přepnout barvu lajn: obtížnost / sklon.
+  Klíč pro build: secret `MAPY_ELEVATION_KEY` (doporučeno – samostatný klíč jen se
+  službou Elevation, bez omezení na doménu), jinak `MAPY_API_KEY`. Klíč omezený na
+  doménu GitHub Pages z Actions nefunguje. Bez klíče nebo při chybě API se web
+  nasadí bez sklonu.
+- Dál: lajny z Trailforks pro parky, které v OSM chybí.
 
 ### Fáze 3 – metadata
 
