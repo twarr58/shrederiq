@@ -134,7 +134,9 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
 - **GPS stopy** (`scripts/gps_check.py`, #22): workflow `osm` stáhne veřejné GPS stopy
   z OSM kolem každého parku a každé lajně dá pokrytí (podíl bodů po 25 m s bodem stopy
   do 15 m). Tabulka v souhrnu běhu ukáže úseky pod 30 % – bez provozu, zavřené, nové,
-  nebo špatně zakreslené.
+  nebo špatně zakreslené. Při nasazení se úseky pod 30 % narovnají podle stop
+  (těžiště bodů stop do 40 m kolem každého bodu lajny), když to pokrytí zvedne aspoň na
+  70 % (vlastnost `gps_fit`).
 - **Trailforks API** (`scripts/trailforks_trails.py`): park s vlastností `trailforks_rid`
   (id regionu na Trailforks) dostane lajny z API, když jsou v Actions secrets
   `TRAILFORKS_APP_ID` a `TRAILFORKS_APP_SECRET`. Bez nich se krok přeskočí. Obtížnost

@@ -8,6 +8,9 @@ TOL_M metrů aspoň jeden bod stopy. Nízké pokrytí znamená lajnu bez provozu
 novou, nebo špatně zakreslenou – ve všech případech stojí za ruční kontrolu.
 
 Výsledek jde do trails.geojson (vlastnost gps_cov, 0–100) a do markdown reportu.
+S --fit se lajny s pokrytím pod 30 % narovnají podle stop: každý bod po 25 m se posune
+do těžiště bodů stop do 40 m (aspoň 5 bodů), čára se vyhladí; výsledek se vezme jen
+když má pokrytí aspoň 70 % a není o víc než 30 % delší (vlastnost gps_fit).
 Stopy se drží v cache podle obdélníku, ať se API nevolá při každém běhu.
 
   python3 scripts/gps_check.py web/data/trails.geojson --cache .osm-cache/gps.json --report out/gps.md
@@ -81,6 +84,12 @@ def load_traces(bbox, cache: dict, fetch) -> list[Point]:
     return pts
 
 
+FIT_R_M = 40          # jak daleko od bodu lajny hledat stopy při narovnávání
+FIT_MIN_PTS = 5       # méně bodů stop v okruhu = nespolehlivé, bod se nehýbe (konce lajn mívají půl oblaku)
+FIT_MIN_COV = 70      # narovnaná lajna musí mít aspoň takové pokrytí, jinak zůstane OSM
+FIT_MAX_LONGER = 1.3
+
+
 class Grid:
     """Mřížka ~TOL_M pro rychlé „je do TOL_M nějaký bod stopy?“."""
 
@@ -92,6 +101,15 @@ class Grid:
 
     def _cell(self, p: Point) -> tuple[int, int]:
         return (int(p[0] * math.cos(math.radians(p[1])) / self.dlat), int(p[1] / self.dlat))
+
+    def within(self, p: Point, r_m: float) -> list[Point]:
+        n = max(1, int(math.ceil(r_m / (self.dlat * 111_320))))
+        cx, cy = self._cell(p)
+        out = []
+        for dx in range(-n, n + 1):
+            for dy in range(-n, n + 1):
+                out += [q for q in self.cells.get((cx + dx, cy + dy), ()) if haversine_m(p, q) <= r_m]
+        return out
 
     def near(self, p: Point, tol_m: float = TOL_M) -> bool:
         cx, cy = self._cell(p)
@@ -109,7 +127,30 @@ def coverage(coords: list[Point], grid: Grid) -> int:
     return round(100 * hit / len(pts))
 
 
-def check(fc: dict, cache: dict, fetch) -> dict[str, dict]:
+def fit_to_traces(coords: list[Point], grid: Grid) -> list[Point] | None:
+    """Narovná lajnu podle stop: každý bod (po 25 m) se posune do těžiště bodů stop do
+    FIT_R_M, pokud jich je aspoň FIT_MIN_PTS; pak se čára vyhladí (průměr sousedů).
+    Vrací None, když se nic nepohnulo, výsledek je o moc delší, nebo pokrytí nestačí."""
+    pts = resample(coords, 25)
+    moved, out = 0, []
+    for p in pts:
+        cloud = grid.within(p, FIT_R_M)
+        if len(cloud) >= FIT_MIN_PTS:
+            out.append((sum(q[0] for q in cloud) / len(cloud), sum(q[1] for q in cloud) / len(cloud)))
+            moved += 1
+        else:
+            out.append(p)
+    if moved < max(3, len(pts) // 2):
+        return None
+    smooth = [out[0]] + [((a[0] + 2 * b[0] + c[0]) / 4, (a[1] + 2 * b[1] + c[1]) / 4)
+                         for a, b, c in zip(out, out[1:], out[2:])] + [out[-1]]
+    length = lambda line: sum(haversine_m(a, b) for a, b in zip(line, line[1:]))  # noqa: E731
+    if length(smooth) > FIT_MAX_LONGER * length(coords) or coverage(smooth, grid) < FIT_MIN_COV:
+        return None
+    return [(round(x, 6), round(y, 6)) for x, y in smooth]
+
+
+def check(fc: dict, cache: dict, fetch, fit: bool = False) -> dict[str, dict]:
     """Doplní gps_cov do lajn; vrací souhrn po parcích."""
     by_park: dict[str, list[dict]] = defaultdict(list)
     for f in fc["features"]:
@@ -125,27 +166,36 @@ def check(fc: dict, cache: dict, fetch) -> dict[str, dict]:
             summary[pid] = {"error": str(e)[:100], "trails": len(feats)}
             continue
         grid = Grid(traces)
-        covs = []
+        covs, fitted = [], 0
         for f in feats:
-            cov = coverage([tuple(c[:2]) for c in f["geometry"]["coordinates"]], grid)
+            coords = [tuple(c[:2]) for c in f["geometry"]["coordinates"]]
+            cov = coverage(coords, grid)
+            if fit and cov < LOW_COV and not f["properties"].get("snapped"):
+                new = fit_to_traces(coords, grid)
+                if new:
+                    f["geometry"]["coordinates"] = [list(c) for c in new]
+                    f["properties"]["length_m"] = round(sum(haversine_m(a, b) for a, b in zip(new, new[1:])))
+                    f["properties"]["gps_fit"] = True
+                    cov = coverage(new, grid)
+                    fitted += 1
             f["properties"]["gps_cov"] = cov
             covs.append(cov)
         covs.sort()
         low = [f for f in feats if f["properties"]["gps_cov"] < LOW_COV]
-        summary[pid] = {"points": len(traces), "trails": len(feats), "median": covs[len(covs) // 2],
+        summary[pid] = {"points": len(traces), "trails": len(feats), "median": covs[len(covs) // 2], "fitted": fitted,
                         "low": sorted({f["properties"].get("name") or "bez názvu" for f in low})}
     return summary
 
 
 def render(summary: dict[str, dict]) -> str:
     out = ["# Lajny × GPS stopy OSM", "",
-           "| park | bodů stop | úseků | medián pokrytí | úseky pod 30 % |", "|---|---:|---:|---:|---|"]
+           "| park | bodů stop | úseků | medián pokrytí | narovnáno | úseky pod 30 % |", "|---|---:|---:|---:|---:|---|"]
     for pid, s in summary.items():
         if "error" in s:
-            out.append(f"| `{pid}` | – | {s['trails']} | – | chyba: {s['error']} |")
+            out.append(f"| `{pid}` | – | {s['trails']} | – | – | chyba: {s['error']} |")
             continue
         low = ", ".join(s["low"][:8]) + (" …" if len(s["low"]) > 8 else "")
-        out.append(f"| `{pid}` | {s['points']:,} | {s['trails']} | {s['median']} % | {low or '–'} |")
+        out.append(f"| `{pid}` | {s['points']:,} | {s['trails']} | {s['median']} % | {s.get('fitted', 0)} | {low or '–'} |")
     out += ["", f"Pokrytí = podíl bodů lajny (po 25 m), u kterých je do {TOL_M} m bod veřejné GPS stopy. "
                 "Nízké pokrytí: bez provozu, zavřeno, nové, nebo špatně zakreslené.", "",
             "Stopy © přispěvatelé OpenStreetMap, ODbL."]
@@ -157,11 +207,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("trails", type=Path, help="trails.geojson (doplní se gps_cov)")
     ap.add_argument("--cache", type=Path, help="JSON cache stop podle obdélníku")
     ap.add_argument("--report", type=Path, help="markdown report")
+    ap.add_argument("--fit", action="store_true",
+                    help="lajny s pokrytím pod 30 %% narovnat podle stop (těžiště stop do 40 m), když to pokrytí zvedne na 70 %%+")
     args = ap.parse_args(argv)
     fc = json.loads(args.trails.read_text())
     cache = json.loads(args.cache.read_text()) if args.cache and args.cache.exists() else {}
     try:
-        summary = check(fc, cache, osm_fetch())
+        summary = check(fc, cache, osm_fetch(), fit=args.fit)
     finally:
         if args.cache:
             args.cache.parent.mkdir(parents=True, exist_ok=True)

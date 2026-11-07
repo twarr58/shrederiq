@@ -37,6 +37,7 @@ jobs:
             .osm-cache/elevation.json
             .osm-cache/trailforks.json
             .osm-cache/snap.json
+            .osm-cache/gps.json
           key: osm-parks-${{ github.run_id }}
           restore-keys: osm-parks-
       # Vyfiltrovaný výřez OSM (pár MB) se drží v cache po dnech – 800MB stahování
@@ -96,6 +97,15 @@ jobs:
         run: |
           python3 scripts/snap_trails.py web/data/trails.geojson --cache .osm-cache/snap.json --report .osm-cache/snap.md
           [ -f .osm-cache/snap.md ] && { echo "## Lajny k ruční kontrole (routing Mapy.com)"; cat .osm-cache/snap.md; } >> "$GITHUB_STEP_SUMMARY" || true
+      # Lajny s pokrytím GPS stopami pod 30 % se narovnají podle stop (#22); stopy z OSM
+      # API v cache po týdnech. Nepotřebuje klíč.
+      - name: Fit low-coverage trails to OSM GPS traces
+        if: hashFiles('web/data/trails.geojson') != ''
+        continue-on-error: true
+        timeout-minutes: 20
+        run: |
+          python3 scripts/gps_check.py web/data/trails.geojson --fit --cache .osm-cache/gps.json --report .osm-cache/gps.md
+          cat .osm-cache/gps.md >> "$GITHUB_STEP_SUMMARY"
       - name: Trail slopes from Mapy.com elevation
         if: hashFiles('web/data/trails.geojson') != ''
         timeout-minutes: 15
@@ -115,6 +125,7 @@ jobs:
             .osm-cache/elevation.json
             .osm-cache/trailforks.json
             .osm-cache/snap.json
+            .osm-cache/gps.json
           key: osm-parks-${{ github.run_id }}
 
       # Mapový podklad:
