@@ -11,16 +11,29 @@ def feature(id_, name, lon, lat, town=None):
             "properties": {"id": id_, "name": name, "town": town}}
 
 
+def way(id_, lat, lon, tags, n=5, step=0.001):
+    """Lajna z n bodů směrem na sever, každý krok ≈ 111 m."""
+    return {"type": "way", "id": id_, "tags": tags,
+            "geometry": [{"lat": lat + i * step, "lon": lon} for i in range(n)]}
+
+
+DH = {"highway": "path", "mtb:scale:dh": "2"}
+IMBA = {"highway": "path", "mtb:scale:imba": "1"}
+
 OVERPASS = {"elements": [
-    {"type": "way", "id": 1, "center": {"lat": 50.1000, "lon": 17.1000},
+    # bikepark u Kout: 3 dh lajny vedle sebe (rozestup ~140 m), každá ~440 m → 1,3 km... + 4. lajna
+    way(1, 50.100, 17.100, DH), way(2, 50.100, 17.102, DH), way(3, 50.100, 17.104, DH), way(4, 50.100, 17.106, IMBA),
+    # singltreky u Trutnova: 4 imba lajny
+    way(10, 50.580, 15.920, IMBA), way(11, 50.580, 15.922, IMBA), way(12, 50.580, 15.924, IMBA), way(13, 50.580, 15.926, IMBA),
+    # osamocená lajna – žádný shluk
+    way(20, 49.000, 15.000, DH),
+    # dvojí výskyt stejné cesty v odpovědi
+    way(1, 50.100, 17.100, DH),
+    # kotvy
+    {"type": "way", "id": 100, "center": {"lat": 50.101, "lon": 17.103},
      "tags": {"leisure": "bike_park", "name": "Bikepark Kouty", "website": "https://example.cz"}},
-    {"type": "node", "id": 2, "lat": 49.1630, "lon": 13.2260, "tags": {"leisure": "bike_park", "name": "Bike park Špičák"}},
-    {"type": "node", "id": 3, "lat": 50.5000, "lon": 16.0000, "tags": {"leisure": "bike_park", "name": "Nový park"}},
-    # MTB cesty: dvě u Kout (jedna duplicitně z obou dotazů), jedna daleko od všeho
-    {"type": "way", "id": 10, "center": {"lat": 50.1010, "lon": 17.1010}, "tags": {"mtb:scale": "2"}},
-    {"type": "way", "id": 11, "center": {"lat": 50.0990, "lon": 17.0990}, "tags": {"mtb:scale:dh": "1"}},
-    {"type": "way", "id": 11, "center": {"lat": 50.0990, "lon": 17.0990}, "tags": {"mtb:scale:dh": "1"}},
-    {"type": "way", "id": 12, "center": {"lat": 49.0000, "lon": 15.0000}, "tags": {"mtb:scale": "1"}},
+    {"type": "relation", "id": 200, "center": {"lat": 50.582, "lon": 15.923},
+     "tags": {"type": "route", "route": "mtb", "name": "Trutnov Trails – modrá"}},
 ]}
 
 
@@ -34,56 +47,86 @@ class Helpers(unittest.TestCase):
         self.assertEqual(osm.name_score("Bikepark Kouty", "Bikepark Ještěd"), 0.0)
         self.assertEqual(osm.name_score(None, "Kouty"), 0.0)
 
-    def test_haversine(self):
-        # 0,01° zeměpisné šířky ≈ 1112 m
+    def test_distances(self):
         self.assertAlmostEqual(osm.haversine_m(50.0, 15.0, 50.01, 15.0), 1112, delta=2)
+        self.assertAlmostEqual(osm.line_length_m([(50.0, 15.0), (50.005, 15.0), (50.01, 15.0)]), 1112, delta=2)
 
 
-class Parse(unittest.TestCase):
-    def test_parks_and_trail_counts(self):
-        parks = {p.osm_id: p for p in osm.parse_overpass(OVERPASS)}
-        self.assertEqual(set(parks), {1, 2, 3})
-        self.assertEqual(parks[1].trails, 2)   # dedup way 11, way 12 je mimo okruh
-        self.assertEqual(parks[2].trails, 0)
-        self.assertEqual(parks[1].url, "https://www.openstreetmap.org/way/1")
+class Response(unittest.TestCase):
+    def test_check_response(self):
+        self.assertIs(osm.check_response(OVERPASS), OVERPASS)
+        with self.assertRaises(osm.OverpassError):
+            osm.check_response({"elements": [], "remark": "runtime error: Query timed out in \"query\" at line 4 after 241 seconds."})
+        with self.assertRaises(osm.OverpassError):
+            osm.check_response({"elements": []})
+
+
+class Clustering(unittest.TestCase):
+    def setUp(self):
+        self.trails, self.anchors = osm.parse_overpass(OVERPASS)
+        self.clusters = {c.trails[0].osm_id // 10 * 10 if c.trails[0].osm_id >= 10 else 0: c
+                         for c in osm.build_clusters(self.trails, self.anchors)}
+
+    def test_parse_dedups_ways(self):
+        self.assertEqual(len(self.trails), 9)
+        self.assertEqual(len(self.anchors), 2)
+
+    def test_two_clusters_lonely_trail_dropped(self):
+        self.assertEqual(set(self.clusters), {0, 10})
+        self.assertEqual(len(self.clusters[0].trails), 4)
+        self.assertEqual(self.clusters[0].id, "c1")
+
+    def test_cluster_kind_name_website(self):
+        kouty, trutnov = self.clusters[0], self.clusters[10]
+        self.assertEqual(kouty.kind, "bikepark")        # 3 dh vs 1 imba
+        self.assertEqual(trutnov.kind, "trail_center")  # samé imba
+        self.assertEqual(kouty.name, "Bikepark Kouty")
+        self.assertEqual(kouty.website, "https://example.cz")
+        self.assertEqual(trutnov.name, "Trutnov Trails – modrá")
+        self.assertAlmostEqual(kouty.length_m, 4 * 445, delta=10)
+
+    def test_link_distance(self):
+        far = {"elements": [way(1, 50.0, 15.0, DH), way(2, 50.0, 15.02, DH)]}  # ~1,4 km od sebe
+        trails, _ = osm.parse_overpass(far)
+        self.assertEqual(len(osm.cluster_trails(trails)), 2)
+        self.assertEqual(len(osm.cluster_trails(trails, link_m=2000)), 1)
 
 
 class MatchAndReport(unittest.TestCase):
     def setUp(self):
-        self.osm = osm.parse_overpass(OVERPASS)
+        trails, anchors = osm.parse_overpass(OVERPASS)
+        self.clusters = osm.build_clusters(trails, anchors)
         self.features = [
-            feature("kouty", "Bikepark Kouty", 17.098, 50.106, "Kouty nad Desnou"),   # ~700 m od OSM
-            feature("spicak", "Bikepark Špičák", 13.226, 49.163, "Železná Ruda"),      # stejné místo
+            feature("kouty", "Bikepark Kouty", 17.098, 50.106, "Kouty nad Desnou"),  # ~400 m od středu shluku
             feature("lipno", "Bikepark Lipno", 14.205, 48.630, "Lipno nad Vltavou"),  # v OSM není
         ]
 
     def test_match(self):
-        matches, extra = osm.match_parks(self.features, self.osm)
-        got = {m.park["properties"]["id"]: (m.osm.osm_id if m.osm else None) for m in matches}
-        self.assertEqual(got, {"kouty": 1, "spicak": 2, "lipno": None})
-        self.assertEqual([o.osm_id for o in extra], [3])
-
-    def test_nearby_without_name_match_is_ignored_beyond_1500m(self):
-        far = [feature("x", "Úplně jiný název", 17.12, 50.10)]  # ~1,4 km → ještě se páruje
-        self.assertIsNotNone(osm.match_parks(far, self.osm)[0][0].osm)
-        far = [feature("x", "Úplně jiný název", 17.13, 50.10)]  # ~2,1 km → už ne
-        self.assertIsNone(osm.match_parks(far, self.osm)[0][0].osm)
+        matches, extra = osm.match_parks(self.features, self.clusters)
+        got = {m.park["properties"]["id"]: (m.cluster.id if m.cluster else None) for m in matches}
+        self.assertEqual(got, {"kouty": "c1", "lipno": None})
+        self.assertEqual([c.name for c in extra], ["Trutnov Trails – modrá"])
 
     def test_report(self):
-        report = osm.render_report(*osm.match_parks(self.features, self.osm))
-        self.assertIn("nalezeno v OSM: **2**", report)
+        report = osm.render_report(*osm.match_parks(self.features, self.clusters))
+        self.assertIn("se shlukem lajn v OSM: **1**", report)
         self.assertIn("| `kouty` | Bikepark Kouty | Bikepark Kouty |", report)
-        self.assertIn("⚠️", report)              # Kouty jsou posunuté o >300 m
+        self.assertIn("⚠️", report)
         self.assertIn("- `lipno` Bikepark Lipno", report)
-        self.assertIn("| Nový park |", report)
+        self.assertIn("| Trutnov Trails – modrá |", report)
+        self.assertIn("trailpark / singltrek", report)
         self.assertIn("ODbL", report)
 
-    def test_geojson(self):
-        gj = osm.to_geojson(self.osm)
-        self.assertEqual(len(gj["features"]), 3)
-        kouty = next(f for f in gj["features"] if f["properties"]["osm"] == "way/1")
-        self.assertEqual(kouty["properties"]["website"], "https://example.cz")
-        self.assertEqual(kouty["geometry"]["coordinates"], [17.1, 50.1])
+    def test_geojson_outputs(self):
+        pts = osm.clusters_geojson(self.clusters)
+        self.assertEqual(len(pts["features"]), 2)
+        self.assertEqual(pts["features"][0]["properties"]["kind"], "bikepark")
+        lines = osm.trails_geojson(self.clusters)
+        self.assertEqual(len(lines["features"]), 8)
+        f = lines["features"][0]
+        self.assertEqual(f["geometry"]["type"], "LineString")
+        self.assertEqual(f["geometry"]["coordinates"][0], [17.1, 50.1])
+        self.assertIn("mtb:scale:dh", f["properties"])
 
 
 if __name__ == "__main__":

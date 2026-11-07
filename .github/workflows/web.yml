@@ -18,6 +18,6 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - run: node --check web/app.js && node --check web/parks.js
-      # testy zároveň validují web/data/parks.geojson
-      - run: node --test tests/parks.test.js
+      - run: for f in web/*.js; do node --check "$f"; done
+      # parks.test.js zároveň validuje web/data/parks.geojson
+      - run: node --test tests/*.test.js

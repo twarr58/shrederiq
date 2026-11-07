@@ -30,9 +30,9 @@ test("validace odhalí prohozené souřadnice, duplicitní id a špatný kind", 
 });
 
 test("validace kontroluje volitelná metadata", () => {
-  const errors = P.validateParks(fc(park({ web: "http://example.com", lift: "ano", trails_count: -1 })));
-  assert.equal(errors.length, 3);
-  assert.deepEqual(P.validateParks(fc(park({ web: "https://example.com", lift: null, trails_count: 12 }))), []);
+  const errors = P.validateParks(fc(park({ web: "http://example.com", lift: "ano", trails_count: -1, parking: [50.1, 17.1] })));
+  assert.equal(errors.length, 4);
+  assert.deepEqual(P.validateParks(fc(park({ web: "https://example.com", lift: null, trails_count: 12, parking: [17.1, 50.1] }))), []);
 });
 
 test("vyhledávání ignoruje diakritiku a hledá i v obci a kraji, výsledek je seřazený", () => {
@@ -50,7 +50,7 @@ test("vyhledávání ignoruje diakritiku a hledá i v obci a kraji, výsledek je
 
 test("info panel zobrazí neznámé hodnoty jako neověřeno", () => {
   const rows = Object.fromEntries(P.describePark({ kind: "trail_center", town: "Černá Voda", region: "Olomoucký", lift: null, trails_count: null }));
-  assert.equal(rows["Typ"], "Trail centrum");
+  assert.equal(rows["Typ"], "Trailpark / singltrek");
   assert.equal(rows["Lokalita"], "Černá Voda, Olomoucký kraj");
   assert.equal(rows["Lanovka / vlek"], "neověřeno");
   assert.equal(rows["Počet trailů"], "neověřeno");
