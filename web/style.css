@@ -86,8 +86,16 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 
 .trails { border-top: 1px solid var(--line); padding-top: 8px; margin-bottom: 10px; }
 .trails h3 { margin: 0 0 6px; font-size: 15px; }
+.trail-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px; margin: 6px 0 8px; }
+.stat { display: flex; flex-direction: column; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: color-mix(in srgb, var(--fg) 4%, transparent); font-size: 11px; color: var(--muted); line-height: 1.25; }
+.stat b { font-size: 16px; color: var(--fg); }
+.stat small { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat.diffs { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; gap: 4px 12px; }
+.stat.diffs .diff { white-space: nowrap; }
 .trail-list { list-style: none; margin: 0; padding: 0; max-height: 180px; overflow-y: auto; font-size: 13px; }
-.trail-list li { padding: 2px 0; }
+.trail-list li { display: flex; align-items: center; gap: 0; padding: 2px 0; }
+.trail-list .name { flex: 1 1 auto; min-width: 0; }
+.trail-list .len { flex: 0 0 auto; font-variant-numeric: tabular-nums; color: var(--muted); margin-left: 8px; }
 .slope-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--muted); margin-bottom: 6px; }
 .swatch { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
 

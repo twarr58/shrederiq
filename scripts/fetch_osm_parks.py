@@ -494,14 +494,41 @@ def difficulty(tags: dict) -> str | None:
     return None
 
 
-def simplify(coords: list[tuple[float, float]], min_m: float = 8) -> list[tuple[float, float]]:
-    """Vynechá body bližší než min_m od předchozího ponechaného (menší soubor pro web)."""
-    out = [coords[0]]
-    for p in coords[1:-1]:
-        if haversine_m(*out[-1], *p) >= min_m:
-            out.append(p)
-    out.append(coords[-1])
-    return out
+def _perp_m(p, a, b) -> float:
+    """Vzdálenost bodu p od úsečky a–b v metrech (lokální rovinná aproximace)."""
+    k = math.cos(math.radians(a[0])) * 111_320
+    ax, ay = 0.0, 0.0
+    bx, by = (b[1] - a[1]) * k, (b[0] - a[0]) * 111_320
+    px, py = (p[1] - a[1]) * k, (p[0] - a[0]) * 111_320
+    dd = bx * bx + by * by
+    t = 0.0 if dd == 0 else max(0.0, min(1.0, (px * bx + py * by) / dd))
+    return math.hypot(px - (ax + t * bx), py - (ay + t * by))
+
+
+def simplify(coords: list[tuple[float, float]], tolerance_m: float = 1.5) -> list[tuple[float, float]]:
+    """Douglas–Peucker: vynechá body, které od spojnice sousedů neuhýbají víc než tolerance_m.
+    Rovné úseky zřídne, serpentiny a klopené zatáčky zůstanou (prosté ředění po 8 m jim
+    ořezávalo rohy a lajny byly v mapě zubaté)."""
+    if len(coords) <= 2:
+        return list(coords)
+    keep = [False] * len(coords)
+    keep[0] = keep[-1] = True
+    stack = [(0, len(coords) - 1)]
+    while stack:
+        i, j = stack.pop()
+        if j - i < 2:
+            continue
+        a, b = coords[i], coords[j]
+        far, idx = 0.0, -1
+        for m in range(i + 1, j):
+            d = _perp_m(coords[m], a, b)
+            if d > far:
+                far, idx = d, m
+        if far > tolerance_m:
+            keep[idx] = True
+            stack.append((i, idx))
+            stack.append((idx, j))
+    return [c for c, k in zip(coords, keep) if k]
 
 
 def park_trails_geojson(matches: list[Match]) -> dict:

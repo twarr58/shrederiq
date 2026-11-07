@@ -177,8 +177,15 @@ class ParkTrails(unittest.TestCase):
         self.assertIsNone(osm.difficulty({"highway": "path"}))
 
     def test_simplify(self):
+        # body na přímce zmizí, koncové zůstanou
         pts = [(50.0, 15.0), (50.00001, 15.0), (50.00002, 15.0), (50.001, 15.0), (50.00101, 15.0)]
-        self.assertEqual(osm.simplify(pts), [(50.0, 15.0), (50.001, 15.0), (50.00101, 15.0)])
+        self.assertEqual(osm.simplify(pts), [(50.0, 15.0), (50.00101, 15.0)])
+        # klopená zatáčka: bod 5 m vedle spojnice zůstane, bod 0,5 m vedle ne
+        pts = [(50.0, 15.0), (50.00005, 15.00007), (50.0001, 15.0), (50.00015, 15.000007), (50.0002, 15.0)]
+        out = osm.simplify(pts)
+        self.assertIn((50.00005, 15.00007), out)
+        self.assertNotIn((50.00015, 15.000007), out)
+        self.assertEqual(osm.simplify(pts[:2]), pts[:2])
 
     def test_park_trails_only_matched(self):
         trails, anchors, places = osm.parse_overpass(OVERPASS)

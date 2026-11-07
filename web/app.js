@@ -222,20 +222,34 @@
         el("span", {}, el("i", { className: "swatch", style: `background:${b.color}` }), b.label)))
       : "";
 
+    // statistiky parku: celková délka, počet lajn, nejdelší lajna, délky podle obtížnosti, převýšení
+    const stat = (label, value, sub) => el("div", { className: "stat" },
+      el("b", {}, value), el("span", {}, label), sub ? el("small", { className: "muted" }, sub) : "");
+    const byDiff = ["green", "blue", "red", "black", "unknown"].filter((d) => s.byDifficulty[d])
+      .map((d) => el("span", { className: "diff" },
+        el("i", { className: "swatch", style: `background:${T.difficultyInfo(d === "unknown" ? null : d).color}` }),
+        `${T.difficultyInfo(d === "unknown" ? null : d).label} ${N.formatDistance(s.byDifficulty[d])}`));
+    const stats = el("div", { className: "trail-stats" },
+      stat("celkem", N.formatDistance(s.lengthM), s.accessLengthM ? `+ ${N.formatDistance(s.accessLengthM)} přístupových cest` : ""),
+      stat(plural(s.namedCount, "lajna", "lajny", "lajn").replace(/^\d+ /, ""), String(s.namedCount),
+        s.segments !== s.namedCount ? `${plural(s.segments, "úsek", "úseky", "úseků")} v OSM` : ""),
+      s.longest ? stat("nejdelší", N.formatDistance(s.longest.lengthM), s.longest.name || "bez názvu") : "",
+      s.eleMin != null ? stat("převýšení", `${s.eleMax - s.eleMin} m`, `${s.eleMin}–${s.eleMax} m n. m.`) : "",
+      byDiff.length ? el("div", { className: "stat diffs" }, ...byDiff) : "");
+
     const list = el("ul", { className: "trail-list" }, ...s.rows.map((r) =>
       el("li", {},
         el("i", { className: "swatch", style: `background:${T.difficultyInfo(r.difficulty).color}`, title: T.difficultyInfo(r.difficulty).label }),
-        r.name ? r.name : el("span", { className: "muted" }, r.segments > 1 ? `bez názvu (${plural(r.segments, "úsek", "úseky", "úseků")})` : "bez názvu"),
-        el("small", { className: "muted" }, ` ${N.formatDistance(r.lengthM)}`
-          + (r.slopeMax != null ? ` · ↕ ${r.eleMax - r.eleMin} m · max ${r.slopeMax} %` : "")))));
+        el("span", { className: "name" },
+          r.name ? r.name : el("span", { className: "muted" }, r.segments > 1 ? `bez názvu (${plural(r.segments, "úsek", "úseky", "úseků")})` : "bez názvu"),
+          r.slopeMax != null ? el("small", { className: "muted" }, ` ↕ ${r.eleMax - r.eleMin} m · max ${r.slopeMax} %`) : ""),
+        el("span", { className: "len" }, N.formatDistance(r.lengthM)))));
 
     box.replaceChildren(
       el("div", { className: "wx-head" },
-        el("h3", {}, "Lajny ", el("small", { className: "muted" },
-          `${plural(s.namedCount, "pojmenovaná", "pojmenované", "pojmenovaných")} · ${N.formatDistance(s.lengthM)}`)),
+        el("h3", {}, "Lajny"),
         toggle),
-      el("p", { className: "attr" }, `V OSM ${plural(s.segments, "úsek", "úseky", "úseků")} (lajna bývá rozdělená na víc úseků)`
-        + (s.accessLengthM ? `, navíc ${N.formatDistance(s.accessLengthM)} lesních a přístupových cest (šedě čárkovaně).` : ".")),
+      stats,
       legend,
       list,
       el("p", { className: "attr" },
