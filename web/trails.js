@@ -90,9 +90,14 @@
       byDifficulty[d] = (byDifficulty[d] || 0) + (f.properties.length_m || 0);
     }
     const namedCount = new Set(trails.map((f) => f.properties.name).filter(Boolean)).size;
+    const sources = {}; // "osm" | "gpx" | "trailforks" → počet úseků
+    for (const f of trails) {
+      const src = f.properties.source || "osm";
+      sources[src] = (sources[src] || 0) + 1;
+    }
     return {
       features, count: features.length, segments: trails.length, namedCount, lengthM, accessLengthM,
-      rows, byDifficulty, hasSlopes: hasSlopes(features),
+      rows, byDifficulty, sources, hasSlopes: hasSlopes(features),
     };
   }
 

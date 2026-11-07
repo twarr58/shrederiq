@@ -56,6 +56,9 @@ jobs:
             echo "::warning::no OSM data source available, deploying without trails and bases"
           fi
           [ -f .osm-cache/summary.md ] && cat .osm-cache/summary.md >> "$GITHUB_STEP_SUMMARY" || true
+      # Ruční GPX (data/gpx/<park_id>/*.gpx) pro parky, které v OSM lajny nemají
+      - name: Trails from GPX files
+        run: python3 scripts/gpx_trails.py --merge web/data/trails.geojson
       # Sklon lajn: výšky z Mapy.com Elevation API (klíč jen v Actions, do stránky se nedostane).
       # Klíč omezený na doménu z Actions nefunguje – pro elevation je lepší samostatný
       # klíč MAPY_ELEVATION_KEY jen se službou Elevation. Při chybě se nasadí bez sklonu.

@@ -14,7 +14,7 @@
   const plural = (n, one, few, many) => `${n} ${n === 1 ? one : n >= 2 && n <= 4 ? few : many}`;
   const el = (tag, props, ...children) => {
     const n = Object.assign(document.createElement(tag), props || {});
-    n.append(...children);
+    n.append(...children.flat());
     return n;
   };
 
@@ -163,6 +163,8 @@
 
   function trailTooltip(p) {
     const parts = [p.name || "bez názvu", T.difficultyInfo(p.difficulty).label, N.formatDistance(p.length_m)];
+    if (p.source === "trailforks") parts.push("GPX Trailforks");
+    else if (p.source === "gpx") parts.push("GPX");
     if (p.slope_max != null) parts.push(`max ${p.slope_max} %`, `${p.ele_min}–${p.ele_max} m n. m.`);
     return parts.join(" · ");
   }
@@ -230,9 +232,13 @@
         + (s.accessLengthM ? `, navíc ${N.formatDistance(s.accessLengthM)} lesních a přístupových cest (šedě čárkovaně).` : ".")),
       legend,
       list,
-      el("p", { className: "attr" }, "Lajny: © přispěvatelé ",
-        el("a", { href: "https://www.openstreetmap.org/copyright", target: "_blank", rel: "noopener" }, "OpenStreetMap"),
-        " (ODbL). Obtížnost podle mtb:scale, může se lišit od značení v parku.",
+      el("p", { className: "attr" },
+        s.sources.osm ? ["Lajny: © přispěvatelé ",
+          el("a", { href: "https://www.openstreetmap.org/copyright", target: "_blank", rel: "noopener" }, "OpenStreetMap"),
+          " (ODbL). Obtížnost podle mtb:scale, může se lišit od značení v parku."] : "",
+        s.sources.trailforks ? [" Lajny z GPX: © ", el("a", { href: "https://www.trailforks.com/", target: "_blank", rel: "noopener" }, "Trailforks"),
+          ` (${s.sources.trailforks} úseků, jen pro nekomerční použití).`] : "",
+        s.sources.gpx ? ` ${s.sources.gpx} úseků z ručně dodaných GPX.` : "",
         s.hasSlopes ? " Výšky: Mapy.com, sklon je orientační (výškový model, okno ~75 m)." : ""));
   }
 

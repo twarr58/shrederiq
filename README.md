@@ -104,6 +104,9 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
 - Kontrola: workflow `osm` vypíše pro každý park základnu, lanovku, posun bodu,
   parkoviště, počet lajn a kandidáty lanovek (Summary běhu). Ruční spuštění přeskočí
   pomalý celorepublikový report přes Overpass, pokud nezaškrtneš vstup `overpass`.
+- **Ruční GPX** pro parky, které v OSM lajny nemají: `data/gpx/<park_id>/*.gpx`
+  (např. export z Trailforks). `scripts/gpx_trails.py` je při buildu připojí
+  k lajnám z OSM, viz `data/gpx/README.md`.
 - Lajna ≠ úsek: jedna lajna bývá v OSM rozdělená na víc cest (way). Panel počítá
   pojmenované lajny, úseky bez názvu ukazuje zvlášť a lesní cesty kreslí šedě čárkovaně.
 - **Sklon** (`scripts/elevation.py`): lajny se převzorkují po ~25 m a výšky bodů se
