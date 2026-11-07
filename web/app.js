@@ -83,6 +83,7 @@
   let parks = [];           // GeoJSON features
   const markers = new Map(); // id → L.circleMarker
   let activeId = null;
+  let trailCounts = null;    // id → počet pojmenovaných lajn (po načtení trails.geojson)
   let userPos = null;        // { lat, lon } po kliknutí na „Moje poloha“
   let userMarker = null;
   let routeLayer = null;
@@ -98,9 +99,14 @@
     const items = list.map((f) => {
       const p = f.properties;
       const where = [p.town, p.region].filter(Boolean).join(", ");
+      const parts = [dist.has(f) ? `${N.formatDistance(dist.get(f))} vzdušně` : "", where];
+      if (trailCounts) {
+        const n = trailCounts[p.id] || 0;
+        parts.push(n ? plural(n, "lajna", "lajny", "lajn") : "bez lajn v datech");
+      }
       const li = el("li", { className: p.id === activeId ? "active" : "" },
         el("i", { className: `dot ${p.kind}` }), " ", p.name,
-        el("small", {}, dist.has(f) ? `${N.formatDistance(dist.get(f))} vzdušně · ${where}` : where));
+        el("small", {}, parts.filter(Boolean).join(" · ")));
       li.addEventListener("click", () => selectPark(p.id));
       return li;
     });
@@ -445,6 +451,11 @@
     }
 
     renderList();
+    fetchTrails().then((fc) => {
+      if (!fc) return;
+      trailCounts = Object.fromEntries(parks.map((f) => [f.properties.id, T.summarize(fc, f.properties.id).namedCount]));
+      renderList();
+    });
     const fromHash = decodeURIComponent(location.hash.slice(1));
     if (fromHash && markers.has(fromHash)) selectPark(fromHash);
   }
