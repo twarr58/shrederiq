@@ -11,6 +11,7 @@
 
   const $ = (id) => document.getElementById(id);
   const num = (x) => String(x).replace(".", ","); // české desetinné číslo
+  const plural = (n, one, few, many) => `${n} ${n === 1 ? one : n >= 2 && n <= 4 ? few : many}`;
   const el = (tag, props, ...children) => {
     const n = Object.assign(document.createElement(tag), props || {});
     n.append(...children);
@@ -147,31 +148,90 @@
     const s = T.summarize(await fetchTrails(), id);
     if (activeId !== id || !box.isConnected) return;
     clearTrails();
-    if (!s.count) {
+    if (!s.segments) {
       box.replaceChildren(el("p", { className: "note" },
         "Lajny tohoto parku zatím v datech nejsou (OpenStreetMap je pro něj nemá). Doplníme z Trailforks."));
       return;
     }
-    trailLayer = L.geoJSON({ type: "FeatureCollection", features: s.features }, {
-      style: (f) => ({ color: T.difficultyInfo(f.properties.difficulty).color, weight: 4, opacity: 0.9 }),
-      onEachFeature: (f, layer) => {
-        const p = f.properties;
-        layer.bindTooltip(`${p.name || "bez názvu"} · ${T.difficultyInfo(p.difficulty).label} · ${N.formatDistance(p.length_m)}`, { sticky: true });
-      },
-    }).addTo(map);
-    map.fitBounds(trailLayer.getBounds(), { padding: [30, 30], maxZoom: 15 });
+    renderTrails(s, box, true);
+  }
+
+  let trailColor = "difficulty"; // nebo "slope"
+  try { trailColor = localStorage.getItem("shrederiq.trailColor") === "slope" ? "slope" : "difficulty"; } catch (_) { /* bez storage */ }
+
+  function trailTooltip(p) {
+    const parts = [p.name || "bez názvu", T.difficultyInfo(p.difficulty).label, N.formatDistance(p.length_m)];
+    if (p.slope_max != null) parts.push(`max ${p.slope_max} %`, `${p.ele_min}–${p.ele_max} m n. m.`);
+    return parts.join(" · ");
+  }
+
+  const trailRenderer = L.canvas({ padding: 0.3 }); // stovky úseků sklonu – canvas je rychlejší než SVG
+
+  function drawTrails(s, mode) {
+    clearTrails();
+    trailLayer = L.featureGroup();
+    for (const f of s.features) {
+      if (f.properties.access) { // lesní / přístupová cesta – tence a čárkovaně, není to lajna
+        L.geoJSON(f, { style: { color: "#8a8f98", weight: 2, opacity: 0.8, dashArray: "4 4" }, renderer: trailRenderer })
+          .bindTooltip(`lesní / přístupová cesta · ${N.formatDistance(f.properties.length_m)}`, { sticky: true }).addTo(trailLayer);
+        continue;
+      }
+      const runs = mode === "slope" ? T.slopeRuns(f) : null;
+      const tooltip = trailTooltip(f.properties);
+      if (runs) {
+        for (const r of runs) {
+          L.polyline(r.coordinates.map(([lon, lat]) => [lat, lon]), { color: r.color, weight: 5, opacity: 0.95, renderer: trailRenderer })
+            .bindTooltip(`${tooltip} · tady ${r.slopeMax} %`, { sticky: true }).addTo(trailLayer);
+        }
+      } else {
+        L.geoJSON(f, { style: { color: T.difficultyInfo(f.properties.difficulty).color, weight: 4, opacity: 0.9 }, renderer: trailRenderer })
+          .bindTooltip(tooltip, { sticky: true }).addTo(trailLayer);
+      }
+    }
+    trailLayer.addTo(map);
+  }
+
+  function renderTrails(s, box, fit) {
+    const mode = s.hasSlopes ? trailColor : "difficulty";
+    drawTrails(s, mode);
+    if (fit) map.fitBounds(trailLayer.getBounds(), { padding: [30, 30], maxZoom: 15 });
+
+    const toggle = s.hasSlopes ? el("div", { className: "wx-toggle", role: "group", ariaLabel: "Barva lajn" },
+      ...[["difficulty", "obtížnost"], ["slope", "sklon"]].map(([m, label]) => {
+        const b = el("button", { type: "button", className: m === mode ? "on" : "" }, label);
+        b.addEventListener("click", () => {
+          trailColor = m;
+          try { localStorage.setItem("shrederiq.trailColor", m); } catch (_) { /* bez storage */ }
+          renderTrails(s, box, false);
+        });
+        return b;
+      })) : "";
+
+    const legend = mode === "slope"
+      ? el("div", { className: "slope-legend" }, ...T.SLOPE_BINS.map((b) =>
+        el("span", {}, el("i", { className: "swatch", style: `background:${b.color}` }), b.label)))
+      : "";
 
     const list = el("ul", { className: "trail-list" }, ...s.rows.map((r) =>
       el("li", {},
         el("i", { className: "swatch", style: `background:${T.difficultyInfo(r.difficulty).color}`, title: T.difficultyInfo(r.difficulty).label }),
-        r.name ? r.name : el("span", { className: "muted" }, r.segments > 1 ? `${r.segments}× bez názvu` : "bez názvu"),
-        el("small", { className: "muted" }, ` ${N.formatDistance(r.lengthM)}`))));
+        r.name ? r.name : el("span", { className: "muted" }, r.segments > 1 ? `bez názvu (${plural(r.segments, "úsek", "úseky", "úseků")})` : "bez názvu"),
+        el("small", { className: "muted" }, ` ${N.formatDistance(r.lengthM)}`
+          + (r.slopeMax != null ? ` · ↕ ${r.eleMax - r.eleMin} m · max ${r.slopeMax} %` : "")))));
+
     box.replaceChildren(
-      el("h3", {}, `Lajny `, el("small", { className: "muted" }, `${s.count} úseků · ${N.formatDistance(s.lengthM)}`)),
+      el("div", { className: "wx-head" },
+        el("h3", {}, "Lajny ", el("small", { className: "muted" },
+          `${plural(s.namedCount, "pojmenovaná", "pojmenované", "pojmenovaných")} · ${N.formatDistance(s.lengthM)}`)),
+        toggle),
+      el("p", { className: "attr" }, `V OSM ${plural(s.segments, "úsek", "úseky", "úseků")} (lajna bývá rozdělená na víc úseků)`
+        + (s.accessLengthM ? `, navíc ${N.formatDistance(s.accessLengthM)} lesních a přístupových cest (šedě čárkovaně).` : ".")),
+      legend,
       list,
       el("p", { className: "attr" }, "Lajny: © přispěvatelé ",
         el("a", { href: "https://www.openstreetmap.org/copyright", target: "_blank", rel: "noopener" }, "OpenStreetMap"),
-        " (ODbL). Obtížnost podle mtb:scale, může se lišit od značení v parku."));
+        " (ODbL). Obtížnost podle mtb:scale, může se lišit od značení v parku.",
+        s.hasSlopes ? " Výšky: Mapy.com, sklon je orientační (výškový model, okno ~75 m)." : ""));
   }
 
   // --- navigace ---------------------------------------------------------------
