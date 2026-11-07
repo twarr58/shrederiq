@@ -4,7 +4,8 @@ Interaktivní mapa českých bikeparků a trail center. Po rozkliknutí parku se
 všechny jeho trailové lajny a základní info (web, otevírací doba, lanovka, ceník).
 Bonus: lajny obarvené podle sklonu.
 
-> Stav: návrh / rozpracováno. Tohle README popisuje cílovou podobu projektu.
+> Stav: **fáze 1** – mapa parků s info panelem. Trasy jednotlivých lajn zatím
+> nejsou (chybí data), přijdou ve fázi 2. Seznam parků je orientační a čeká na ověření.
 
 ## Funkce
 
@@ -34,13 +35,67 @@ Bonus: lajny obarvené podle sklonu.
    (až 256 bodů na request) → sklon v % mezi body, uložený jako atribut segmentů / barva.
 5. **Metadata** — doplnění info o parcích (web, provoz, lanovka, ceník).
 
-Navržený tvar dat:
+## Implementace
+
+### Fáze 1 – mapa parků (hotovo)
+
+Statický web bez buildu (stejný stack jako emhadecko), nasazený na GitHub Pages.
 
 ```text
-data/
-  parks.geojson    # body parků + metadata
-  trails.geojson   # lajny trailů (park_id, name, difficulty, length_m, slope segmenty)
+web/
+  index.html          # stránka
+  app.js              # mapa (Leaflet), seznam, vyhledávání, info panel, #odkaz na park
+  parks.js            # čisté funkce: validace dat, filtr, popis parku (testované)
+  config.js           # runtime konfigurace (klíč Mapy.com), přepisuje ji pages workflow
+  style.css
+  data/parks.geojson  # seznam parků – zdroj pravdy, needitovat jinde
+tests/parks.test.js   # unit testy + validace web/data/parks.geojson
 ```
+
+Formát `web/data/parks.geojson` – `FeatureCollection` bodů (`[lon, lat]`), vlastnosti:
+
+| Pole | Typ | Popis |
+|---|---|---|
+| `id` | string, kebab-case | unikátní ID parku (použije se i jako `park_id` u trailů a v URL `#id`) |
+| `name` | string | název |
+| `kind` | `bikepark` \| `trail_center` | typ |
+| `town`, `region` | string | obec, kraj |
+| `web` | `https://…` \| null | oficiální web |
+| `lift` | bool \| null | lanovka / vlek |
+| `trails_count` | int \| null | počet trailů |
+| `verified` | bool | `false` = poloha a údaje jsou orientační |
+
+Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
+
+### Fáze 2 – trailové lajny (až budou data)
+
+- `web/data/trails.geojson` – `LineString` s `park_id`, `name`, `difficulty`, `length_m`, `source`,
+- skript(y) v `scripts/` pro import GPX z Trailforks a Overpass → normalizovaný GeoJSON,
+- výpočet sklonu přes Mapy.com Elevation API (segmenty se sklonem v %),
+- ve frontendu: po kliknutí na park načíst jeho lajny a obarvit je podle sklonu / obtížnosti.
+
+### Fáze 3 – metadata
+
+Otevírací doba, ceník, stav provozu – ručně nebo scrapováním webů parků.
+
+## Lokální spuštění
+
+```bash
+python3 -m http.server -d web 8000
+```
+
+Pak otevři <http://localhost:8000>. Bez klíče Mapy.com se použije podklad OpenStreetMap.
+
+```bash
+node --test tests/parks.test.js
+```
+
+## Nasazení
+
+Workflow `pages` nasadí `web/` na GitHub Pages při pushi do `main`
+(v Settings → Pages nastav Source na **GitHub Actions**). Pro podklad Mapy.com
+přidej repo secret `MAPY_API_KEY`. Klíč je ve stránce veřejně čitelný, proto ho
+v administraci Mapy.com omez na doménu GitHub Pages.
 
 ## Frontend
 
