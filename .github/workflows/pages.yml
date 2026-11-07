@@ -36,6 +36,7 @@ jobs:
             .osm-cache/parks.json
             .osm-cache/elevation.json
             .osm-cache/trailforks.json
+            .osm-cache/snap.json
           key: osm-parks-${{ github.run_id }}
           restore-keys: osm-parks-
       # Vyfiltrovaný výřez OSM (pár MB) se drží v cache po dnech – 800MB stahování
@@ -82,10 +83,24 @@ jobs:
       # Sklon lajn: výšky z Mapy.com Elevation API (klíč jen v Actions, do stránky se nedostane).
       # Klíč omezený na doménu z Actions nefunguje – pro elevation je lepší samostatný
       # klíč MAPY_ELEVATION_KEY jen se službou Elevation. Při chybě se nasadí bez sklonu.
+      # Přichycení lajn k síti Mapy.com (routing bike_mountain), #22 – jen se serverovým
+      # klíčem; bez něj zůstávají lajny podle OSM. Odpovědi v cache, lajny k ruční
+      # kontrole jdou do souhrnu běhu.
+      - name: Snap trails to the Mapy.com network
+        if: hashFiles('web/data/trails.geojson') != ''
+        continue-on-error: true
+        timeout-minutes: 20
+        env:
+          MAPY_SERVER_KEY: ${{ secrets.MAPY_SERVER_KEY }}
+          MAPY_ELEVATION_KEY: ${{ secrets.MAPY_ELEVATION_KEY }}
+        run: |
+          python3 scripts/snap_trails.py web/data/trails.geojson --cache .osm-cache/snap.json --report .osm-cache/snap.md
+          [ -f .osm-cache/snap.md ] && { echo "## Lajny k ruční kontrole (routing Mapy.com)"; cat .osm-cache/snap.md; } >> "$GITHUB_STEP_SUMMARY" || true
       - name: Trail slopes from Mapy.com elevation
         if: hashFiles('web/data/trails.geojson') != ''
         timeout-minutes: 15
         env:
+          MAPY_SERVER_KEY: ${{ secrets.MAPY_SERVER_KEY }}
           MAPY_ELEVATION_KEY: ${{ secrets.MAPY_ELEVATION_KEY }}
           MAPY_API_KEY: ${{ secrets.MAPY_API_KEY }}
         run: |

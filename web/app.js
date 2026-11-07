@@ -259,6 +259,7 @@
         s.sources.trailforks ? [" Lajny z GPX: © ", el("a", { href: "https://www.trailforks.com/", target: "_blank", rel: "noopener" }, "Trailforks"),
           ` (${plural(s.sources.trailforks, "úsek", "úseky", "úseků")}, jen pro nekomerční použití).`] : "",
         s.sources.gpx ? ` ${plural(s.sources.gpx, "úsek", "úseky", "úseků")} z ručně dodaných GPX.` : "",
+        s.snapped ? ` Průběh ${plural(s.snapped, "úseku", "úseků", "úseků")} podle sítě Mapy.com (routing).` : "",
         s.hasSlopes ? " Výšky: Mapy.com, sklon je orientační (výškový model, okno ~75 m)." : ""));
   }
 

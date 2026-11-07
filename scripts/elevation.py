@@ -11,7 +11,8 @@ Pro každou lajnu:
                     který v OSM nemusí odpovídat směru jízdy),
        ele_min, ele_max, slope_avg (|konec − začátek| / délka), slope_max (max |sklon|).
 
-Klíč: proměnná prostředí MAPY_ELEVATION_KEY, jinak MAPY_API_KEY. Bez klíče skript
+Klíč: proměnná prostředí MAPY_SERVER_KEY (serverový klíč Mapy.com s Elevation + Routing),
+jinak MAPY_ELEVATION_KEY, jinak MAPY_API_KEY. Bez klíče skript
 soubor nezmění (exit 0). Při chybě API skončí s chybou a soubor nezmění.
 
 Příklad:
@@ -157,9 +158,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cache", type=Path, help="JSON cache výšek {\"lon,lat\": výška}")
     args = ap.parse_args(argv)
 
-    api_key = os.environ.get("MAPY_ELEVATION_KEY") or os.environ.get("MAPY_API_KEY")
+    api_key = os.environ.get("MAPY_SERVER_KEY") or os.environ.get("MAPY_ELEVATION_KEY") or os.environ.get("MAPY_API_KEY")
     if not api_key:
-        print("elevation: bez MAPY_ELEVATION_KEY / MAPY_API_KEY, sklon se nepočítá", file=sys.stderr)
+        print("elevation: bez MAPY_SERVER_KEY / MAPY_ELEVATION_KEY / MAPY_API_KEY, sklon se nepočítá", file=sys.stderr)
         return 0
 
     fc = json.loads(args.trails.read_text())

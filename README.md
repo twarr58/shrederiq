@@ -120,11 +120,17 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   v Actions). Ke každému úseku se uloží sklon v %, počítaný přes okno ~75 m, protože
   výškový model je zašuměný. K lajně se uloží převýšení a průměrný a maximální sklon.
   Ve webu jde přepnout barvu lajn: obtížnost / sklon.
-  Klíč pro build: secret `MAPY_ELEVATION_KEY` (doporučeno – samostatný klíč jen se
+  Klíč pro build: secret `MAPY_SERVER_KEY` (dřív `MAPY_ELEVATION_KEY`) (doporučeno – samostatný klíč jen se
   službou Elevation, bez omezení na doménu), jinak `MAPY_API_KEY`. Klíč omezený na
   doménu GitHub Pages z Actions nefunguje. Bez klíče nebo při chybě API se web
   nasadí bez sklonu.
 - Dál: lajny z Trailforks pro parky, které v OSM chybí.
+- **Přichycení k Mapy.com** (`scripts/snap_trails.py`, #22): se serverovým klíčem
+  `MAPY_SERVER_KEY` (Routing + Elevation, bez omezení domény) se každá lajna z OSM
+  nechá spočítat routingem `bike_mountain` po síti Mapy.com přes průjezdní body po
+  100 m. Když se trasa od OSM neodchýlí o víc než 25 m a není o víc než polovinu
+  delší, nahradí hrubý nákres z OSM (vlastnost `snapped`); jinak lajna zůstane podle
+  OSM a objeví se v souhrnu běhu jako „k ruční kontrole“ (`snap_dev` v metrech).
 - **Trailforks API** (`scripts/trailforks_trails.py`): park s vlastností `trailforks_rid`
   (id regionu na Trailforks) dostane lajny z API, když jsou v Actions secrets
   `TRAILFORKS_APP_ID` a `TRAILFORKS_APP_SECRET`. Bez nich se krok přeskočí. Obtížnost
