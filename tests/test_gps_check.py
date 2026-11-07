@@ -56,5 +56,25 @@ class GpsCheck(unittest.TestCase):
         self.assertEqual(gc.bbox_of([line("p", "a")]), (14.597, 49.997, 14.603, 50.007))
 
 
+    def test_fit_moves_line_onto_traces(self):
+        # lajna v OSM 30 m vedle, stopy hustě podél skutečné trasy
+        drawn = line("p", "Korida", lon=14.6004)
+        trace = "".join(f'<trkpt lat="{50.0 + i * 0.00004:.5f}" lon="{14.6 + (0.00002 if i % 2 else -0.00002):.5f}"/>' for i in range(101))
+        fc = {"features": [drawn]}
+        summary = gc.check(fc, {}, lambda b, p: GPX.format(pts=trace), fit=True)
+        self.assertTrue(drawn["properties"]["gps_fit"])
+        self.assertGreaterEqual(drawn["properties"]["gps_cov"], 70)
+        self.assertEqual(summary["p"]["fitted"], 1)
+        self.assertTrue(all(abs(c[0] - 14.6) < 0.00015 for c in drawn["geometry"]["coordinates"]))  # do ~11 m od stop
+        self.assertIn("| 1 |", gc.render(summary))
+
+    def test_fit_leaves_line_without_traces(self):
+        drawn = line("p", "Ghost", lon=14.62)
+        trace = "".join(f'<trkpt lat="{50.0 + i * 0.0001:.5f}" lon="14.60003"/>' for i in range(41))
+        gc.check({"features": [drawn]}, {}, lambda b, p: GPX.format(pts=trace), fit=True)
+        self.assertNotIn("gps_fit", drawn["properties"])
+        self.assertEqual(drawn["geometry"]["coordinates"][0][0], 14.62)
+
+
 if __name__ == "__main__":
     unittest.main()

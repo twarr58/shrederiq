@@ -1,0 +1,18 @@
+{
+  "source": "https://www.mujkralicak.cz/traily.htm",
+  "checked": "2026-11-07",
+  "trails": [
+    {"name": "Rodinný Stříbrňák", "difficulty": "green", "length_m": 6800},
+    {"name": "Hynčická tečka", "difficulty": "green", "length_m": 700},
+    {"name": "Kudrňák", "difficulty": "blue", "length_m": 1900},
+    {"name": "Modrý Flowčko", "difficulty": "blue", "length_m": 2500},
+    {"name": "Vlaštovka", "difficulty": "blue", "length_m": 2400},
+    {"name": "Fun Flow", "difficulty": "red", "length_m": 1700},
+    {"name": "Skill trail a pumptrack", "difficulty": "green", "length_m": 295},
+    {"name": "Enduro RZ-1", "difficulty": "black", "length_m": 600},
+    {"name": "Enduro RZ-2", "difficulty": "black", "length_m": 600},
+    {"name": "Enduro RZ-3", "difficulty": "black", "length_m": 1200},
+    {"name": "Enduro RZ-4", "difficulty": "black", "length_m": 1100},
+    {"name": "Enduro RZ-5", "difficulty": "black", "length_m": 1100}
+  ]
+}
