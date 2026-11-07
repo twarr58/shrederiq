@@ -1,0 +1,99 @@
+{
+  "source": "https://trutnovtrails.cz/traily/",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Floutek trail",
+      "difficulty": "blue",
+      "length_m": 3800
+    },
+    {
+      "name": "Kozí trail",
+      "difficulty": "blue",
+      "length_m": 5100
+    },
+    {
+      "name": "Bunkr trail",
+      "difficulty": "blue",
+      "length_m": 7000
+    },
+    {
+      "name": "Trubka trail",
+      "difficulty": "blue",
+      "length_m": 700
+    },
+    {
+      "name": "Úpa trail",
+      "difficulty": "blue",
+      "length_m": 4600
+    },
+    {
+      "name": "Krakonoš trail",
+      "difficulty": "blue",
+      "length_m": 700
+    },
+    {
+      "name": "Perníkový trail",
+      "difficulty": "red",
+      "length_m": 2000
+    },
+    {
+      "name": "Modřínový trail",
+      "difficulty": "red",
+      "length_m": 3100
+    },
+    {
+      "name": "Rýbrcoul",
+      "difficulty": "red",
+      "length_m": 1000
+    },
+    {
+      "name": "Myší díra",
+      "difficulty": "red",
+      "length_m": 1000
+    },
+    {
+      "name": "Ádr expres",
+      "difficulty": "red",
+      "length_m": 2700
+    },
+    {
+      "name": "Boulder trail",
+      "difficulty": "black",
+      "length_m": 2500
+    },
+    {
+      "name": "Ptačí perspektiva",
+      "difficulty": "black",
+      "length_m": 800
+    },
+    {
+      "name": "Trail pod Jeskyňkou",
+      "difficulty": "black",
+      "length_m": 2000
+    },
+    {
+      "name": "Střílna trail",
+      "difficulty": "black",
+      "length_m": 1000
+    },
+    {
+      "name": "Jezevec trail",
+      "difficulty": "black",
+      "length_m": 700
+    },
+    {
+      "name": "Žiletka trail",
+      "difficulty": "black",
+      "length_m": 2000
+    },
+    {
+      "name": "Panský stoupák",
+      "length_m": 3200
+    },
+    {
+      "name": "Zkratka k trailům",
+      "length_m": 4100
+    }
+  ]
+}

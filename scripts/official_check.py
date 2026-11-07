@@ -61,14 +61,19 @@ def osm_trails(fc: dict) -> dict[str, dict[str, dict]]:
         p = f["properties"]
         if p.get("access") or not p.get("name"):
             continue
-        row = out[p["park_id"]].setdefault(p["name"], {"length_m": 0, "by": defaultdict(int)})
+        # stejné jméno bez ohledu na velikost písmen („Stará Medvědice“ / „Stará medvědice“)
+        key = fold(p["name"])
+        row = out[p["park_id"]].setdefault(key, {"name": p["name"], "length_m": 0, "by": defaultdict(int)})
         row["length_m"] += p.get("length_m") or 0
         row["by"][p.get("difficulty") or ""] += p.get("length_m") or 0
-    for rows in out.values():
+    # klíč → zobrazované jméno (první pravopis), aby report tiskl jména z OSM
+    named: dict[str, dict[str, dict]] = defaultdict(dict)
+    for pid, rows in out.items():
         for row in rows.values():
             row["difficulty"] = max(row["by"].items(), key=lambda kv: kv[1])[0] or None
             del row["by"]
-    return out
+            named[pid][row.pop("name")] = row
+    return named
 
 
 def match(official: list[dict], osm: dict[str, dict]) -> dict:

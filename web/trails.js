@@ -70,11 +70,14 @@
     // Pojmenovaná lajna = jeden řádek bez ohledu na obtížnost úseků (OSM mívá krátký úsek
     // s jiným mtb:scale, např. nájezd); obtížnost řádku je ta s největší délkou.
     // Úseky bez názvu se slučují podle obtížnosti.
+    // Název se porovnává bez ohledu na velikost písmen a mezery (OSM: „Stará Medvědice“
+    // i „Stará medvědice“); zobrazí se pravopis nejdelšího úseku.
     const named = new Map(); // name nebo "|difficulty" → { name, difficulty, lengthM, segments, byDiff }
     for (const f of trails) {
       const p = f.properties;
-      const key = p.name ? p.name : `|${p.difficulty || ""}`;
-      const row = named.get(key) || { name: p.name || null, difficulty: p.difficulty || null, lengthM: 0, segments: 0, slopeMax: null, eleMin: null, eleMax: null, byDiff: {} };
+      const key = p.name ? p.name.trim().toLowerCase().replace(/\s+/g, " ") : `|${p.difficulty || ""}`;
+      const row = named.get(key) || { name: p.name || null, difficulty: p.difficulty || null, lengthM: 0, segments: 0, slopeMax: null, eleMin: null, eleMax: null, byDiff: {}, longestSeg: -1 };
+      if ((p.length_m || 0) > row.longestSeg) { row.longestSeg = p.length_m || 0; row.name = p.name || null; }
       row.lengthM += p.length_m || 0;
       row.segments += 1;
       const d = p.difficulty || "";
@@ -85,7 +88,7 @@
       if (p.ele_max != null) row.eleMax = Math.max(row.eleMax ?? -Infinity, p.ele_max);
       named.set(key, row);
     }
-    const rows = [...named.values()].map(({ byDiff, ...r }) => r).sort((a, b) =>
+    const rows = [...named.values()].map(({ byDiff, longestSeg, ...r }) => r).sort((a, b) =>
       ORDER.indexOf(a.difficulty) - ORDER.indexOf(b.difficulty)
       || (a.name === null) - (b.name === null)
       || (a.name || "").localeCompare(b.name || "", "cs"));
@@ -95,7 +98,7 @@
       const d = f.properties.difficulty || "unknown";
       byDifficulty[d] = (byDifficulty[d] || 0) + (f.properties.length_m || 0);
     }
-    const namedCount = new Set(trails.map((f) => f.properties.name).filter(Boolean)).size;
+    const namedCount = rows.filter((r) => r.name).length;
     const sources = {}; // "osm" | "gpx" | "trailforks" → počet úseků
     for (const f of trails) {
       const src = f.properties.source || "osm";

@@ -1,0 +1,29 @@
+{
+  "source": "https://singlekras.cz/jedovnicke-stezky",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Stoupací"
+    },
+    {
+      "name": "Jedlovice"
+    },
+    {
+      "name": "Duchoslav"
+    },
+    {
+      "name": "Tipeček"
+    },
+    {
+      "name": "Rakovecký"
+    },
+    {
+      "name": "Pod cestou",
+      "difficulty": "blue",
+      "length_m": 2500
+    },
+    {
+      "name": "Paseky"
+    }
+  ]
+}

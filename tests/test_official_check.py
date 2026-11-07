@@ -34,6 +34,14 @@ class Official(unittest.TestCase):
         self.assertIn("| `k` | 3 | 3 | 2 | Vlaštovka | Neznámá |", text)
         self.assertIn("Žádný soubor", oc.render({}))
 
+    def test_same_name_different_case_is_one_trail(self):
+        fc = {"features": [
+            {"properties": {"park_id": "k", "name": "Stará Medvědice", "difficulty": "red", "length_m": 5}},
+            {"properties": {"park_id": "k", "name": "Stará medvědice", "difficulty": "red", "length_m": 3995}}]}
+        rows = oc.osm_trails(fc)["k"]
+        self.assertEqual(list(rows), ["Stará Medvědice"])
+        self.assertEqual(rows["Stará Medvědice"]["length_m"], 4000)
+
     def test_fold_and_same(self):
         self.assertEqual(oc.fold("Modrý Flowčko "), "modry flowcko")
         self.assertTrue(oc.same("Modrá trať", "Modrý trail"))

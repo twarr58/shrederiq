@@ -1,0 +1,44 @@
+{
+  "source": "https://eresort.dolnimorava.cz/atrakce/trail-park-17/",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Selský trail",
+      "difficulty": "blue",
+      "length_m": 6100
+    },
+    {
+      "name": "Mlýnský trail",
+      "difficulty": "green",
+      "length_m": 7600
+    },
+    {
+      "name": "OAKLEY trail",
+      "difficulty": "red",
+      "length_m": 4700
+    },
+    {
+      "name": "Mamutí trail",
+      "difficulty": "black",
+      "length_m": 4000
+    },
+    {
+      "name": "Downhill trail",
+      "difficulty": "black",
+      "length_m": 2000
+    },
+    {
+      "name": "Stoupák",
+      "difficulty": "blue",
+      "length_m": 5200
+    },
+    {
+      "name": "Specialized Enduro Trail",
+      "length_m": 2600
+    },
+    {
+      "name": "Selská AirLine",
+      "length_m": 1900
+    }
+  ]
+}
