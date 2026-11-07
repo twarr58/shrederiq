@@ -107,33 +107,79 @@
       const li = el("li", { className: p.id === activeId ? "active" : "" },
         el("i", { className: `dot ${p.kind}` }), " ", p.name,
         el("small", {}, parts.filter(Boolean).join(" · ")));
-      li.addEventListener("click", () => selectPark(p.id));
+      li.addEventListener("click", () => { selectPark(p.id); if (matchMedia("(max-width: 640px)").matches) setListOpen(false); });
       return li;
     });
     $("list").replaceChildren(...items);
     $("status").textContent = `${items.length} z ${parks.length} parků`;
+    $("toggle-list").textContent = listOpen ? "Skrýt seznam" : `Seznam parků · ${parks.length}`;
   }
 
+  // Seznam parků se zobrazí jen na požádání (tlačítko) nebo při hledání – jinak zabíral
+  // celou výšku okna a překrýval mapu.
+  let listOpen = false;
+  function setListOpen(open) {
+    listOpen = open;
+    for (const id of ["legend", "list", "status"]) $(id).hidden = !open;
+    $("toggle-list").setAttribute("aria-expanded", String(open));
+    $("panel").classList.toggle("open", open);
+    renderList();
+  }
+  $("toggle-list").addEventListener("click", () => setListOpen(!listOpen));
+
+  // Karta: hlavička, tři čísla a záložky. Jen Lajny se načtou hned (kreslí se do mapy),
+  // počasí až po otevření záložky – karta tak nezabírá celou výšku okna.
+  let cardTab = "trails";
+  try { cardTab = localStorage.getItem("shrederiq.cardTab") || "trails"; } catch (_) { /* bez storage */ }
+
   function renderCard(p) {
+    const close = el("button", { className: "close", type: "button", title: "Zavřít", ariaLabel: "Zavřít" }, "×");
+    close.addEventListener("click", () => selectPark(null));
+
+    const where = P.describePark(p).find(([k]) => k === "Lokalita")[1];
+    const sub = el("p", { className: "card-sub" }, el("i", { className: `dot ${p.kind}` }),
+      [P.KINDS[p.kind] || p.kind, where, p.lift ? (p.osm_lift ? `lanovka ${p.osm_lift}` : "lanovka / vlek") : ""].filter(Boolean).join(" · "));
+    const head = el("div", { className: "card-head" }, el("h2", {}, p.name), sub);
+    const stats = el("div", { className: "card-stats" });
+
+    const trails = el("section", { className: "trails" }, el("p", { className: "muted" }, "Načítám lajny…"));
+    const weather = el("section", { className: "weather" }, el("p", { className: "muted" }, "Počasí se načte po otevření záložky."));
+    const info = renderInfo(p);
+    const panels = { trails, weather, nav: renderNav(p.id), info };
+    const labels = { trails: "Lajny", weather: "Počasí", nav: "Navigace", info: "Info" };
+    const loaded = new Set();
+    const panel = el("div", { className: "tab-panel", role: "tabpanel" });
+    const tabs = el("div", { className: "tabs", role: "tablist", ariaLabel: "Části karty" });
+    const open = (key) => {
+      cardTab = key;
+      try { localStorage.setItem("shrederiq.cardTab", key); } catch (_) { /* bez storage */ }
+      for (const b of tabs.children) b.setAttribute("aria-selected", String(b.dataset.key === key));
+      panel.replaceChildren(panels[key]);
+      if (key === "weather" && !loaded.has(key)) { loaded.add(key); loadWeather(p.id, weather); }
+    };
+    for (const key of Object.keys(panels)) {
+      const b = el("button", { className: "tab", type: "button", role: "tab" }, labels[key]);
+      b.dataset.key = key;
+      b.addEventListener("click", () => open(key));
+      tabs.append(b);
+    }
+
+    $("card").replaceChildren(close, head, stats, tabs, panel);
+    $("card").hidden = false;
+    $("card").scrollTop = 0;
+    open(panels[cardTab] ? cardTab : "trails");
+    loadTrails(p.id, trails, stats);
+  }
+
+  function renderInfo(p) {
     const dl = el("dl");
     for (const [k, v] of P.describePark(p)) dl.append(el("dt", {}, k), el("dd", {}, v));
     if (p.web) dl.append(el("dt", {}, "Web"), el("dd", {}, el("a", { href: p.web, target: "_blank", rel: "noopener" }, new URL(p.web).hostname)));
     if (p.osm_base_source === "lift") dl.append(el("dt", {}, "Základna"), el("dd", {}, p.osm_lift ? `dolní stanice – ${p.osm_lift}` : "dolní stanice lanovky"));
     if (p.parking) dl.append(el("dt", {}, "Parkoviště"), el("dd", {}, p.parking_name || "ano", el("small", { className: "muted" }, " (P v mapě, navigace vede sem)")));
-
-    const close = el("button", { className: "close", type: "button", title: "Zavřít", ariaLabel: "Zavřít" }, "×");
-    close.addEventListener("click", () => selectPark(null));
-
-    const notes = [];
-    if (p.verified === false) notes.push(el("p", { className: "note" }, "Údaje o parku (včetně polohy) jsou orientační a čekají na ověření."));
-
-    const weather = el("section", { className: "weather" }, el("p", { className: "muted" }, "Načítám počasí…"));
-    const trails = el("section", { className: "trails" }, el("p", { className: "muted" }, "Načítám lajny…"));
-    $("card").replaceChildren(close, el("h2", {}, p.name), dl, renderNav(p.id), trails, weather, ...notes);
-    $("card").hidden = false;
-    $("card").scrollTop = 0;
-    loadTrails(p.id, trails);
-    loadWeather(p.id, weather);
+    const box = el("section", {}, dl);
+    if (p.verified === false) box.append(el("p", { className: "note" }, "Údaje o parku (včetně polohy) jsou orientační a čekají na ověření."));
+    return box;
   }
 
   // --- lajny (OSM, web/data/trails.geojson generuje workflow pages) ------------
@@ -152,15 +198,22 @@
     trailLayer = null;
   }
 
-  async function loadTrails(id, box) {
+  async function loadTrails(id, box, stats) {
     const s = T.summarize(await fetchTrails(), id);
     if (activeId !== id || !box.isConnected) return;
     clearTrails();
     if (!s.segments) {
+      stats.remove();
       box.replaceChildren(el("p", { className: "note" },
         "Lajny tohoto parku zatím v datech nejsou (OpenStreetMap je pro něj nemá). Doplníme z Trailforks."));
       return;
     }
+    const stat = (label, value, sub) => el("div", { className: "stat" },
+      el("b", {}, value), el("span", {}, label), sub ? el("small", { className: "muted" }, sub) : "");
+    stats.replaceChildren(
+      stat("celkem", N.formatDistance(s.lengthM)),
+      stat(plural(s.namedCount, "lajna", "lajny", "lajn").replace(/^\d+ /, ""), String(s.namedCount), `${plural(s.segments, "úsek", "úseky", "úseků")} v OSM`),
+      s.longest ? stat("nejdelší", N.formatDistance(s.longest.lengthM), s.longest.name || "bez názvu") : "");
     renderTrails(s, box, true);
   }
 
@@ -230,11 +283,8 @@
         el("i", { className: "swatch", style: `background:${T.difficultyInfo(d === "unknown" ? null : d).color}` }),
         `${T.difficultyInfo(d === "unknown" ? null : d).label} ${N.formatDistance(s.byDifficulty[d])}`));
     const stats = el("div", { className: "trail-stats" },
-      stat("celkem", N.formatDistance(s.lengthM), s.accessLengthM ? `+ ${N.formatDistance(s.accessLengthM)} přístupových cest` : ""),
-      stat(plural(s.namedCount, "lajna", "lajny", "lajn").replace(/^\d+ /, ""), String(s.namedCount),
-        s.segments !== s.namedCount ? `${plural(s.segments, "úsek", "úseky", "úseků")} v OSM` : ""),
-      s.longest ? stat("nejdelší", N.formatDistance(s.longest.lengthM), s.longest.name || "bez názvu") : "",
       s.eleMin != null ? stat("převýšení", `${s.eleMax - s.eleMin} m`, `${s.eleMin}–${s.eleMax} m n. m.`) : "",
+      s.accessLengthM ? stat("přístupové cesty", N.formatDistance(s.accessLengthM)) : "",
       byDiff.length ? el("div", { className: "stat diffs" }, ...byDiff) : "");
 
     const list = el("ul", { className: "trail-list" }, ...s.rows.map((r) =>
@@ -509,7 +559,7 @@
     if (fromHash && markers.has(fromHash)) selectPark(fromHash);
   }
 
-  $("search").addEventListener("input", renderList);
+  $("search").addEventListener("input", () => { if (!listOpen && $("search").value.trim()) setListOpen(true); else renderList(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && activeId) selectPark(null); });
   window.addEventListener("hashchange", () => {
     const id = decodeURIComponent(location.hash.slice(1));

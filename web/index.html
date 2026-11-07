@@ -17,14 +17,17 @@
       <input id="search" type="search" placeholder="Hledat park, obec, kraj…" autocomplete="off">
       <button id="locate" type="button" title="Seřadit podle mé polohy" aria-label="Moje poloha">📍</button>
     </div>
-    <div id="legend">
+    <div class="row chips">
+      <button id="toggle-list" type="button" class="chip" aria-expanded="false" aria-controls="list">Seznam parků</button>
+      <label class="chip" title="Všechny pumptracky z OpenStreetMap"><input type="checkbox" id="layer-pumptracks" checked><i class="dot pump-layer"></i> pumptracky (OSM)</label>
+    </div>
+    <div id="legend" hidden>
       <span><i class="dot bikepark"></i> Bikepark</span>
       <span><i class="dot trail_center"></i> Trailpark / singltrek</span>
       <span><i class="dot pumptrack"></i> Pumptrack</span>
-      <label title="Všechny pumptracky z OpenStreetMap"><input type="checkbox" id="layer-pumptracks" checked><i class="dot pump-layer"></i> pumptracky (OSM)</label>
     </div>
-    <ul id="list"></ul>
-    <div id="status">Načítám…</div>
+    <ul id="list" hidden></ul>
+    <div id="status" hidden>Načítám…</div>
   </aside>
 
   <aside id="card" hidden aria-live="polite"></aside>

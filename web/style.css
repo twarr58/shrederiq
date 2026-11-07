@@ -25,7 +25,12 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 #panel h1 { margin: 0; font-size: 20px; color: var(--accent); }
 .sub { margin: 0 0 8px; color: var(--muted); }
 #search { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; font: inherit; background: var(--bg); color: var(--fg); }
-#legend { display: flex; gap: 12px; margin: 8px 0; color: var(--muted); font-size: 12px; }
+.chips { margin-top: 8px; flex-wrap: wrap; }
+.chip { font: inherit; font-size: 12px; font-weight: 600; padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); color: var(--fg); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.chip[aria-expanded="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip input { margin: 0; vertical-align: -1px; }
+#legend { display: flex; gap: 12px; margin: 8px 0 4px; color: var(--muted); font-size: 12px; }
+#legend[hidden], #list[hidden], #status[hidden] { display: none; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: -1px; }
 .dot.bikepark { background: var(--bikepark); }
 .dot.trail_center { background: var(--trail_center); }
@@ -39,13 +44,25 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 #list li small { display: block; color: var(--muted); }
 #status { color: var(--muted); font-size: 12px; margin-top: 6px; }
 
-#card { top: 12px; right: 12px; width: 320px; }
-#card h2 { margin: 0 32px 8px 0; font-size: 18px; }
+#card { top: 12px; right: 12px; width: 340px; padding: 0; }
+#card h2 { margin: 0 32px 2px 0; font-size: 19px; }
+.card-head { padding: 12px 14px 10px; }
+.card-sub { margin: 0; color: var(--muted); font-size: 13px; }
+.card-sub .dot { margin-right: 5px; }
+.card-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 0 14px 10px; }
+.tabs { display: flex; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.tab { flex: 1; font: inherit; font-size: 13px; font-weight: 500; padding: 9px 0; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); cursor: pointer; }
+.tab[aria-selected="true"] { color: var(--fg); font-weight: 600; border-bottom-color: var(--accent); }
+.tab-panel { padding: 10px 14px 12px; }
+.tab-panel > .trails, .tab-panel > .weather { border-top: 0; padding-top: 0; margin-bottom: 0; }
+.tab-panel > .trails h3, .tab-panel > .weather h3 { display: none; }
+.tab-panel .trail-list { max-height: none; }
 #card dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 10px; }
 #card dt { color: var(--muted); }
 #card dd { margin: 0; }
-#card .close { position: absolute; top: 8px; right: 8px; border: 0; background: none; font-size: 20px; cursor: pointer; color: var(--muted); }
-#card .note { color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 8px; margin: 0; }
+#card .close { position: absolute; top: 6px; right: 8px; border: 0; background: none; font-size: 20px; cursor: pointer; color: var(--muted); }
+#card .note { color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 8px; margin: 8px 0 0; }
+#card dl { margin-bottom: 0; }
 #card a { color: var(--accent); }
 
 #card { max-height: calc(100% - 24px); overflow-y: auto; }
@@ -106,5 +123,6 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 
 @media (max-width: 640px) {
   #panel { left: 8px; right: 8px; width: auto; top: 8px; max-height: 40%; }
-  #card { left: 8px; right: 8px; top: auto; bottom: 24px; width: auto; max-height: 50%; overflow-y: auto; }
+  #card { left: 8px; right: 8px; top: auto; bottom: 24px; width: auto; max-height: 55%; overflow-y: auto; }
+  #panel:not(.open) { max-height: none; }
 }
