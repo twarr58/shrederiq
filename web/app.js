@@ -14,7 +14,7 @@
   const plural = (n, one, few, many) => `${n} ${n === 1 ? one : n >= 2 && n <= 4 ? few : many}`;
   const el = (tag, props, ...children) => {
     const n = Object.assign(document.createElement(tag), props || {});
-    n.append(...children);
+    n.append(...children.flat());
     return n;
   };
 
@@ -83,6 +83,7 @@
   let parks = [];           // GeoJSON features
   const markers = new Map(); // id → L.circleMarker
   let activeId = null;
+  let trailCounts = null;    // id → počet pojmenovaných lajn (po načtení trails.geojson)
   let userPos = null;        // { lat, lon } po kliknutí na „Moje poloha“
   let userMarker = null;
   let routeLayer = null;
@@ -98,9 +99,14 @@
     const items = list.map((f) => {
       const p = f.properties;
       const where = [p.town, p.region].filter(Boolean).join(", ");
+      const parts = [dist.has(f) ? `${N.formatDistance(dist.get(f))} vzdušně` : "", where];
+      if (trailCounts) {
+        const n = trailCounts[p.id] || 0;
+        parts.push(n ? plural(n, "lajna", "lajny", "lajn") : "bez lajn v datech");
+      }
       const li = el("li", { className: p.id === activeId ? "active" : "" },
         el("i", { className: `dot ${p.kind}` }), " ", p.name,
-        el("small", {}, dist.has(f) ? `${N.formatDistance(dist.get(f))} vzdušně · ${where}` : where));
+        el("small", {}, parts.filter(Boolean).join(" · ")));
       li.addEventListener("click", () => selectPark(p.id));
       return li;
     });
@@ -163,6 +169,8 @@
 
   function trailTooltip(p) {
     const parts = [p.name || "bez názvu", T.difficultyInfo(p.difficulty).label, N.formatDistance(p.length_m)];
+    if (p.source === "trailforks") parts.push("GPX Trailforks");
+    else if (p.source === "gpx") parts.push("GPX");
     if (p.slope_max != null) parts.push(`max ${p.slope_max} %`, `${p.ele_min}–${p.ele_max} m n. m.`);
     return parts.join(" · ");
   }
@@ -230,9 +238,13 @@
         + (s.accessLengthM ? `, navíc ${N.formatDistance(s.accessLengthM)} lesních a přístupových cest (šedě čárkovaně).` : ".")),
       legend,
       list,
-      el("p", { className: "attr" }, "Lajny: © přispěvatelé ",
-        el("a", { href: "https://www.openstreetmap.org/copyright", target: "_blank", rel: "noopener" }, "OpenStreetMap"),
-        " (ODbL). Obtížnost podle mtb:scale, může se lišit od značení v parku.",
+      el("p", { className: "attr" },
+        s.sources.osm ? ["Lajny: © přispěvatelé ",
+          el("a", { href: "https://www.openstreetmap.org/copyright", target: "_blank", rel: "noopener" }, "OpenStreetMap"),
+          " (ODbL). Obtížnost podle mtb:scale, může se lišit od značení v parku."] : "",
+        s.sources.trailforks ? [" Lajny z GPX: © ", el("a", { href: "https://www.trailforks.com/", target: "_blank", rel: "noopener" }, "Trailforks"),
+          ` (${plural(s.sources.trailforks, "úsek", "úseky", "úseků")}, jen pro nekomerční použití).`] : "",
+        s.sources.gpx ? ` ${plural(s.sources.gpx, "úsek", "úseky", "úseků")} z ručně dodaných GPX.` : "",
         s.hasSlopes ? " Výšky: Mapy.com, sklon je orientační (výškový model, okno ~75 m)." : ""));
   }
 
@@ -417,6 +429,39 @@
     renderList();
   }
 
+  // --- pumptracky (OSM, web/data/pumptracks.geojson generuje build) -----------
+  const pumpLayer = L.layerGroup();
+  let pumpLoaded = false;
+  async function loadPumptracks() {
+    if (pumpLoaded) return;
+    pumpLoaded = true;
+    try {
+      const res = await fetch("data/pumptracks.geojson");
+      if (!res.ok) return;
+      const fc = await res.json();
+      for (const f of fc.features) {
+        const [lon, lat] = f.geometry.coordinates;
+        const p = f.properties;
+        const name = p.name || "Pumptrack";
+        const links = N.navLinks([lon, lat], userPos);
+        L.circleMarker([lat, lon], { radius: 4, weight: 1, color: "#fff", fillColor: color("pumptrack"), fillOpacity: 0.8, renderer: trailRenderer })
+          .bindTooltip(name, { direction: "top", offset: [0, -4] })
+          .bindPopup(`<b>${name.replace(/</g, "&lt;")}</b><br>${p.surface ? `povrch: ${p.surface}<br>` : ""}<a href="${links.mapy}" target="_blank" rel="noopener">Navigovat</a> · <a href="https://www.openstreetmap.org/${p.osm}" target="_blank" rel="noopener">OSM</a>`)
+          .addTo(pumpLayer);
+      }
+      $("layer-pumptracks").title = `${fc.features.length} pumptracků z OpenStreetMap`;
+    } catch (err) {
+      console.warn("pumptracks", err);
+    }
+  }
+  function updatePumpLayer() {
+    const on = $("layer-pumptracks").checked;
+    try { localStorage.setItem("shrederiq.pumptracks", on ? "1" : "0"); } catch (_) { /* bez storage */ }
+    if (on) { loadPumptracks(); pumpLayer.addTo(map); } else { map.removeLayer(pumpLayer); }
+  }
+  try { if (localStorage.getItem("shrederiq.pumptracks") === "0") $("layer-pumptracks").checked = false; } catch (_) { /* bez storage */ }
+  $("layer-pumptracks").addEventListener("change", updatePumpLayer);
+
   // --- data ------------------------------------------------------------------
   async function load() {
     const res = await fetch("data/parks.geojson", { cache: "no-cache" });
@@ -439,6 +484,12 @@
     }
 
     renderList();
+    updatePumpLayer();
+    fetchTrails().then((fc) => {
+      if (!fc) return;
+      trailCounts = Object.fromEntries(parks.map((f) => [f.properties.id, T.summarize(fc, f.properties.id).namedCount]));
+      renderList();
+    });
     const fromHash = decodeURIComponent(location.hash.slice(1));
     if (fromHash && markers.has(fromHash)) selectPark(fromHash);
   }

@@ -81,3 +81,11 @@ test("data z OSM: posun na základnu, parkoviště, ověřené parky se nehýbou
   assert.deepEqual(parks[0].geometry.coordinates, [17.098, 50.106]); // vstup se nemění
   assert.equal(P.applyOsm(parks, null), parks);
 });
+
+test("trailforks_rid musí být kladné celé číslo", () => {
+  const park = (extra) => ({ type: "FeatureCollection", features: [{ type: "Feature", geometry: { type: "Point", coordinates: [14.6, 49.5] },
+    properties: { id: "p", name: "P", kind: "bikepark", ...extra } }] });
+  assert.deepEqual(P.validateParks(park({ trailforks_rid: 1234 })), []);
+  assert.equal(P.validateParks(park({ trailforks_rid: "1234" })).length, 1);
+  assert.equal(P.validateParks(park({ trailforks_rid: 0 })).length, 1);
+});

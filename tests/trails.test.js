@@ -82,3 +82,13 @@ test("souhrn lajn se sklonem", () => {
   assert.deepEqual([s.rows[0].slopeMax, s.rows[0].eleMin, s.rows[0].eleMax], [22, 700, 900]);
   assert.equal(T.summarize(FC, "kouty").hasSlopes, false);
 });
+
+test("zdroje lajn (OSM / GPX / Trailforks)", () => {
+  const fc = { features: [
+    line("kouty", "A", "blue", 100),
+    { ...line("kouty", "B", "red", 100), properties: { ...line("kouty", "B", "red", 100).properties, source: "trailforks" } },
+    { ...line("kouty", "C", "red", 100), properties: { ...line("kouty", "C", "red", 100).properties, source: "gpx" } },
+  ] };
+  assert.deepEqual(T.summarize(fc, "kouty").sources, { osm: 1, trailforks: 1, gpx: 1 });
+  assert.deepEqual(T.summarize(FC, "kouty").sources, { osm: 7 });
+});

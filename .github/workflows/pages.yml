@@ -35,16 +35,27 @@ jobs:
           path: |
             .osm-cache/parks.json
             .osm-cache/elevation.json
+            .osm-cache/trailforks.json
           key: osm-parks-${{ github.run_id }}
           restore-keys: osm-parks-
+      # Vyfiltrovaný výřez OSM (pár MB) se drží v cache po dnech – 800MB stahování
+      # z Geofabriku pak proběhne jen jednou denně, ne při každém běhu.
+      - id: day
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: .osm-cache/mtb.osm.pbf
+          key: mtb-pbf-${{ steps.day.outputs.date }}
       - name: Park data from OSM
         timeout-minutes: 30
+        env:
+          MTB_PBF: .osm-cache/mtb.osm.pbf
         run: |
           mkdir -p .osm-cache
           rm -f .osm-cache/fresh.json
           OUT="--trails web/data/trails.geojson --info web/data/parks_osm.json --summary .osm-cache/summary.md"
           # 1) výřez Geofabrik (spolehlivý), 2) Overpass, 3) poslední odpověď z cache
-          if scripts/osm_extract.sh .osm-cache/fresh.json && python3 scripts/park_osm.py --cache .osm-cache/fresh.json $OUT; then
+          if scripts/osm_extract.sh .osm-cache/fresh.json web/data/pumptracks.geojson && python3 scripts/park_osm.py --cache .osm-cache/fresh.json $OUT; then
             mv .osm-cache/fresh.json .osm-cache/parks.json
           elif rm -f .osm-cache/fresh.json && python3 scripts/park_osm.py --cache .osm-cache/fresh.json $OUT; then
             echo "::warning::Geofabrik extract failed, used Overpass"
@@ -56,6 +67,18 @@ jobs:
             echo "::warning::no OSM data source available, deploying without trails and bases"
           fi
           [ -f .osm-cache/summary.md ] && cat .osm-cache/summary.md >> "$GITHUB_STEP_SUMMARY" || true
+      # Ruční GPX (data/gpx/<park_id>/*.gpx) pro parky, které v OSM lajny nemají
+      - name: Trails from GPX files
+        run: python3 scripts/gpx_trails.py --merge web/data/trails.geojson
+      # Lajny z Trailforks API pro parky s trailforks_rid – jen když jsou secrets
+      # TRAILFORKS_APP_ID / TRAILFORKS_APP_SECRET; bez nich skript jen přeskočí.
+      - name: Trails from Trailforks API
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          TRAILFORKS_APP_ID: ${{ secrets.TRAILFORKS_APP_ID }}
+          TRAILFORKS_APP_SECRET: ${{ secrets.TRAILFORKS_APP_SECRET }}
+        run: python3 scripts/trailforks_trails.py --merge web/data/trails.geojson --cache .osm-cache/trailforks.json
       # Sklon lajn: výšky z Mapy.com Elevation API (klíč jen v Actions, do stránky se nedostane).
       # Klíč omezený na doménu z Actions nefunguje – pro elevation je lepší samostatný
       # klíč MAPY_ELEVATION_KEY jen se službou Elevation. Při chybě se nasadí bez sklonu.

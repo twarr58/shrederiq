@@ -13,9 +13,22 @@ on:
   schedule:
     - cron: "17 4 * * 1" # každé pondělí ráno
   workflow_dispatch:
+    inputs:
+      overpass:
+        description: "Spustit i celorepublikový report přes Overpass (pomalý)"
+        type: boolean
+        default: false
+      dump_park:
+        description: "Diagnostika: id parku, pro který vypsat cesty v okolí"
+        type: string
+        default: ""
 
 permissions:
   contents: read
+
+concurrency:
+  group: osm-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -31,17 +44,29 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+      - id: day
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: .osm-cache/mtb.osm.pbf
+          key: mtb-pbf-${{ steps.day.outputs.date }}
       # lajny, základna a parkoviště kolem našich parků (to, co jde na web)
       - name: Park data from OSM
+        timeout-minutes: 30
+        env:
+          MTB_PBF: .osm-cache/mtb.osm.pbf
         run: |
           mkdir -p out
-          scripts/osm_extract.sh out/parks-osm.json
+          scripts/osm_extract.sh out/parks-osm.json out/pumptracks.geojson
           python3 scripts/park_osm.py --cache out/parks-osm.json \
-            --trails out/trails.geojson --info out/parks_osm.json --summary out/parks-summary.md
+            --trails out/trails.geojson --info out/parks_osm.json --summary out/parks-summary.md \
+            ${{ inputs.dump_park && format('--dump-park {0}', inputs.dump_park) || '' }}
+          python3 scripts/gpx_trails.py --merge out/trails.geojson
           cat out/parks-summary.md >> "$GITHUB_STEP_SUMMARY"
           cat out/parks-summary.md
       # celorepublikový report přes Overpass – jen pro hledání nových parků, smí selhat
       - name: Fetch OSM bike parks
+        if: github.event_name != 'workflow_dispatch' || inputs.overpass
         continue-on-error: true
         timeout-minutes: 20
         run: |

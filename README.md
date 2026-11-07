@@ -71,7 +71,7 @@ Formát `web/data/parks.geojson` – `FeatureCollection` bodů (`[lon, lat]`), v
 |---|---|---|
 | `id` | string, kebab-case | unikátní ID parku (použije se i jako `park_id` u trailů a v URL `#id`) |
 | `name` | string | název |
-| `kind` | `bikepark` \| `trail_center` | typ |
+| `kind` | `bikepark` \| `trail_center` \| `pumptrack` | typ |
 | `town`, `region` | string | obec, kraj |
 | `web` | `https://…` \| null | oficiální web |
 | `lift` | bool \| null | lanovka / vlek |
@@ -89,8 +89,10 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
     `mtb:scale` u lanovek a členové relací `route=mtb`. Lajny trail center bývají
     zmapované jen jako relace, název lajny se pak vezme z relace. Dlouhé cyklotrasy
     se vyřadí.
-  - **základna**: dolní stanice lanovky, u které je nejvíc lajn. U parku bez lanovky
-    (`lift: false`) je to parkoviště u lajn.
+  - **základna**: dolní stanice lanovky – nejdřív ta se jménem parku, pak ta s nejvíc
+    lajnami, pak nejbližší do 2 km (gondola před sedačkou), pak vlek se jménem parku
+    (Kyčerka, Peklák). U parku bez lanovky (`lift: false`), nebo když se žádná nenajde,
+    je to parkoviště u lajn.
   - **parkoviště**: nejbližší `amenity=parking` do 700 m od základny.
 - **Zdroj dat**: denní výřez OSM Česka od [Geofabriku](https://download.geofabrik.de/europe/czech-republic.html).
   `scripts/osm_extract.sh` ho stáhne, `osmium tags-filter` vybere MTB cesty, lanovky,
@@ -102,7 +104,15 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   Web posune bod neověřeného parku (`verified` není `true`) na základnu, ukáže
   parkoviště („P“) a navigace vede na něj.
 - Kontrola: workflow `osm` vypíše pro každý park základnu, lanovku, posun bodu,
-  parkoviště a počet lajn (Summary běhu).
+  parkoviště, počet lajn a kandidáty lanovek (Summary běhu). Ruční spuštění přeskočí
+  pomalý celorepublikový report přes Overpass, pokud nezaškrtneš vstup `overpass`.
+- **Pumptracky**: `osm_extract.py --pumptracks` vybere z celého výřezu objekty se
+  `sport=pump_track`, BMX/cyklistické dráhy a cokoli s „pumptrack“ v názvu →
+  `web/data/pumptracks.geojson`. Ve webu jsou jako samostatná vrstva s přepínačem
+  v legendě. Park může mít `kind: "pumptrack"`, když je pumptrack jeho hlavní atrakce.
+- **Ruční GPX** pro parky, které v OSM lajny nemají: `data/gpx/<park_id>/*.gpx`
+  (např. export z Trailforks). `scripts/gpx_trails.py` je při buildu připojí
+  k lajnám z OSM, viz `data/gpx/README.md`.
 - Lajna ≠ úsek: jedna lajna bývá v OSM rozdělená na víc cest (way). Panel počítá
   pojmenované lajny, úseky bez názvu ukazuje zvlášť a lesní cesty kreslí šedě čárkovaně.
 - **Sklon** (`scripts/elevation.py`): lajny se převzorkují po ~25 m a výšky bodů se
@@ -115,6 +125,11 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   doménu GitHub Pages z Actions nefunguje. Bez klíče nebo při chybě API se web
   nasadí bez sklonu.
 - Dál: lajny z Trailforks pro parky, které v OSM chybí.
+- **Trailforks API** (`scripts/trailforks_trails.py`): park s vlastností `trailforks_rid`
+  (id regionu na Trailforks) dostane lajny z API, když jsou v Actions secrets
+  `TRAILFORKS_APP_ID` a `TRAILFORKS_APP_SECRET`. Bez nich se krok přeskočí. Obtížnost
+  2–3 → zelená, 4 → modrá, 5 → červená, 6 a 8 → černá, 1 a 7 → přístupová cesta.
+  Data Trailforks jsou jen pro nekomerční použití s atribucí, web ji ukazuje.
 
 ### Fáze 3 – metadata
 

@@ -2,7 +2,7 @@
 (function (root) {
   "use strict";
 
-  const KINDS = { bikepark: "Bikepark", trail_center: "Trailpark / singltrek" };
+  const KINDS = { bikepark: "Bikepark", trail_center: "Trailpark / singltrek", pumptrack: "Pumptrack" };
 
   // přibližný obdélník ČR – hrubá kontrola prohozených / nesmyslných souřadnic
   const CZ_BOUNDS = { minLon: 12.09, maxLon: 18.86, minLat: 48.55, maxLat: 51.06 };
@@ -49,6 +49,9 @@
       if (p.lift != null && typeof p.lift !== "boolean") errors.push(`${at}: lift musí být true / false / null`);
       if (p.trails_count != null && !(Number.isInteger(p.trails_count) && p.trails_count >= 0)) {
         errors.push(`${at}: trails_count musí být nezáporné celé číslo nebo null`);
+      }
+      if (p.trailforks_rid != null && !(Number.isInteger(p.trailforks_rid) && p.trailforks_rid > 0)) {
+        errors.push(`${at}: trailforks_rid musí být kladné celé číslo (id regionu na Trailforks)`);
       }
     });
     return errors;

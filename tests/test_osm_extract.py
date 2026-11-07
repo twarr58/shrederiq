@@ -27,10 +27,14 @@ OSM_XML = """<?xml version='1.0' encoding='UTF-8'?>
   <node id="20" lat="50.1100" lon="17.1100"/><node id="21" lat="50.1110" lon="17.1110"/><node id="22" lat="50.1120" lon="17.1120"/>
   <node id="30" lat="49.5000" lon="15.0000"/><node id="31" lat="49.5010" lon="15.0010"/>
   <node id="40" lat="50.0895" lon="17.0995"><tag k="amenity" v="parking"/><tag k="name" v="P Kouty"/></node>
+  <node id="50" lat="49.0" lon="15.0"><tag k="sport" v="pump_track"/><tag k="name" v="Pumptrack Telč"/></node>
+  <node id="60" lat="50.2" lon="17.2"/><node id="61" lat="50.2" lon="17.201"/><node id="62" lat="50.201" lon="17.201"/>
   <way id="100"><nd ref="1"/><nd ref="2"/><nd ref="3"/><nd ref="4"/><tag k="aerialway" v="chair_lift"/><tag k="name" v="LD Medvědí hora"/></way>
   <way id="101"><nd ref="10"/><nd ref="11"/><nd ref="12"/><nd ref="13"/><tag k="highway" v="path"/><tag k="mtb:scale" v="2"/><tag k="name" v="Flow"/></way>
   <way id="102"><nd ref="20"/><nd ref="21"/><nd ref="22"/><tag k="highway" v="path"/></way>
   <way id="103"><nd ref="30"/><nd ref="31"/><tag k="highway" v="path"/><tag k="mtb:scale" v="1"/></way>
+  <way id="104"><nd ref="60"/><nd ref="61"/><nd ref="62"/><nd ref="60"/><tag k="leisure" v="track"/><tag k="sport" v="bmx"/><tag k="surface" v="asphalt"/></way>
+  <way id="105"><nd ref="60"/><nd ref="61"/><tag k="leisure" v="track"/><tag k="sport" v="running"/></way>
   <relation id="500"><member type="way" ref="102" role=""/><tag k="type" v="route"/><tag k="route" v="mtb"/><tag k="name" v="Singltrek Kouty"/></relation>
 </osm>
 """
@@ -41,8 +45,19 @@ class Helpers(unittest.TestCase):
         self.assertTrue(ox.is_trail({"highway": "path", "mtb:scale": "1"}))
         self.assertTrue(ox.is_trail({"highway": "path", "bicycle": "designated"}))
         self.assertTrue(ox.is_trail({"mtb:scale:imba": "2"}))
+        self.assertTrue(ox.is_trail({"highway": "path", "mtb:scale:dh": "3"}))
+        self.assertTrue(ox.is_trail({"highway": "path", "mtb": "single track"}))
+        self.assertFalse(ox.is_trail({"highway": "path", "mtb": "no"}))
         self.assertFalse(ox.is_trail({"highway": "residential", "mtb:scale": "0"}))
         self.assertFalse(ox.is_trail({"highway": "path"}))
+
+    def test_is_pumptrack(self):
+        self.assertTrue(ox.is_pumptrack({"sport": "pump_track"}))
+        self.assertTrue(ox.is_pumptrack({"leisure": "track", "sport": "bmx"}))
+        self.assertTrue(ox.is_pumptrack({"leisure": "pitch", "sport": "cycling;bmx"}))
+        self.assertTrue(ox.is_pumptrack({"highway": "path", "name": "Pumptrack Lipno"}))
+        self.assertFalse(ox.is_pumptrack({"leisure": "track", "sport": "running"}))
+        self.assertFalse(ox.is_pumptrack({"leisure": "track"}))
 
     def test_near(self):
         near = ox.Near([PARK], 3500)
@@ -65,6 +80,17 @@ class Extract(unittest.TestCase):
         self.assertEqual(info["kouty"]["parking_name"], "P Kouty")
         names = {f["properties"]["name"] for f in fc["features"]}
         self.assertEqual(names, {"Flow", "Singltrek Kouty"})
+
+    def test_extract_pumptracks(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "test.osm"
+            path.write_text(OSM_XML)
+            fc = ox.extract_pumptracks(str(path))
+        got = {f["properties"]["osm"]: f for f in fc["features"]}
+        self.assertEqual(set(got), {"node/50", "way/104"})
+        self.assertEqual(got["node/50"]["properties"]["name"], "Pumptrack Telč")
+        self.assertEqual(got["way/104"]["properties"]["surface"], "asphalt")
+        self.assertAlmostEqual(got["way/104"]["geometry"]["coordinates"][1], 50.2003, places=3)
 
 
 if __name__ == "__main__":

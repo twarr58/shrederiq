@@ -33,16 +33,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fetch_osm_parks import (  # noqa: E402
-    PARKS, OverpassError, difficulty, fetch_overpass, haversine_m, simplify,
+    PARKS, OverpassError, difficulty, fetch_overpass, haversine_m, name_tokens, simplify,
 )
 
 RADIUS_M = 3000
 LIFT_TRAIL_M = 1500
 PARKING_M = 700
+NEAR_LIFT_M = 2000   # lanovka bez lajn v okolí se vezme jako základna jen takhle blízko bodu parku
+MIN_LIFT_SCORE = 10  # méně bodů lajn u lanovky je šum (Hofmanky Express: 3 body vs. gondola s 0)
+LIFT_PRIORITY = {"gondola": 0, "cable_car": 0, "mixed_lift": 0, "chair_lift": 1}  # bikeparky jezdí na velké lanovce
 MAX_ROUTE_KM = 25
 LIFTS = "chair_lift|gondola|cable_car|mixed_lift|drag_lift|t-bar|j-bar|platter"
 BIKE_LIFTS = {"chair_lift", "gondola", "cable_car", "mixed_lift"}  # kola vozí hlavně tyhle
-TRAIL_NAME_RE = re.compile(r"singl|single|trail|flow|bike ?park|enduro|downhill|freeride|\bdh\b", re.I)
+TRAIL_NAME_RE = re.compile(r"singl|single|trail|flow|bike ?park|enduro|downhill|freeride|gravity|pump ?track|\bline\b|\bdh\b", re.I)
 LONG_NETWORKS = {"lcn", "rcn", "ncn", "icn"}
 BATCH = 4            # parků na jeden dotaz – velký dotaz na všechny parky Overpass nezvládal
 QUERY_TIMEOUT = 300
@@ -55,7 +58,8 @@ def build_query(parks: list[dict], radius: int = RADIUS_M) -> str:
     ways = "\n".join(
         f'  way({a})["highway"~"^(path|track|cycleway|bridleway|footway)$"]["mtb:scale"];\n'
         f'  way({a})["mtb:scale:imba"];\n'
-        f'  way({a})["highway"="path"]["mtb"="designated"];\n'
+        f'  way({a})["mtb:scale:dh"];\n'
+        f'  way({a})["highway"="path"]["mtb"];\n'
         f'  way({a})["highway"="path"]["bicycle"="designated"];'
         for a in ar)
     rels = "\n".join(f'  relation({a})["route"="mtb"];' for a in ar)
@@ -182,8 +186,13 @@ def select_trails(park_pt, osm, rel_names, radius=RADIUS_M, has_lift=None):
         if _dist_to_line(park_pt, coords[::3] + [coords[-1]]) > radius:
             continue
         in_rel = wid in rel_names
-        strong = ("mtb:scale:imba" in tags or tags.get("mtb") == "designated"
-                  or (tags.get("bicycle") == "designated" and tags.get("highway") == "path" and "mtb:scale" in tags))
+        hw, name = tags.get("highway"), tags.get("name") or tags.get("mtb:name") or ""
+        strong = ("mtb:scale:imba" in tags or "mtb:scale:dh" in tags
+                  # pěšina s jakýmkoli mtb=* (designated, single track, yes…) je MTB lajna;
+                  # bicycle=designated pěšina jen s mtb:scale nebo s „lajnovým“ názvem (Gravity Line, Fun Trail)
+                  or (hw == "path" and tags.get("mtb") not in (None, "no"))
+                  or (hw == "path" and tags.get("bicycle") == "designated"
+                      and ("mtb:scale" in tags or TRAIL_NAME_RE.search(name))))
         near_lift = "mtb:scale" in tags and any(
             _dist_to_line(c, l) <= LIFT_TRAIL_M for l in lifts for c in coords[::4] + [coords[-1]])
         if in_rel or strong or near_lift:
@@ -191,29 +200,76 @@ def select_trails(park_pt, osm, rel_names, radius=RADIUS_M, has_lift=None):
     return out
 
 
-def choose_base(park_pt, trails, osm, has_lift=True):
-    """Dolní stanice lanovky s nejvíc lajnami do 400 m, jinak parkoviště nejblíž lajnám.
-    Park, který podle parks.geojson lanovku nemá (lift: false), se k lanovce nepřichytí."""
+def lift_candidates(park_pt, trails, osm, has_lift=True):
+    """Lanovky pro kola do RADIUS_M od bodu parku: (lanovka, počet bodů lajn do 400 m od ní,
+    vzdálenost dolní stanice od bodu parku), seřazené podle skóre. Park s lift: false
+    lanovky nedostane."""
+    if has_lift is False:
+        return []
     pts = [c for w, _ in trails.values() for c in w["coords"][::3]]
-    best, best_score = None, 0.0
-    for lid, l in (osm["lifts"].items() if has_lift is not False else ()):
-        if l["tags"].get("aerialway") not in BIKE_LIFTS:
-            continue
-        if _dist_to_line(park_pt, l["coords"]) > RADIUS_M:
+    out = []
+    for l in osm["lifts"].values():
+        if l["tags"].get("aerialway") not in BIKE_LIFTS or _dist_to_line(park_pt, l["coords"]) > RADIUS_M:
             continue
         score = sum(1 for p in pts if _dist_to_line(p, l["coords"]) <= 400)
-        if score > best_score:
-            best, best_score = l, score
+        out.append((l, score, haversine_m(*park_pt, *l["coords"][0])))
+    # nejvíc lajn, při shodě nejblíž bodu parku
+    return sorted(out, key=lambda c: (-c[1], c[2]))
+
+
+def park_keywords(park_name, town=None) -> str:
+    """Slova z názvu parku, která nejsou jménem obce – „Bikepark Špindlerův Mlýn“ v obci
+    Špindlerův Mlýn nedává nic (lanovky se jmenují po městě), „Bikepark Kopřivná“ dá kopřivná."""
+    return " ".join(name_tokens(park_name) - name_tokens(town))
+
+
+def choose_base(park_pt, trails, osm, has_lift=True, park_name=None, town=None):
+    """Základna parku (OSM kreslí lanovky zdola nahoru, dolní stanice = první bod):
+      1. lanovka, jejíž název sdílí slovo s názvem parku, které není jménem obce
+         (Kopřivná, Špičák); mezi víc takovými ta s nejvíc lajnami, pak nejbližší,
+      2. lanovka s nejvíc lajnami do 400 m, pokud jich je aspoň MIN_LIFT_SCORE bodů,
+      3. jinak lanovka do NEAR_LIFT_M od bodu parku: gondola před sedačkou, pak nejbližší,
+      4. jinak vlek (kotva, poma) se jménem parku do NEAR_LIFT_M (Kyčerka, Peklák),
+      5. jinak parkoviště nejblíž lajnám (když jich je dost), případně bodu parku.
+    Vrací i kandidáty lanovek pro kontrolu v reportu."""
+    cands = lift_candidates(park_pt, trails, osm, has_lift)
+    cand_info = [(l["tags"].get("name") or f"way/{lid}", score, round(dist))
+                 for (l, score, dist), lid in ((c, next(k for k, v in osm["lifts"].items() if v is c[0])) for c in cands[:3])]
+    if not cands and has_lift is not False:
+        # žádná lanovka pro kola – ukázat aspoň vleky v okolí, ať je vidět, jestli v OSM chybí nebo je jinak otagovaná
+        others = sorted((haversine_m(*park_pt, *l["coords"][0]), l) for l in osm["lifts"].values()
+                        if l["tags"].get("aerialway") not in BIKE_LIFTS)
+        cand_info = [(f"{l['tags'].get('name') or 'bez názvu'} [{l['tags'].get('aerialway')}]", -1, round(d))
+                     for d, l in others[:3] if d <= NEAR_LIFT_M]
+
+    keywords = name_tokens(park_keywords(park_name, town))
+    named = [(score, dist, l) for l, score, dist in cands if keywords & name_tokens(l["tags"].get("name"))]
+    best = max(named, key=lambda x: (x[0], -x[1]))[2] if named else None
+    if not best:
+        best = next((l for l, score, _ in cands if score >= MIN_LIFT_SCORE), None)
+    if not best:
+        near = [(LIFT_PRIORITY.get(l["tags"].get("aerialway"), 2), dist, l) for l, _, dist in cands if dist <= NEAR_LIFT_M]
+        best = min(near, key=lambda x: (x[0], x[1]))[2] if near else None
+    if not best and has_lift is not False:
+        # 5. vlek (kotva, poma) se jménem parku do NEAR_LIFT_M – menší bikeparky vozí kola vlekem (Kyčerka, Peklák)
+        drag = [(haversine_m(*park_pt, *l["coords"][0]), l) for l in osm["lifts"].values()
+                if l["tags"].get("aerialway") not in BIKE_LIFTS and keywords & name_tokens(l["tags"].get("name"))]
+        drag = [x for x in drag if x[0] <= NEAR_LIFT_M]
+        best = min(drag, key=lambda x: x[0])[1] if drag else None
     if best:
-        return {"base": best["coords"][0], "base_source": "lift", "lift": best["tags"].get("name")}
-    if pts:
-        cx = sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts)
-        near = [(haversine_m(*cx, *pk["pos"]), pk) for pk in osm["parkings"].values()]
+        return {"base": best["coords"][0], "base_source": "lift", "lift": best["tags"].get("name"), "candidates": cand_info}
+
+    pts = [c for w, _ in trails.values() for c in w["coords"][::3]]
+    refs = [park_pt]
+    if len(trails) >= 3:  # pár úseků nestačí – těžiště by ukázalo kamsi do lesa
+        refs.insert(0, (sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts)))
+    for ref in refs:
+        near = [(haversine_m(*ref, *pk["pos"]), pk) for pk in osm["parkings"].values()]
         near = [x for x in near if x[0] <= 1500]
         if near:
             pk = min(near, key=lambda x: x[0])[1]
-            return {"base": pk["pos"], "base_source": "parking", "lift": None}
-    return {"base": None, "base_source": None, "lift": None}
+            return {"base": pk["pos"], "base_source": "parking", "lift": None, "candidates": cand_info}
+    return {"base": None, "base_source": None, "lift": None, "candidates": cand_info}
 
 
 def choose_parking(base, osm):
@@ -228,11 +284,13 @@ def build(parks: list[dict], osm: dict):
     rel_names = trail_relations(osm)
     pts = {f["properties"]["id"]: (f["geometry"]["coordinates"][1], f["geometry"]["coordinates"][0]) for f in parks}
     has_lift = {f["properties"]["id"]: f["properties"].get("lift") for f in parks}
+    park_names = {f["properties"]["id"]: f["properties"].get("name") for f in parks}
+    towns = {f["properties"]["id"]: f["properties"].get("town") for f in parks}
 
     # Každou cestu jen k jednomu parku – k tomu, jehož základně (nebo bodu, když základnu
     # nemá) je nejblíž. Naše body parků bývají mimo, proto se nejdřív hledá základna.
     per_park = {pid: select_trails(pt, osm, rel_names, has_lift=has_lift[pid]) for pid, pt in pts.items()}
-    anchor = {pid: choose_base(pts[pid], per_park[pid], osm, has_lift[pid])["base"] or pts[pid] for pid in pts}
+    anchor = {pid: choose_base(pts[pid], per_park[pid], osm, has_lift[pid], park_names[pid], towns[pid])["base"] or pts[pid] for pid in pts}
     owner: dict[int, str] = {}
     for pid, cands in per_park.items():
         for wid, (w, _) in cands.items():
@@ -244,7 +302,7 @@ def build(parks: list[dict], osm: dict):
     for f in parks:
         pid = f["properties"]["id"]
         trails = {wid: v for wid, v in per_park[pid].items() if owner.get(wid) == pid}
-        base = choose_base(pts[pid], trails, osm, has_lift[pid])
+        base = choose_base(pts[pid], trails, osm, has_lift[pid], park_names[pid], towns[pid])
         parking = choose_parking(base["base"], osm)
         entry = {"base_source": base["base_source"], "lift": base["lift"]}
         if base["base"]:
@@ -272,20 +330,46 @@ def build(parks: list[dict], osm: dict):
         moved = round(haversine_m(*pts[pid], *base["base"])) if base["base"] else None
         rows.append((pid, f["properties"]["name"], base["base_source"], base["lift"], moved,
                      parking["name"] if parking and parking["name"] else ("ano" if parking else "–"),
-                     len(names), len(trails)))
+                     len(names), len(trails), base["candidates"]))
     trails_fc = {"type": "FeatureCollection", "attribution": "© přispěvatelé OpenStreetMap, ODbL", "features": features}
     return trails_fc, info, rows
 
 
+def dump_park(pid: str, parks: list[dict], osm: dict, trails_fc: dict, radius_m: float = 2000) -> None:
+    """Diagnostika: každá cesta do radius_m od bodu parku, její tagy a kam ji build zařadil."""
+    f = next((f for f in parks if f["properties"]["id"] == pid), None)
+    if not f:
+        print(f"dump: park {pid} není v parks.geojson", file=sys.stderr)
+        return
+    pt = (f["geometry"]["coordinates"][1], f["geometry"]["coordinates"][0])
+    owner = {int(x["properties"]["osm"].split("/")[1]): x["properties"]["park_id"] for x in trails_fc["features"]}
+    keep = ("highway", "name", "mtb:name", "mtb:scale", "mtb:scale:imba", "mtb:scale:dh", "mtb", "bicycle", "piste:type", "access")
+    print(f"dump {pid}: cesty do {radius_m:.0f} m od bodu {pt}", file=sys.stderr)
+    for wid, w in sorted(osm["ways"].items(), key=lambda kv: _dist_to_line(pt, kv[1]["coords"])):
+        d = _dist_to_line(pt, w["coords"])
+        if d > radius_m:
+            break
+        tags = " ".join(f"{k}={v}" for k, v in w["tags"].items() if k in keep)
+        print(f"  way/{wid} {d:5.0f} m {len(w['coords']):3d} b  → {owner.get(wid, '–'):24} {tags}", file=sys.stderr)
+    for lid, l in osm["lifts"].items():
+        d = _dist_to_line(pt, l["coords"])
+        if d <= radius_m:
+            print(f"  lift way/{lid} {d:5.0f} m {l['tags'].get('aerialway')} {l['tags'].get('name', '')}", file=sys.stderr)
+
+
 def render_summary(rows) -> str:
     out = ["# Parky × OSM (lajny, základna, parkoviště)", "",
-           "| id | park | základna | lanovka | posun bodu | parkoviště | pojm. lajn | úseků OSM |",
-           "|---|---|---|---|---:|---|---:|---:|"]
-    for pid, name, src, lift, moved, parking, named, segs in rows:
+           "| id | park | základna | lanovka | posun bodu | parkoviště | pojm. lajn | úseků OSM | kandidáti lanovek (lajn u ní / m od bodu) |",
+           "|---|---|---|---|---:|---|---:|---:|---|"]
+    for pid, name, src, lift, moved, parking, named, segs, cands in rows:
         src_l = {"lift": "lanovka", "parking": "parkoviště", None: "–"}[src]
+        cands_l = "; ".join(f"{n} ({d:,} m)" if sc < 0 else f"{n} ({sc} / {d:,} m)" for n, sc, d in cands) or "–"
         out.append(f"| `{pid}` | {name} | {src_l} | {lift or '–'} | {f'{moved:,} m' if moved is not None else '–'} "
-                   f"| {parking} | {named} | {segs} |")
-    out += ["", "Data © přispěvatelé OpenStreetMap, ODbL."]
+                   f"| {parking} | {named} | {segs} | {cands_l} |")
+    out += ["", "Kandidáti = lanovky pro kola do 3 km od bodu parku, nejvýš tři. Základna: lanovka se jménem parku (ne obce); "
+                "jinak ta s nejvíc lajnami (aspoň 10 bodů); jinak do 2 km od bodu gondola před sedačkou, pak nejbližší; "
+                "jinak vlek se jménem parku; jinak parkoviště. Vlek v hranatých závorkách = v okolí není lanovka pro kola, jen tenhle typ.",
+            "", "Data © přispěvatelé OpenStreetMap, ODbL."]
     return "\n".join(out) + "\n"
 
 
@@ -296,6 +380,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--trails", type=Path)
     ap.add_argument("--info", type=Path)
     ap.add_argument("--summary", help="Markdown souhrn ('-' = stdout)")
+    ap.add_argument("--dump-park", help="diagnostika: vypsat cesty do 2 km od bodu parku s tagy a výsledkem výběru")
     args = ap.parse_args(argv)
 
     parks = json.loads(args.parks.read_text())["features"]
@@ -310,6 +395,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"OSM kolem parků: {len(osm['ways'])} úseků, {len(osm['rels'])} relací route=mtb, "
           f"{len(osm['lifts'])} lanovek a vleků, {len(osm['parkings'])} parkovišť", file=sys.stderr)
     trails_fc, info, rows = build(parks, osm)
+    if args.dump_park:
+        dump_park(args.dump_park, parks, osm, trails_fc)
     with_trails = sum(1 for r in rows if r[7])
     print(f"trails.geojson: {len(trails_fc['features'])} úseků, lajny má {with_trails} z {len(rows)} parků; "
           f"základna u {sum(1 for r in rows if r[2])} parků", file=sys.stderr)
