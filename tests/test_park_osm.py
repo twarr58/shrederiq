@@ -202,3 +202,27 @@ class ParkOsm(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_route_relation_beyond_extract_is_skipped(self):
+        # dálková MTB trasa: v okolí parku jen dva členy z deseti, bez trailového jména → pryč;
+        # stejně dlouhý úsek relace „… Trail“ se bere
+        tour = [way(50, 49.50, 14.60, {"highway": "track", "name": "Jezerní cesta"}, n=6, dlon=0.001),
+                way(51, 49.50, 14.61, {"highway": "track"}, n=6, dlon=0.001)]
+        rel = lambda rid, name, refs: {"type": "relation", "id": rid, "tags": {"route": "mtb", "name": name},
+                                       "members": [{"type": "way", "ref": r} for r in refs]}
+        osm = po.parse({"elements": tour + [rel(1, "MTB-Tour 2 Rundtour", [50, 51] + list(range(900, 908)))]})
+        fc, _, _ = po.build([park("p", 14.605, 49.50, "Bikepark P", lift=True)], osm)
+        self.assertEqual(fc["features"], [])
+        osm = po.parse({"elements": tour + [rel(1, "Jezerní Trail", [50, 51] + list(range(900, 908)))]})
+        fc, _, _ = po.build([park("p", 14.605, 49.50, "Bikepark P", lift=True)], osm)
+        self.assertEqual(sorted(f["properties"]["name"] for f in fc["features"]), ["Jezerní Trail", "Jezerní Trail"])
+
+    def test_named_track_with_mtb_scale_is_access_road(self):
+        lift = way(1, 49.50, 14.60, {"aerialway": "chair_lift", "name": "Sedačka"}, n=6)
+        track = way(2, 49.501, 14.601, {"highway": "track", "mtb:scale": "1", "name": "Jezerní cesta"}, n=6)
+        dh = way(3, 49.502, 14.602, {"highway": "track", "mtb:scale:dh": "2", "name": "Rodeo"}, n=6)
+        fc, _, rows = po.build([park("p", 14.60, 49.50, "Bikepark P", lift=True)], po.parse({"elements": [lift, track, dh]}))
+        by = {f["properties"]["osm"]: f["properties"] for f in fc["features"]}
+        self.assertEqual((by["way/2"]["access"], by["way/2"]["name"]), (True, None))
+        self.assertEqual((by["way/3"]["access"], by["way/3"]["name"]), (False, "Rodeo"))
+        self.assertEqual(rows[0][6], 1)  # jen Rodeo je pojmenovaná lajna

@@ -157,7 +157,10 @@ def trail_relations(osm: dict) -> dict[int, str | None]:
         members = [osm["ways"][w] for w in rel["ways"] if w in osm["ways"]]
         km = sum(_length(w["coords"]) for w in members) / 1000
         trailish = bool(name and TRAIL_NAME_RE.search(name))
-        if not trailish and (tags.get("network") in LONG_NETWORKS or km > MAX_ROUTE_KM):
+        # relace, jejíž členové leží i mimo okolí parků, je dálková trasa (MTB-Tour, okruh
+        # kolem jezera) – délka spočítaná jen z blízkých členů by ji pustila dovnitř
+        beyond = len(members) < len(rel["ways"])
+        if not trailish and (tags.get("network") in LONG_NETWORKS or km > MAX_ROUTE_KM or beyond):
             continue
         for w in rel["ways"]:
             out.setdefault(w, name)
@@ -316,9 +319,13 @@ def build(parks: list[dict], osm: dict):
         for wid, (w, rel_name) in sorted(trails.items()):
             tags = w["tags"]
             name = tags.get("name") or tags.get("mtb:name") or rel_name
-            access = (tags.get("highway") == "track" and not name
-                      and "mtb:scale:imba" not in tags and wid not in rel_names)
-            if name and not access:
+            # lesní cesta (track) je přístupová, i když má mtb:scale nebo jméno – lajna z ní je
+            # jen s mtb:scale:imba / dh nebo jako člen trailové relace
+            access = (tags.get("highway") == "track" and "mtb:scale:imba" not in tags
+                      and "mtb:scale:dh" not in tags and wid not in rel_names)
+            if access:
+                name = None  # jméno lesní cesty v seznamu lajn mate
+            if name:
                 names.add(name)
             features.append({
                 "type": "Feature",
