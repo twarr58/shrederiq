@@ -16,7 +16,7 @@ fi
 curl -sSfL --retry 3 -o "$TMP/cz.osm.pbf" "$URL"
 osmium fileinfo -g header.option.osmosis_replication_timestamp "$TMP/cz.osm.pbf" | sed 's/^/OSM data k: /' || true
 osmium tags-filter "$TMP/cz.osm.pbf" \
-  w/mtb:scale w/mtb:scale:imba w/mtb=designated w/bicycle=designated \
+  w/mtb:scale w/mtb:scale:imba w/mtb:scale:dh w/mtb=designated w/bicycle=designated \
   w/aerialway nwr/amenity=parking r/route=mtb \
   -o "$TMP/mtb.osm.pbf" --overwrite
 python3 "$(dirname "$0")/osm_extract.py" "$TMP/mtb.osm.pbf" --out "$OUT"

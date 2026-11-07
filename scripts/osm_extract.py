@@ -7,7 +7,7 @@ Geofabriku je denně aktualizovaný soubor – zpracování je spolehlivé a opa
 
 Doporučený postup (v GitHub Actions):
   curl -sSfLo cz.osm.pbf https://download.geofabrik.de/europe/czech-republic-latest.osm.pbf
-  osmium tags-filter cz.osm.pbf w/mtb:scale w/mtb:scale:imba w/mtb=designated \\
+  osmium tags-filter cz.osm.pbf w/mtb:scale w/mtb:scale:imba w/mtb:scale:dh w/mtb=designated \\
       w/bicycle=designated w/aerialway nwr/amenity=parking r/route=mtb -o mtb.osm.pbf
   python3 scripts/osm_extract.py mtb.osm.pbf --out parks-osm.json
   python3 scripts/park_osm.py --cache parks-osm.json --trails … --info …
@@ -40,7 +40,7 @@ def _tags(obj) -> dict:
 def is_trail(tags: dict) -> bool:
     hw = tags.get("highway")
     return (("mtb:scale" in tags and hw in TRAIL_HIGHWAYS)
-            or "mtb:scale:imba" in tags
+            or "mtb:scale:imba" in tags or "mtb:scale:dh" in tags
             or (hw == "path" and (tags.get("mtb") == "designated" or tags.get("bicycle") == "designated")))
 
 

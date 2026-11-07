@@ -41,6 +41,7 @@ class Helpers(unittest.TestCase):
         self.assertTrue(ox.is_trail({"highway": "path", "mtb:scale": "1"}))
         self.assertTrue(ox.is_trail({"highway": "path", "bicycle": "designated"}))
         self.assertTrue(ox.is_trail({"mtb:scale:imba": "2"}))
+        self.assertTrue(ox.is_trail({"highway": "path", "mtb:scale:dh": "3"}))
         self.assertFalse(ox.is_trail({"highway": "residential", "mtb:scale": "0"}))
         self.assertFalse(ox.is_trail({"highway": "path"}))
 

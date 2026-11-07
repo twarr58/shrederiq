@@ -58,6 +58,7 @@ def build_query(parks: list[dict], radius: int = RADIUS_M) -> str:
     ways = "\n".join(
         f'  way({a})["highway"~"^(path|track|cycleway|bridleway|footway)$"]["mtb:scale"];\n'
         f'  way({a})["mtb:scale:imba"];\n'
+        f'  way({a})["mtb:scale:dh"];\n'
         f'  way({a})["highway"="path"]["mtb"="designated"];\n'
         f'  way({a})["highway"="path"]["bicycle"="designated"];'
         for a in ar)
@@ -185,7 +186,7 @@ def select_trails(park_pt, osm, rel_names, radius=RADIUS_M, has_lift=None):
         if _dist_to_line(park_pt, coords[::3] + [coords[-1]]) > radius:
             continue
         in_rel = wid in rel_names
-        strong = ("mtb:scale:imba" in tags or tags.get("mtb") == "designated"
+        strong = ("mtb:scale:imba" in tags or "mtb:scale:dh" in tags or tags.get("mtb") == "designated"
                   or (tags.get("bicycle") == "designated" and tags.get("highway") == "path" and "mtb:scale" in tags))
         near_lift = "mtb:scale" in tags and any(
             _dist_to_line(c, l) <= LIFT_TRAIL_M for l in lifts for c in coords[::4] + [coords[-1]])

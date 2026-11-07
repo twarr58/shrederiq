@@ -67,6 +67,13 @@ class ParkOsm(unittest.TestCase):
         self.assertEqual(cands[0][0], "LD Medvědí hora")
         self.assertGreater(cands[0][1], 0)
 
+    def test_dh_only_ways_are_trails(self):
+        # sjezdovka otagovaná jen mtb:scale:dh, daleko od lanovky i bez relace
+        dh = way(1, 50.05, 17.30, {"highway": "path", "mtb:scale:dh": "3", "name": "Expres DH"}, n=6)
+        fc, _, _ = po.build([park("k", 17.30, 50.052, "Express Bikepark Karlov", lift=True)], po.parse({"elements": [dh]}))
+        self.assertEqual([f["properties"]["name"] for f in fc["features"]], ["Expres DH"])
+        self.assertEqual(fc["features"][0]["properties"]["difficulty"], "black")
+
     def test_trail_center_base_is_parking(self):
         data = {"elements": [e for e in DATA["elements"] if e["id"] not in (1,)]
                 + [{"type": "node", "id": 202, "lat": 50.0815, "lon": 17.1035, "tags": {"amenity": "parking"}}]}
