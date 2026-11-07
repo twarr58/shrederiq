@@ -101,6 +101,7 @@
       const src = f.properties.source || "osm";
       sources[src] = (sources[src] || 0) + 1;
     }
+    const snapped = trails.filter((f) => f.properties.snapped).length; // průběh podle sítě Mapy.com
     // nejdelší lajna (pojmenovaná má přednost), celkové převýšení ze sklonových dat
     const longest = [...rows].sort((a, b) => (b.name !== null) - (a.name !== null) || b.lengthM - a.lengthM)[0] || null;
     const eles = rows.filter((r) => r.eleMin != null && r.eleMax != null);
@@ -108,7 +109,7 @@
     const eleMax = eles.length ? Math.max(...eles.map((r) => r.eleMax)) : null;
     return {
       features, count: features.length, segments: trails.length, namedCount, lengthM, accessLengthM,
-      rows, byDifficulty, sources, hasSlopes: hasSlopes(features), longest, eleMin, eleMax,
+      rows, byDifficulty, sources, snapped, hasSlopes: hasSlopes(features), longest, eleMin, eleMax,
     };
   }
 
