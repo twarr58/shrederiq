@@ -138,10 +138,21 @@ def check_response(data: dict) -> dict:
     """Overpass při timeoutu / nedostatku paměti vrací HTTP 200 s chybou v `remark`
     a prázdnými nebo neúplnými daty – takovou odpověď nelze použít."""
     remark = data.get("remark") or ""
+    if remark:
+        print(f"overpass remark: {remark.strip()}", file=sys.stderr)
     if "error" in remark.lower():
         raise OverpassError(remark.strip())
-    if not data.get("elements"):
+    elements = data.get("elements") or []
+    if not elements:
         raise OverpassError("prázdná odpověď")
+    # Neúplná odpověď bez chyby: lanovky přišly, ale MTB cesty kolem nich ne
+    # (dotaz „around“ je nejdražší část a Overpass ho občas tiše vynechá).
+    lifts = sum(1 for e in elements if "aerialway" in e.get("tags", {}))
+    ways = [e for e in elements if e.get("type") == "way" and "geometry" in e]
+    near_lift = sum(1 for e in ways if Trail(e["id"], e.get("tags", {}), [(0, 0), (0, 0)]).style == "lift")
+    print(f"overpass: {len(ways)} úseků, z toho {near_lift} jen s mtb:scale u lanovek; {lifts} lanovek", file=sys.stderr)
+    if lifts and not near_lift:
+        raise OverpassError(f"neúplná odpověď: {lifts} lanovek, ale žádné MTB cesty u nich")
     return data
 
 

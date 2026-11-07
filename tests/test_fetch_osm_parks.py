@@ -62,6 +62,11 @@ class Response(unittest.TestCase):
             osm.check_response({"elements": [], "remark": "runtime error: Query timed out in \"query\" at line 4 after 241 seconds."})
         with self.assertRaises(osm.OverpassError):
             osm.check_response({"elements": []})
+        lift = {"type": "way", "id": 900, "center": {"lat": 50.1, "lon": 17.1}, "tags": {"aerialway": "chair_lift"}}
+        with self.assertRaises(osm.OverpassError):  # lanovka bez MTB cest kolem = neúplná odpověď
+            osm.check_response({"elements": OVERPASS["elements"] + [lift]})
+        ok = OVERPASS["elements"] + [lift, way(901, 50.1, 17.1, {"highway": "track", "mtb:scale": "1"})]
+        self.assertEqual(len(osm.check_response({"elements": ok})["elements"]), len(ok))
 
 
 class Clustering(unittest.TestCase):
