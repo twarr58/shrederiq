@@ -55,14 +55,20 @@
     return DIFFICULTY[d] || UNKNOWN;
   }
 
-  // Lajny jednoho parku + souhrn pro panel. Lajny bez názvu se v seznamu sloučí
-  // podle obtížnosti („3× bez názvu“), aby seznam nebyl dlouhý.
+  // Lajny jednoho parku + souhrn pro panel.
+  // Pozor na počty: jedna lajna bývá v OSM rozdělená na víc úseků (way), proto se
+  // úseky se stejným názvem a obtížností slučují do jedné lajny a jako „lajny“ se
+  // počítají jen pojmenované. Úseky bez názvu jsou zvlášť a lesní / přístupové cesty
+  // (access) do lajn nepatří vůbec.
   function summarize(fc, parkId) {
     const features = ((fc && fc.features) || []).filter((f) => f.properties && f.properties.park_id === parkId);
-    const lengthM = features.reduce((a, f) => a + (f.properties.length_m || 0), 0);
+    const trails = features.filter((f) => !f.properties.access);
+    const access = features.filter((f) => f.properties.access);
+    const lengthM = trails.reduce((a, f) => a + (f.properties.length_m || 0), 0);
+    const accessLengthM = access.reduce((a, f) => a + (f.properties.length_m || 0), 0);
 
     const named = new Map(); // "name|difficulty" → { name, difficulty, lengthM, segments }
-    for (const f of features) {
+    for (const f of trails) {
       const p = f.properties;
       const key = `${p.name || ""}|${p.difficulty || ""}`;
       const row = named.get(key) || { name: p.name || null, difficulty: p.difficulty || null, lengthM: 0, segments: 0, slopeMax: null, eleMin: null, eleMax: null };
@@ -79,11 +85,15 @@
       || (a.name || "").localeCompare(b.name || "", "cs"));
 
     const byDifficulty = {};
-    for (const f of features) {
+    for (const f of trails) {
       const d = f.properties.difficulty || "unknown";
       byDifficulty[d] = (byDifficulty[d] || 0) + (f.properties.length_m || 0);
     }
-    return { features, count: features.length, lengthM, rows, byDifficulty, hasSlopes: hasSlopes(features) };
+    const namedCount = new Set(trails.map((f) => f.properties.name).filter(Boolean)).size;
+    return {
+      features, count: features.length, segments: trails.length, namedCount, lengthM, accessLengthM,
+      rows, byDifficulty, hasSlopes: hasSlopes(features),
+    };
   }
 
   const api = { DIFFICULTY, SLOPE_BINS, difficultyInfo, slopeBin, slopeRuns, hasSlopes, summarize };

@@ -14,7 +14,7 @@ jednotlivé lajny. Skript proto:
   2. stáhne „kotvy“ s názvem: leisure=bike_park, sportoviště se sport=mtb / downhill
      a MTB trasy (route=mtb) s názvem typu Singltrek / Trail / Bikepark,
   3. lajny ležící blízko sebe spojí do shluků; shluk = kandidát na park
-     (střed, počet lajn, délka, typ podle převahy dh / imba lajn, název z kotvy),
+     (střed, počet pojmenovaných lajn a úseků OSM, délka, typ, název z kotvy),
   4. shluky spáruje s naším seznamem podle vzdálenosti a podobnosti názvu;
      shluky bez názvu pojmenuje podle nejbližší obce.
 
@@ -174,6 +174,16 @@ class Trail:
         return line_length_m(self.coords)
 
     @property
+    def trail_name(self) -> str | None:
+        return self.tags.get("name") or self.tags.get("mtb:name")
+
+    @property
+    def is_access(self) -> bool:
+        """Lesní / přístupová cesta (highway=track bez názvu a MTB škál), ne lajna."""
+        return (self.tags.get("highway") == "track" and not self.trail_name
+                and "mtb:scale:imba" not in self.tags and "mtb:scale:dh" not in self.tags)
+
+    @property
     def style(self) -> str:
         """dh = sjezdová, imba = singltrek / trailpark, lift = MTB cesta u lanovky, other"""
         if "mtb:scale:dh" in self.tags:
@@ -222,6 +232,12 @@ class Cluster:
     @property
     def length_m(self) -> float:
         return sum(t.length_m for t in self.trails)
+
+    @property
+    def named_trails(self) -> int:
+        """Počet pojmenovaných lajn. Jedna lajna bývá v OSM rozdělená na víc cest (way),
+        proto se počítají různé názvy, ne cesty."""
+        return len({t.trail_name for t in self.trails if t.trail_name and not t.is_access})
 
     @property
     def kind(self) -> str:
@@ -388,23 +404,25 @@ def render_report(matches: list[Match], extra: list[Cluster], moved_threshold_m:
            f"bez shluku: **{len(missing)}**, shluků navíc (kandidáti): **{len(extra)}**", ""]
 
     out += ["## Shody", "",
-            "| id | název (my) | název (OSM) | odchylka | návrh [lon, lat] | lajn | km | typ (OSM) | web (OSM) | |",
-            "|---|---|---|---:|---|---:|---:|---|---|---|"]
+            "| id | název (my) | název (OSM) | odchylka | návrh [lon, lat] | pojm. lajn | úseků OSM | km | typ (OSM) | web (OSM) | |",
+            "|---|---|---|---:|---|---:|---:|---:|---|---|---|"]
     for m in sorted(found, key=lambda m: -m.distance_m):
         p, c = m.park["properties"], m.cluster
         flag = " ⚠️" if m.distance_m > moved_threshold_m else ""
         out.append(f"| `{p['id']}` | {p['name']} | {c.label} | {m.distance_m:,.0f} m{flag} | {_pt(*c.center)} "
-                   f"| {len(c.trails)} | {c.length_m / 1000:.1f} | {KIND_LABEL[c.kind]} | {c.website or ''} | {_osm_link(c)} |")
-    out += ["", f"⚠️ = odchylka nad {moved_threshold_m:.0f} m. Střed shluku nemusí být nástup do parku – posuď v mapě.", ""]
+                   f"| {c.named_trails} | {len(c.trails)} | {c.length_m / 1000:.1f} | {KIND_LABEL[c.kind]} | {c.website or ''} | {_osm_link(c)} |")
+    out += ["", "Úsek OSM = jedna cesta (way); lajna bývá rozdělená na víc úseků. "
+                "„pojm. lajn“ = počet různých názvů, km včetně lesních cest u lanovek.",
+            f"⚠️ = odchylka nad {moved_threshold_m:.0f} m. Střed shluku nemusí být nástup do parku – posuď v mapě.", ""]
 
     out += ["## Bez shluku v OSM", ""]
     out += [f"- `{m.park['properties']['id']}` {m.park['properties']['name']}" for m in missing] or ["- (žádné)"]
     out.append("")
 
     out += ["## Shluky, které v seznamu chybí (kandidáti)", "",
-            "| název (OSM) | [lon, lat] | lajn | km | typ | web | |", "|---|---|---:|---:|---|---|---|"]
+            "| název (OSM) | [lon, lat] | pojm. lajn | úseků OSM | km | typ | web | |", "|---|---|---:|---:|---:|---|---|---|"]
     for c in extra:
-        out.append(f"| {c.label} | {_pt(*c.center)} | {len(c.trails)} | {c.length_m / 1000:.1f} "
+        out.append(f"| {c.label} | {_pt(*c.center)} | {c.named_trails} | {len(c.trails)} | {c.length_m / 1000:.1f} "
                    f"| {KIND_LABEL[c.kind]} | {c.website or ''} | {_osm_link(c)} |")
     out += ["", "Data © přispěvatelé OpenStreetMap, ODbL."]
     return "\n".join(out) + "\n"
@@ -418,7 +436,7 @@ def clusters_geojson(clusters: list[Cluster]) -> dict:
             "type": "Feature",
             "geometry": {"type": "Point", "coordinates": [round(lon, 5), round(lat, 5)]},
             "properties": {"cluster_id": c.id, "name": c.name, "place": c.place, "kind": c.kind, "website": c.website,
-                           "trails": len(c.trails), "length_m": round(c.length_m),
+                           "segments": len(c.trails), "named_trails": c.named_trails, "length_m": round(c.length_m),
                            "anchors": [f"{a.osm_type}/{a.osm_id}" for a in c.anchors]},
         })
     return {"type": "FeatureCollection", "features": feats}
@@ -488,7 +506,8 @@ def park_trails_geojson(matches: list[Match]) -> dict:
                              "coordinates": [[round(lon, 5), round(lat, 5)] for lat, lon in simplify(t.coords)]},
                 "properties": {
                     "park_id": park_id,
-                    "name": t.tags.get("name") or t.tags.get("mtb:name"),
+                    "name": t.trail_name,
+                    "access": t.is_access,
                     "difficulty": difficulty(t.tags),
                     "length_m": round(t.length_m),
                     "osm": f"way/{t.osm_id}",
@@ -518,7 +537,7 @@ def main(argv: list[str] | None = None) -> int:
 
     trails, anchors, places = parse_overpass(data)
     clusters = build_clusters(trails, anchors, places)
-    print(f"OSM: {len(trails)} lajn, {len(anchors)} kotev, {len(places)} obcí, {len(clusters)} shluků", file=sys.stderr)
+    print(f"OSM: {len(trails)} úseků (way), {len(anchors)} kotev, {len(places)} obcí, {len(clusters)} shluků", file=sys.stderr)
 
     if args.geojson:
         args.geojson.write_text(json.dumps(clusters_geojson(clusters), ensure_ascii=False, indent=1) + "\n")
@@ -530,7 +549,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.park_trails:
         pt = park_trails_geojson(matches)
         args.park_trails.write_text(json.dumps(pt, ensure_ascii=False, separators=(",", ":")) + "\n")
-        print(f"trails.geojson: {len(pt['features'])} lajn, {len({f['properties']['park_id'] for f in pt['features']})} parků", file=sys.stderr)
+        print(f"trails.geojson: {len(pt['features'])} úseků, {len({f['properties']['park_id'] for f in pt['features']})} parků", file=sys.stderr)
     if args.report:
         report = render_report(matches, extra)
         if args.report == "-":

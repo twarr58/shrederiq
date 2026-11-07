@@ -127,6 +127,7 @@ class MatchAndReport(unittest.TestCase):
         report = osm.render_report(*osm.match_parks(self.features, self.clusters))
         self.assertIn("se shlukem lajn v OSM: **1**", report)
         self.assertIn("| `kouty` | Bikepark Kouty | Bikepark Kouty |", report)
+        self.assertIn("pojm. lajn | úseků OSM", report)
         self.assertIn("⚠️", report)
         self.assertIn("- `lipno` Bikepark Lipno", report)
         self.assertIn("| Trutnov Trails – modrá |", report)
@@ -143,6 +144,21 @@ class MatchAndReport(unittest.TestCase):
         self.assertEqual(f["geometry"]["type"], "LineString")
         self.assertEqual(f["geometry"]["coordinates"][0], [17.1, 50.1])
         self.assertIn("mtb:scale:dh", f["properties"])
+
+
+class TrailCounting(unittest.TestCase):
+    def test_named_trails_and_access_roads(self):
+        data = {"elements": [
+            way(1, 50.0, 15.0, {"highway": "path", "mtb:scale": "1", "name": "Flow"}),
+            way(2, 50.0, 15.001, {"highway": "path", "mtb:scale": "1", "name": "Flow"}),   # druhý úsek téže lajny
+            way(3, 50.0, 15.002, {"highway": "path", "mtb:scale": "3", "name": "Black"}),
+            way(4, 50.0, 15.003, {"highway": "track", "mtb:scale": "0"}),                 # lesní cesta
+            way(5, 50.0, 15.004, {"highway": "path", "mtb:scale": "2"}),                  # bez názvu
+        ]}
+        trails = osm.parse_overpass(data)[0]
+        self.assertEqual([t.is_access for t in trails], [False, False, False, True, False])
+        (c,) = osm.build_clusters(trails, [])
+        self.assertEqual((c.named_trails, len(c.trails)), (2, 5))
 
 
 class ParkTrails(unittest.TestCase):
@@ -169,6 +185,7 @@ class ParkTrails(unittest.TestCase):
         f = gj["features"][0]["properties"]
         self.assertEqual((f["osm"], f["difficulty"], f["length_m"]), ("way/1", "red", 445))
         self.assertIn("ODbL", gj["attribution"])
+        self.assertIs(f["access"], False)
 
 
 if __name__ == "__main__":

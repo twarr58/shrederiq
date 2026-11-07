@@ -19,13 +19,17 @@ const FC = {
     line("kouty", "Easy", "green", 1000),
     line("kouty", "Bez obtížnosti", null, 100),
     line("spicak", "Jiný park", "red", 999),
+    { ...line("kouty", null, "green", 700), properties: { ...line("kouty", null, "green", 700).properties, access: true } },
   ],
 };
 
 test("souhrn lajn jednoho parku", () => {
   const s = T.summarize(FC, "kouty");
-  assert.equal(s.count, 7);
+  assert.equal(s.count, 8);          // všechny úseky včetně lesní cesty
+  assert.equal(s.segments, 7);       // úseky lajn
+  assert.equal(s.namedCount, 4);     // Flow (2 úseky), Black Hole, Easy, Bez obtížnosti
   assert.equal(s.lengthM, 3400);
+  assert.equal(s.accessLengthM, 700);
   assert.deepEqual(s.byDifficulty, { blue: 1200, black: 600, red: 500, green: 1000, unknown: 100 });
 });
 
