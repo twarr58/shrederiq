@@ -50,7 +50,7 @@ test("vyhledávání ignoruje diakritiku a hledá i v obci a kraji, výsledek je
 
 test("info panel zobrazí neznámé hodnoty jako neověřeno", () => {
   const rows = Object.fromEntries(P.describePark({ kind: "trail_center", town: "Černá Voda", region: "Olomoucký", lift: null, trails_count: null }));
-  assert.equal(rows["Typ"], "Trail centrum");
+  assert.equal(rows["Typ"], "Trailpark / singltrek");
   assert.equal(rows["Lokalita"], "Černá Voda, Olomoucký kraj");
   assert.equal(rows["Lanovka / vlek"], "neověřeno");
   assert.equal(rows["Počet trailů"], "neověřeno");
