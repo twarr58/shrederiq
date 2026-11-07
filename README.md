@@ -128,7 +128,10 @@ Report najdeš v souhrnu běhu (Summary) a jako artifact `osm-report`.
 
 Workflow `pages` nasadí `web/` na GitHub Pages při pushi do `main`
 (v Settings → Pages nastav Source na **GitHub Actions**). Pro podklad Mapy.com
-přidej repo secret `MAPY_API_KEY`. Klíč je ve stránce veřejně čitelný, proto ho
+přidej repo secret `MAPY_API_KEY`. Bezplatný limit je 100 000 dlaždic měsíčně, proto
+přehled ČR jde z OpenStreetMap a Mapy.com se načítají až od zoomu 11 (`mapyMinZoom`
+v `config.js`). Podklad jde přepnout v mapě. Když Mapy.com začnou vracet chyby
+(vyčerpaný limit), mapa se sama přepne na OSM. Klíč je ve stránce veřejně čitelný, proto ho
 v administraci Mapy.com omez na doménu GitHub Pages.
 
 ## Frontend

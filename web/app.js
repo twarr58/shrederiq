@@ -20,26 +20,62 @@
   const map = L.map("map", { zoomControl: false }).setView(CZ_CENTER, 7);
   L.control.zoom({ position: "bottomright" }).addTo(map);
 
+  // Podklad: OpenStreetMap, nebo Mapy.com (s klíčem). Mapy.com mají limit 100k dlaždic
+  // měsíčně, proto: přehled ČR z OSM a Mapy.com až od zoomu mapyMinZoom, dlaždice se
+  // nenačítají během zoomu a při chybách Mapy.com (vyčerpaný limit) se přepne na OSM.
+  const TILE_OPTS = { maxZoom: 19, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 1 };
+  const MAPY_MIN_ZOOM = Number.isFinite(cfg.mapyMinZoom) ? cfg.mapyMinZoom : 11;
+  const MAPY_MAX_ERRORS = 8;
+
+  const osmLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    ...TILE_OPTS,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+  });
+  let mapyLayer = null, mapyLogo = null, mapyErrors = 0, mapyFailed = false;
+  let base = "osm";
+
   if (cfg.mapyApiKey) {
     // Mapy.com – podmínky vyžadují atribuci i logo (https://developer.mapy.com/)
     const mapset = cfg.mapyMapset || "outdoor";
-    L.tileLayer(`https://api.mapy.com/v1/maptiles/${mapset}/256/{z}/{x}/{y}?apikey=${encodeURIComponent(cfg.mapyApiKey)}`, {
-      minZoom: 0,
-      maxZoom: 19,
+    mapyLayer = L.tileLayer(`https://api.mapy.com/v1/maptiles/${mapset}/256/{z}/{x}/{y}?apikey=${encodeURIComponent(cfg.mapyApiKey)}`, {
+      ...TILE_OPTS,
       attribution: '<a href="https://api.mapy.com/copyright" target="_blank" rel="noopener">&copy; Seznam.cz a.s. a další</a>',
-    }).addTo(map);
+    });
+    mapyLayer.on("tileerror", () => {
+      if (++mapyErrors >= MAPY_MAX_ERRORS && !mapyFailed) {
+        mapyFailed = true;
+        console.warn("Mapy.com tiles failing, switching to OpenStreetMap");
+        updateBase();
+      }
+    });
+    mapyLayer.on("tileload", () => { mapyErrors = 0; });
     const Logo = L.Control.extend({
       options: { position: "bottomleft" },
       onAdd: () => el("a", { className: "mapy-logo", href: "https://mapy.com/", target: "_blank", rel: "noopener" },
         el("img", { src: "https://api.mapy.com/img/api/logo.svg", alt: "Mapy.com" })),
     });
-    new Logo().addTo(map);
-  } else {
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
-    }).addTo(map);
+    mapyLogo = new Logo();
+
+    try { base = localStorage.getItem("shrederiq.base") === "osm" ? "osm" : "mapy"; } catch (_) { base = "mapy"; }
+    const choices = { "Mapy.com (turistická)": L.layerGroup(), "OpenStreetMap": L.layerGroup() };
+    (base === "mapy" ? choices["Mapy.com (turistická)"] : choices.OpenStreetMap).addTo(map);
+    L.control.layers(choices, null, { position: "bottomright" }).addTo(map);
+    map.on("baselayerchange", (e) => {
+      base = e.layer === choices.OpenStreetMap ? "osm" : "mapy";
+      try { localStorage.setItem("shrederiq.base", base); } catch (_) { /* bez storage */ }
+      updateBase();
+    });
   }
+
+  function updateBase() {
+    const useMapy = mapyLayer && base === "mapy" && !mapyFailed && map.getZoom() >= MAPY_MIN_ZOOM;
+    const [on, off] = useMapy ? [mapyLayer, osmLayer] : [osmLayer, mapyLayer];
+    if (off && map.hasLayer(off)) map.removeLayer(off);
+    if (!map.hasLayer(on)) on.addTo(map);
+    if (mapyLogo) useMapy ? mapyLogo.addTo(map) : mapyLogo.remove();
+  }
+  map.on("zoomend", updateBase);
+  updateBase();
 
   // --- stav ------------------------------------------------------------------
   let parks = [];           // GeoJSON features
@@ -159,7 +195,7 @@
     b.disabled = true;
     try {
       await locate();
-      if (!activeId) map.flyTo([userPos.lat, userPos.lon], 9, { duration: 0.8 });
+      if (!activeId) map.setView([userPos.lat, userPos.lon], 9);
       else renderCard(parks.find((x) => x.properties.id === activeId).properties); // odkazy s výchozím bodem
       $("status").textContent += " · seřazeno podle vzdálenosti";
     } catch (err) {
@@ -248,7 +284,7 @@
     if (f) {
       markers.get(id).setStyle({ weight: 4, radius: 10 }).bringToFront();
       const [lon, lat] = f.geometry.coordinates;
-      if (fly) map.flyTo([lat, lon], PARK_ZOOM, { duration: 0.8 });
+      if (fly) map.setView([lat, lon], PARK_ZOOM); // bez flyTo: nenačítá dlaždice mezilehlých zoomů
       renderCard(f.properties);
       history.replaceState(null, "", `#${id}`);
     } else {
