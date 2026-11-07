@@ -64,6 +64,19 @@ jobs:
           python3 scripts/gpx_trails.py --merge out/trails.geojson
           cat out/parks-summary.md >> "$GITHUB_STEP_SUMMARY"
           cat out/parks-summary.md
+      # kontrola lajn proti veřejným GPS stopám OSM (#22); stopy v cache po týdnech
+      - id: week
+        run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: .osm-cache/gps.json
+          key: gps-traces-${{ steps.week.outputs.week }}
+      - name: Trails vs OSM GPS traces
+        continue-on-error: true
+        timeout-minutes: 15
+        run: |
+          python3 scripts/gps_check.py out/trails.geojson --cache .osm-cache/gps.json --report out/gps.md
+          cat out/gps.md >> "$GITHUB_STEP_SUMMARY"
       # celorepublikový report přes Overpass – jen pro hledání nových parků, smí selhat
       - name: Fetch OSM bike parks
         if: github.event_name != 'workflow_dispatch' || inputs.overpass
