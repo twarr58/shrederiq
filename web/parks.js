@@ -66,12 +66,20 @@
     return list.sort((a, b) => a.properties.name.localeCompare(b.properties.name, "cs"));
   }
 
+  // „Plzeňský“ → „Plzeňský kraj“; Vysočina a Praha mají jiný tvar
+  function regionLabel(region) {
+    if (!region) return "";
+    if (region === "Vysočina") return "Kraj Vysočina";
+    if (region === "Praha") return "Praha";
+    return `${region} kraj`;
+  }
+
   // Řádky info panelu; neznámé hodnoty (null) se zobrazí jako „neověřeno“.
   function describePark(p) {
     const unknown = "neověřeno";
     return [
       ["Typ", KINDS[p.kind] || p.kind],
-      ["Lokalita", [p.town, p.region && `${p.region} kraj`].filter(Boolean).join(", ") || unknown],
+      ["Lokalita", [p.town, regionLabel(p.region)].filter(Boolean).join(", ") || unknown],
       ["Lanovka / vlek", p.lift == null ? unknown : p.lift ? "ano" : "ne"],
       ["Počet trailů", p.trails_count == null ? unknown : String(p.trails_count)],
     ];
