@@ -56,6 +56,10 @@
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [16.4441, 49.9043] },
       "properties": {"id": "peklak", "name": "Bikepark Peklák", "kind": "bikepark", "town": "Česká Třebová", "region": "Pardubický", "web": null, "lift": true, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [17.2873, 50.0159] },
-      "properties": {"id": "express-bikepark-karlov", "name": "Express Bikepark Karlov", "kind": "bikepark", "town": "Malá Morávka", "region": "Moravskoslezský", "web": "https://www.skikarlov.cz", "lift": true, "trails_count": null, "verified": false} }
+      "properties": {"id": "express-bikepark-karlov", "name": "Express Bikepark Karlov", "kind": "bikepark", "town": "Malá Morávka", "region": "Moravskoslezský", "web": "https://www.skikarlov.cz", "lift": true, "trails_count": null, "verified": false} },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [13.6177, 49.0605] },
+      "properties": {"id": "zadov", "name": "Bike Park Zadov-Kobyla", "kind": "bikepark", "town": "Stachy", "region": "Jihočeský", "web": "https://www.lazadov.cz", "lift": true, "trails_count": null, "verified": false} },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [18.30, 49.35] },
+      "properties": {"id": "kycerka", "name": "Bikepark Kyčerka", "kind": "bikepark", "town": "Velké Karlovice", "region": "Zlínský", "web": null, "lift": true, "trails_count": null, "verified": false} }
   ]
 }
