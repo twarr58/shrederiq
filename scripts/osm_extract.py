@@ -9,7 +9,7 @@ Doporučený postup (v GitHub Actions):
   curl -sSfLo cz.osm.pbf https://download.geofabrik.de/europe/czech-republic-latest.osm.pbf
   osmium tags-filter cz.osm.pbf w/mtb:scale w/mtb:scale:imba w/mtb:scale:dh w/mtb \\
       w/bicycle=designated w/aerialway nwr/amenity=parking r/route=mtb -o mtb.osm.pbf
-  python3 scripts/osm_extract.py mtb.osm.pbf --out parks-osm.json
+  python3 scripts/osm_extract.py mtb.osm.pbf --out parks-osm.json --pumptracks web/data/pumptracks.geojson
   python3 scripts/park_osm.py --cache parks-osm.json --trails … --info …
 
 (tags-filter ponechá i uzly a členy relací, na které vybrané objekty odkazují.)
@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import sys
 from pathlib import Path
 
@@ -35,6 +36,18 @@ MARGIN_M = 500  # rezerva navíc k RADIUS_M, ať se neuřízne cesta, která do 
 
 def _tags(obj) -> dict:
     return {t.k: t.v for t in obj.tags}
+
+
+PUMP_RE = re.compile(r"pump ?track|pumptrek", re.I)
+
+
+def is_pumptrack(tags: dict) -> bool:
+    """sport=pump_track, nebo dráha / hřiště pro BMX či cyklistiku, nebo cokoli s „pumptrack“ v názvu."""
+    sport = tags.get("sport") or ""
+    name = tags.get("name") or ""
+    if "pump_track" in sport or PUMP_RE.search(name):
+        return True
+    return tags.get("leisure") in ("track", "pitch") and any(x in sport for x in ("bmx", "cycling"))
 
 
 def is_trail(tags: dict) -> bool:
@@ -59,6 +72,43 @@ class Near:
             if s <= lat <= n and w <= lon <= e and haversine_m(lat, lon, la, lo) <= self.r:
                 return True
         return False
+
+
+def extract_pumptracks(pbf: str) -> dict:
+    """Pumptracky v celém výřezu jako GeoJSON body (uzly, nebo těžiště cest / ploch)."""
+    import osmium
+
+    feats = []
+
+    def add(osm_type, osm_id, lat, lon, tags):
+        feats.append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [round(lon, 5), round(lat, 5)]},
+            "properties": {"name": tags.get("name"), "osm": f"{osm_type}/{osm_id}", "sport": tags.get("sport"),
+                           "surface": tags.get("surface"), "website": tags.get("website") or tags.get("contact:website")},
+        })
+
+    class Pumps(osmium.SimpleHandler):
+        def node(self, n):
+            tags = _tags(n)
+            if is_pumptrack(tags) and n.location.valid():
+                add("node", n.id, n.location.lat, n.location.lon, tags)
+
+        def way(self, w):
+            tags = _tags(w)
+            if not is_pumptrack(tags):
+                return
+            try:
+                pts = [(nd.location.lat, nd.location.lon) for nd in w.nodes if nd.location.valid()]
+            except osmium.InvalidLocationError:
+                return
+            if pts:
+                add("way", w.id, sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts), tags)
+
+    h = Pumps()
+    h.apply_file(pbf, locations=True)
+    feats.sort(key=lambda f: (f["properties"]["name"] or "~", f["properties"]["osm"]))
+    return {"type": "FeatureCollection", "attribution": "© přispěvatelé OpenStreetMap, ODbL", "features": feats}
 
 
 def extract(pbf: str, parks: list[dict], radius_m: float = RADIUS_M + MARGIN_M) -> dict:
@@ -126,6 +176,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("pbf", help="OSM výřez (.osm.pbf nebo .osm)")
     ap.add_argument("--parks", type=Path, default=PARKS)
     ap.add_argument("--out", type=Path, required=True, help="JSON ve tvaru odpovědi Overpass")
+    ap.add_argument("--pumptracks", type=Path, help="pumptracky z celého výřezu jako GeoJSON body")
     args = ap.parse_args(argv)
 
     parks = json.loads(args.parks.read_text())["features"]
@@ -135,6 +186,10 @@ def main(argv: list[str] | None = None) -> int:
         counts[e["type"]] = counts.get(e["type"], 0) + 1
     print(f"osm_extract: {counts}", file=sys.stderr)
     args.out.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")))
+    if args.pumptracks:
+        pumps = extract_pumptracks(args.pbf)
+        print(f"osm_extract: {len(pumps['features'])} pumptracků", file=sys.stderr)
+        args.pumptracks.write_text(json.dumps(pumps, ensure_ascii=False, separators=(",", ":")) + "\n")
     return 0
 
 

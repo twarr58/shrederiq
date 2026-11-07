@@ -4,3 +4,4 @@ out/
 web/data/trails.geojson
 .osm-cache/
 web/data/parks_osm.json
+web/data/pumptracks.geojson

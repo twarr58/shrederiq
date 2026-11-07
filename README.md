@@ -71,7 +71,7 @@ Formát `web/data/parks.geojson` – `FeatureCollection` bodů (`[lon, lat]`), v
 |---|---|---|
 | `id` | string, kebab-case | unikátní ID parku (použije se i jako `park_id` u trailů a v URL `#id`) |
 | `name` | string | název |
-| `kind` | `bikepark` \| `trail_center` | typ |
+| `kind` | `bikepark` \| `trail_center` \| `pumptrack` | typ |
 | `town`, `region` | string | obec, kraj |
 | `web` | `https://…` \| null | oficiální web |
 | `lift` | bool \| null | lanovka / vlek |
@@ -104,6 +104,10 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
 - Kontrola: workflow `osm` vypíše pro každý park základnu, lanovku, posun bodu,
   parkoviště, počet lajn a kandidáty lanovek (Summary běhu). Ruční spuštění přeskočí
   pomalý celorepublikový report přes Overpass, pokud nezaškrtneš vstup `overpass`.
+- **Pumptracky**: `osm_extract.py --pumptracks` vybere z celého výřezu objekty se
+  `sport=pump_track`, BMX/cyklistické dráhy a cokoli s „pumptrack“ v názvu →
+  `web/data/pumptracks.geojson`. Ve webu jsou jako samostatná vrstva s přepínačem
+  v legendě. Park může mít `kind: "pumptrack"`, když je pumptrack jeho hlavní atrakce.
 - **Ruční GPX** pro parky, které v OSM lajny nemají: `data/gpx/<park_id>/*.gpx`
   (např. export z Trailforks). `scripts/gpx_trails.py` je při buildu připojí
   k lajnám z OSM, viz `data/gpx/README.md`.

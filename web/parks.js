@@ -2,7 +2,7 @@
 (function (root) {
   "use strict";
 
-  const KINDS = { bikepark: "Bikepark", trail_center: "Trailpark / singltrek" };
+  const KINDS = { bikepark: "Bikepark", trail_center: "Trailpark / singltrek", pumptrack: "Pumptrack" };
 
   // přibližný obdélník ČR – hrubá kontrola prohozených / nesmyslných souřadnic
   const CZ_BOUNDS = { minLon: 12.09, maxLon: 18.86, minLat: 48.55, maxLat: 51.06 };

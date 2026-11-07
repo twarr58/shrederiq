@@ -44,7 +44,7 @@ jobs:
       - name: Park data from OSM
         run: |
           mkdir -p out
-          scripts/osm_extract.sh out/parks-osm.json
+          scripts/osm_extract.sh out/parks-osm.json out/pumptracks.geojson
           python3 scripts/park_osm.py --cache out/parks-osm.json \
             --trails out/trails.geojson --info out/parks_osm.json --summary out/parks-summary.md \
             ${{ inputs.dump_park && format('--dump-park {0}', inputs.dump_park) || '' }}

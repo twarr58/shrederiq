@@ -429,6 +429,39 @@
     renderList();
   }
 
+  // --- pumptracky (OSM, web/data/pumptracks.geojson generuje build) -----------
+  const pumpLayer = L.layerGroup();
+  let pumpLoaded = false;
+  async function loadPumptracks() {
+    if (pumpLoaded) return;
+    pumpLoaded = true;
+    try {
+      const res = await fetch("data/pumptracks.geojson");
+      if (!res.ok) return;
+      const fc = await res.json();
+      for (const f of fc.features) {
+        const [lon, lat] = f.geometry.coordinates;
+        const p = f.properties;
+        const name = p.name || "Pumptrack";
+        const links = N.navLinks([lon, lat], userPos);
+        L.circleMarker([lat, lon], { radius: 4, weight: 1, color: "#fff", fillColor: color("pumptrack"), fillOpacity: 0.8, renderer: trailRenderer })
+          .bindTooltip(name, { direction: "top", offset: [0, -4] })
+          .bindPopup(`<b>${name.replace(/</g, "&lt;")}</b><br>${p.surface ? `povrch: ${p.surface}<br>` : ""}<a href="${links.mapy}" target="_blank" rel="noopener">Navigovat</a> · <a href="https://www.openstreetmap.org/${p.osm}" target="_blank" rel="noopener">OSM</a>`)
+          .addTo(pumpLayer);
+      }
+      $("layer-pumptracks").title = `${fc.features.length} pumptracků z OpenStreetMap`;
+    } catch (err) {
+      console.warn("pumptracks", err);
+    }
+  }
+  function updatePumpLayer() {
+    const on = $("layer-pumptracks").checked;
+    try { localStorage.setItem("shrederiq.pumptracks", on ? "1" : "0"); } catch (_) { /* bez storage */ }
+    if (on) { loadPumptracks(); pumpLayer.addTo(map); } else { map.removeLayer(pumpLayer); }
+  }
+  try { if (localStorage.getItem("shrederiq.pumptracks") === "0") $("layer-pumptracks").checked = false; } catch (_) { /* bez storage */ }
+  $("layer-pumptracks").addEventListener("change", updatePumpLayer);
+
   // --- data ------------------------------------------------------------------
   async function load() {
     const res = await fetch("data/parks.geojson", { cache: "no-cache" });
@@ -451,6 +484,7 @@
     }
 
     renderList();
+    updatePumpLayer();
     fetchTrails().then((fc) => {
       if (!fc) return;
       trailCounts = Object.fromEntries(parks.map((f) => [f.properties.id, T.summarize(fc, f.properties.id).namedCount]));

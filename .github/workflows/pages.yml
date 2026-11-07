@@ -44,7 +44,7 @@ jobs:
           rm -f .osm-cache/fresh.json
           OUT="--trails web/data/trails.geojson --info web/data/parks_osm.json --summary .osm-cache/summary.md"
           # 1) výřez Geofabrik (spolehlivý), 2) Overpass, 3) poslední odpověď z cache
-          if scripts/osm_extract.sh .osm-cache/fresh.json && python3 scripts/park_osm.py --cache .osm-cache/fresh.json $OUT; then
+          if scripts/osm_extract.sh .osm-cache/fresh.json web/data/pumptracks.geojson && python3 scripts/park_osm.py --cache .osm-cache/fresh.json $OUT; then
             mv .osm-cache/fresh.json .osm-cache/parks.json
           elif rm -f .osm-cache/fresh.json && python3 scripts/park_osm.py --cache .osm-cache/fresh.json $OUT; then
             echo "::warning::Geofabrik extract failed, used Overpass"
