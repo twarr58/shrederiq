@@ -29,6 +29,8 @@ OSM_XML = """<?xml version='1.0' encoding='UTF-8'?>
   <node id="40" lat="50.0895" lon="17.0995"><tag k="amenity" v="parking"/><tag k="name" v="P Kouty"/></node>
   <node id="50" lat="49.0" lon="15.0"><tag k="sport" v="pump_track"/><tag k="name" v="Pumptrack Telč"/></node>
   <node id="60" lat="50.2" lon="17.2"/><node id="61" lat="50.2" lon="17.201"/><node id="62" lat="50.201" lon="17.201"/>
+  <node id="70" lat="50.0850" lon="17.0950"><tag k="place" v="village"/><tag k="name" v="Kouty nad Desnou"/></node>
+  <node id="71" lat="50.0905" lon="17.1005"><tag k="leisure" v="bike_park"/><tag k="name" v="Bikepark Kouty"/></node>
   <way id="100"><nd ref="1"/><nd ref="2"/><nd ref="3"/><nd ref="4"/><tag k="aerialway" v="chair_lift"/><tag k="name" v="LD Medvědí hora"/></way>
   <way id="101"><nd ref="10"/><nd ref="11"/><nd ref="12"/><nd ref="13"/><tag k="highway" v="path"/><tag k="mtb:scale" v="2"/><tag k="name" v="Flow"/></way>
   <way id="102"><nd ref="20"/><nd ref="21"/><nd ref="22"/><tag k="highway" v="path"/></way>
@@ -38,6 +40,33 @@ OSM_XML = """<?xml version='1.0' encoding='UTF-8'?>
   <relation id="500"><member type="way" ref="102" role=""/><tag k="type" v="route"/><tag k="route" v="mtb"/><tag k="name" v="Singltrek Kouty"/></relation>
 </osm>
 """
+
+
+@unittest.skipUnless(HAVE_OSMIUM, "pyosmium není nainstalované")
+class Country(unittest.TestCase):
+    def test_extract_country(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "cz.osm"
+            path.write_text(OSM_XML)
+            data = ox.extract_country(str(path))
+        by = {(e["type"], e["id"]): e for e in data["elements"]}
+        self.assertIn(("way", 101), by)                 # mtb:scale u lanovky (do 1,5 km)
+        self.assertIn("geometry", by[("way", 101)])
+        self.assertNotIn(("way", 103), by)              # mtb:scale daleko od lanovky
+        self.assertEqual(by[("way", 100)]["tags"]["aerialway"], "chair_lift")
+        self.assertIn("center", by[("way", 100)])
+        self.assertEqual(by[("node", 70)]["tags"]["place"], "village")
+        self.assertEqual(by[("node", 71)]["tags"]["leisure"], "bike_park")
+        self.assertIn("center", by[("relation", 500)])  # relace route=mtb „Singltrek Kouty“ se středem z členů
+        self.assertAlmostEqual(by[("relation", 500)]["center"]["lat"], 50.111, places=3)
+        self.assertIn(("way", 104), by)                 # BMX dráha jako kotva (sport=bmx, leisure=track)
+        # výstup je použitelný pro celorepublikový report beze změn
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+        import fetch_osm_parks as fo
+        trails, anchors, places = fo.parse_overpass(fo.check_response(data))
+        self.assertEqual([t.osm_id for t in trails], [101])
+        self.assertEqual(len(places), 1)
+        self.assertGreaterEqual(len(anchors), 3)
 
 
 class Helpers(unittest.TestCase):

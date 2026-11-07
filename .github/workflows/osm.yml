@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       overpass:
-        description: "Spustit i celorepublikový report přes Overpass (pomalý)"
+        description: "Celorepublikový report přes Overpass místo výřezu Geofabrik (pomalý, odpovědi bývají neúplné)"
         type: boolean
         default: false
       dump_park:
@@ -82,9 +82,21 @@ jobs:
         run: |
           python3 scripts/gps_check.py out/trails.geojson --cache .osm-cache/gps.json --report out/gps.md
           cat out/gps.md >> "$GITHUB_STEP_SUMMARY"
-      # celorepublikový report přes Overpass – jen pro hledání nových parků, smí selhat
-      - name: Fetch OSM bike parks
-        if: github.event_name != 'workflow_dispatch' || inputs.overpass
+      # celorepublikový report (hledání nových parků) ze stejného výřezu Geofabrik;
+      # Overpass jen na vyžádání vstupem `overpass` (bývá pomalý a odpovědi neúplné)
+      - name: Country report from the extract
+        if: "!inputs.overpass"
+        continue-on-error: true
+        timeout-minutes: 15
+        run: |
+          python3 scripts/osm_extract.py .osm-cache/mtb.osm.pbf --out /dev/null --country out/country.json
+          python3 scripts/fetch_osm_parks.py \
+            --cache out/country.json --report out/osm-report.md \
+            --geojson out/osm-clusters.geojson --trails out/osm-trails.geojson
+          cat out/osm-report.md >> "$GITHUB_STEP_SUMMARY"
+          cat out/osm-report.md
+      - name: Fetch OSM bike parks (Overpass)
+        if: inputs.overpass
         continue-on-error: true
         timeout-minutes: 20
         run: |

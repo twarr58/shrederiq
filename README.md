@@ -97,7 +97,7 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
 - **Zdroj dat**: denní výřez OSM Česka od [Geofabriku](https://download.geofabrik.de/europe/czech-republic.html).
   `scripts/osm_extract.sh` ho stáhne, `osmium tags-filter` vybere MTB cesty, lanovky,
   parkoviště a relace `route=mtb` a `scripts/osm_extract.py` (pyosmium) z toho vytáhne
-  okolí parků. Overpass je jen záloha, protože bývá přetížený a části dotazů občas tiše
+  okolí parků. Overpass se už nepoužívá (býval přetížený a části dotazů občas tiše
   vynechá.
 - Výstup je `web/data/trails.geojson` a `web/data/parks_osm.json`. Soubory nejsou v repu,
   generuje je workflow `pages` při deployi a jednou týdně (s cache pro výpadky Overpass).
@@ -105,7 +105,8 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   parkoviště („P“) a navigace vede na něj.
 - Kontrola: workflow `osm` vypíše pro každý park základnu, lanovku, posun bodu,
   parkoviště, počet lajn a kandidáty lanovek (Summary běhu). Ruční spuštění přeskočí
-  pomalý celorepublikový report přes Overpass, pokud nezaškrtneš vstup `overpass`.
+  celorepublikový report ze stejného výřezu (`osm_extract.py --country`); Overpass jen se
+  vstupem `overpass`.
 - **Pumptracky**: `osm_extract.py --pumptracks` vybere z celého výřezu objekty se
   `sport=pump_track`, BMX/cyklistické dráhy a cokoli s „pumptrack“ v názvu →
   `web/data/pumptracks.geojson`. Ve webu jsou jako samostatná vrstva s přepínačem

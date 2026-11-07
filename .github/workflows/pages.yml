@@ -28,8 +28,8 @@ jobs:
       - uses: actions/checkout@v7
 
       # Data parků z OSM (scripts/park_osm.py): lajny → web/data/trails.geojson,
-      # základna a parkoviště → web/data/parks_osm.json. Overpass bývá přetížený, proto
-      # se poslední úspěšná odpověď drží v cache; bez ní se stránka nasadí bez těchto dat.
+      # základna a parkoviště → web/data/parks_osm.json. Poslední úspěšná data se drží
+      # v cache pro případ výpadku Geofabriku; bez nich se stránka nasadí bez těchto dat.
       - uses: actions/cache/restore@v4
         with:
           path: |
@@ -56,14 +56,11 @@ jobs:
           mkdir -p .osm-cache
           rm -f .osm-cache/fresh.json
           OUT="--trails web/data/trails.geojson --info web/data/parks_osm.json --summary .osm-cache/summary.md"
-          # 1) výřez Geofabrik (spolehlivý), 2) Overpass, 3) poslední odpověď z cache
+          # 1) výřez Geofabrik, 2) poslední úspěšná data z cache (Overpass se už nepoužívá)
           if scripts/osm_extract.sh .osm-cache/fresh.json web/data/pumptracks.geojson && python3 scripts/park_osm.py --cache .osm-cache/fresh.json $OUT; then
             mv .osm-cache/fresh.json .osm-cache/parks.json
-          elif rm -f .osm-cache/fresh.json && python3 scripts/park_osm.py --cache .osm-cache/fresh.json $OUT; then
-            echo "::warning::Geofabrik extract failed, used Overpass"
-            mv .osm-cache/fresh.json .osm-cache/parks.json
           elif [ -f .osm-cache/parks.json ]; then
-            echo "::warning::Geofabrik and Overpass failed, using the cached data"
+            echo "::warning::Geofabrik extract failed, using the cached data"
             python3 scripts/park_osm.py --cache .osm-cache/parks.json $OUT || echo "::warning::park data not generated"
           else
             echo "::warning::no OSM data source available, deploying without trails and bases"

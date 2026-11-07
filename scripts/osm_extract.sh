@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Stáhne OSM výřez Česka (Geofabrik, aktualizovaný denně), vyfiltruje MTB cesty, lanovky,
 # parkoviště a relace route=mtb a vytáhne data kolem parků do JSON ve tvaru odpovědi Overpass.
-#   scripts/osm_extract.sh výstup.json [pumptracky.geojson]
+#   scripts/osm_extract.sh výstup.json [pumptracky.geojson] [cela-cr.json]
 # MTB_PBF=cesta: vyfiltrovaný výřez; když existuje, přeskočí se stažení (cache po dnech v Actions).
 # Na GitHub runneru doinstaluje osmium-tool a pyosmium (apt).
 set -euo pipefail
 OUT=${1:?výstupní JSON}
 PUMP=${2:-}
+COUNTRY=${3:-}
 TMP=${RUNNER_TEMP:-/tmp}
 URL=https://download.geofabrik.de/europe/czech-republic-latest.osm.pbf
 
@@ -24,9 +25,10 @@ else
   osmium tags-filter "$TMP/cz.osm.pbf" \
     w/mtb:scale w/mtb:scale:imba w/mtb:scale:dh w/mtb w/bicycle=designated \
     w/aerialway nwr/amenity=parking r/route=mtb \
-    nwr/sport=pump_track nwr/leisure=track,pitch \
+    nwr/sport=pump_track nwr/leisure=track,pitch,sports_centre,bike_park \
+    nwr/sport=mtb,downhill,bmx n/place=town,village \
     -o "$MTB_PBF" --overwrite
   rm -f "$TMP/cz.osm.pbf"
 fi
 osmium fileinfo -g header.option.osmosis_replication_timestamp "$MTB_PBF" | sed 's/^/OSM data k: /' || true
-python3 "$(dirname "$0")/osm_extract.py" "$MTB_PBF" --out "$OUT" ${PUMP:+--pumptracks "$PUMP"}
+python3 "$(dirname "$0")/osm_extract.py" "$MTB_PBF" --out "$OUT" ${PUMP:+--pumptracks "$PUMP"} ${COUNTRY:+--country "$COUNTRY"}
