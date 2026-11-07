@@ -60,6 +60,6 @@
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [13.6177, 49.0605] },
       "properties": {"id": "zadov", "name": "Bike Park Zadov-Kobyla", "kind": "bikepark", "town": "Stachy", "region": "Jihočeský", "web": "https://www.lazadov.cz", "lift": true, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [18.30, 49.35] },
-      "properties": {"id": "kycerka", "name": "Bikepark Kyčerka", "kind": "bikepark", "town": "Velké Karlovice", "region": "Zlínský", "web": null, "lift": true, "trails_count": null, "verified": false} }
+      "properties": {"id": "kycerka", "name": "Traily Velké Karlovice (Kyčerka)", "kind": "trail_center", "town": "Velké Karlovice", "region": "Zlínský", "web": "https://www.trailforks.com/region/traily-velke-karlovice/", "lift": false, "trails_count": null, "verified": false} }
   ]
 }
