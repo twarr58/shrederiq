@@ -3,7 +3,10 @@ name: pages
 on:
   push:
     branches: [main]
-    paths: [web/**, .github/workflows/pages.yml]
+    paths: [web/**, scripts/**, .github/workflows/pages.yml]
+  # lajny z OpenStreetMap se obnovují jednou týdně
+  schedule:
+    - cron: "23 3 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -23,6 +26,33 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
+
+      # Trailové lajny z OSM → web/data/trails.geojson. Overpass bývá přetížený, proto
+      # se poslední úspěšná odpověď drží v cache; bez ní se stránka nasadí bez lajn.
+      - uses: actions/cache/restore@v4
+        with:
+          path: .osm-cache/overpass.json
+          key: overpass-${{ github.run_id }}
+          restore-keys: overpass-
+      - name: Trail lines from OSM
+        timeout-minutes: 30
+        run: |
+          mkdir -p .osm-cache
+          rm -f .osm-cache/fresh.json
+          if python3 scripts/fetch_osm_parks.py --cache .osm-cache/fresh.json --park-trails web/data/trails.geojson; then
+            mv .osm-cache/fresh.json .osm-cache/overpass.json
+          elif [ -f .osm-cache/overpass.json ]; then
+            echo "::warning::Overpass failed, using the cached response"
+            python3 scripts/fetch_osm_parks.py --cache .osm-cache/overpass.json --park-trails web/data/trails.geojson \
+              || echo "::warning::trail lines not generated"
+          else
+            echo "::warning::Overpass failed and there is no cache, deploying without trail lines"
+          fi
+      - if: hashFiles('.osm-cache/overpass.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .osm-cache/overpass.json
+          key: overpass-${{ github.run_id }}
 
       # Mapový podklad:
       #  - secret MAPY_API_KEY → Mapy.com tiles (klíč je ve stránce veřejně čitelný,

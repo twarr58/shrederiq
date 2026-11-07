@@ -55,3 +55,10 @@ test("info panel zobrazí neznámé hodnoty jako neověřeno", () => {
   assert.equal(rows["Lanovka / vlek"], "neověřeno");
   assert.equal(rows["Počet trailů"], "neověřeno");
 });
+
+test("kraj: Vysočina a Praha mají vlastní tvar", () => {
+  const loc = (region) => Object.fromEntries(P.describePark({ kind: "bikepark", town: "X", region }))["Lokalita"];
+  assert.equal(loc("Olomoucký"), "X, Olomoucký kraj");
+  assert.equal(loc("Vysočina"), "X, Kraj Vysočina");
+  assert.equal(loc("Praha"), "X, Praha");
+});

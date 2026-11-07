@@ -5,6 +5,7 @@
   const P = window.ShrederiqParks;
   const W = window.ShrederiqWeather;
   const N = window.ShrederiqNav;
+  const T = window.ShrederiqTrails;
   const CZ_CENTER = [49.8, 15.5];
   const PARK_ZOOM = 14;
 
@@ -20,26 +21,62 @@
   const map = L.map("map", { zoomControl: false }).setView(CZ_CENTER, 7);
   L.control.zoom({ position: "bottomright" }).addTo(map);
 
+  // Podklad: OpenStreetMap, nebo Mapy.com (s klíčem). Mapy.com mají limit 100k dlaždic
+  // měsíčně, proto: přehled ČR z OSM a Mapy.com až od zoomu mapyMinZoom, dlaždice se
+  // nenačítají během zoomu a při chybách Mapy.com (vyčerpaný limit) se přepne na OSM.
+  const TILE_OPTS = { maxZoom: 19, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 1 };
+  const MAPY_MIN_ZOOM = Number.isFinite(cfg.mapyMinZoom) ? cfg.mapyMinZoom : 11;
+  const MAPY_MAX_ERRORS = 8;
+
+  const osmLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    ...TILE_OPTS,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+  });
+  let mapyLayer = null, mapyLogo = null, mapyErrors = 0, mapyFailed = false;
+  let base = "osm";
+
   if (cfg.mapyApiKey) {
     // Mapy.com – podmínky vyžadují atribuci i logo (https://developer.mapy.com/)
     const mapset = cfg.mapyMapset || "outdoor";
-    L.tileLayer(`https://api.mapy.com/v1/maptiles/${mapset}/256/{z}/{x}/{y}?apikey=${encodeURIComponent(cfg.mapyApiKey)}`, {
-      minZoom: 0,
-      maxZoom: 19,
+    mapyLayer = L.tileLayer(`https://api.mapy.com/v1/maptiles/${mapset}/256/{z}/{x}/{y}?apikey=${encodeURIComponent(cfg.mapyApiKey)}`, {
+      ...TILE_OPTS,
       attribution: '<a href="https://api.mapy.com/copyright" target="_blank" rel="noopener">&copy; Seznam.cz a.s. a další</a>',
-    }).addTo(map);
+    });
+    mapyLayer.on("tileerror", () => {
+      if (++mapyErrors >= MAPY_MAX_ERRORS && !mapyFailed) {
+        mapyFailed = true;
+        console.warn("Mapy.com tiles failing, switching to OpenStreetMap");
+        updateBase();
+      }
+    });
+    mapyLayer.on("tileload", () => { mapyErrors = 0; });
     const Logo = L.Control.extend({
       options: { position: "bottomleft" },
       onAdd: () => el("a", { className: "mapy-logo", href: "https://mapy.com/", target: "_blank", rel: "noopener" },
         el("img", { src: "https://api.mapy.com/img/api/logo.svg", alt: "Mapy.com" })),
     });
-    new Logo().addTo(map);
-  } else {
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
-    }).addTo(map);
+    mapyLogo = new Logo();
+
+    try { base = localStorage.getItem("shrederiq.base") === "osm" ? "osm" : "mapy"; } catch (_) { base = "mapy"; }
+    const choices = { "Mapy.com (turistická)": L.layerGroup(), "OpenStreetMap": L.layerGroup() };
+    (base === "mapy" ? choices["Mapy.com (turistická)"] : choices.OpenStreetMap).addTo(map);
+    L.control.layers(choices, null, { position: "bottomright" }).addTo(map);
+    map.on("baselayerchange", (e) => {
+      base = e.layer === choices.OpenStreetMap ? "osm" : "mapy";
+      try { localStorage.setItem("shrederiq.base", base); } catch (_) { /* bez storage */ }
+      updateBase();
+    });
   }
+
+  function updateBase() {
+    const useMapy = mapyLayer && base === "mapy" && !mapyFailed && map.getZoom() >= MAPY_MIN_ZOOM;
+    const [on, off] = useMapy ? [mapyLayer, osmLayer] : [osmLayer, mapyLayer];
+    if (off && map.hasLayer(off)) map.removeLayer(off);
+    if (!map.hasLayer(on)) on.addTo(map);
+    if (mapyLogo) useMapy ? mapyLogo.addTo(map) : mapyLogo.remove();
+  }
+  map.on("zoomend", updateBase);
+  updateBase();
 
   // --- stav ------------------------------------------------------------------
   let parks = [];           // GeoJSON features
@@ -78,14 +115,63 @@
     const close = el("button", { className: "close", type: "button", title: "Zavřít", ariaLabel: "Zavřít" }, "×");
     close.addEventListener("click", () => selectPark(null));
 
-    const notes = [el("p", { className: "note" }, "Trasy jednotlivých lajn zatím nejsou k dispozici – doplníme z Trailforks / OSM.")];
+    const notes = [];
     if (p.verified === false) notes.push(el("p", { className: "note" }, "Údaje o parku (včetně polohy) jsou orientační a čekají na ověření."));
 
     const weather = el("section", { className: "weather" }, el("p", { className: "muted" }, "Načítám počasí…"));
-    $("card").replaceChildren(close, el("h2", {}, p.name), dl, renderNav(p.id), weather, ...notes);
+    const trails = el("section", { className: "trails" }, el("p", { className: "muted" }, "Načítám lajny…"));
+    $("card").replaceChildren(close, el("h2", {}, p.name), dl, renderNav(p.id), trails, weather, ...notes);
     $("card").hidden = false;
     $("card").scrollTop = 0;
+    loadTrails(p.id, trails);
     loadWeather(p.id, weather);
+  }
+
+  // --- lajny (OSM, web/data/trails.geojson generuje workflow pages) ------------
+  let trailsData = null; // Promise<FeatureCollection | null>
+  let trailLayer = null;
+
+  function fetchTrails() {
+    trailsData = trailsData || fetch("data/trails.geojson")
+      .then((res) => (res.ok ? res.json() : null))
+      .catch((err) => { console.warn("trails", err); return null; });
+    return trailsData;
+  }
+
+  function clearTrails() {
+    if (trailLayer) map.removeLayer(trailLayer);
+    trailLayer = null;
+  }
+
+  async function loadTrails(id, box) {
+    const s = T.summarize(await fetchTrails(), id);
+    if (activeId !== id || !box.isConnected) return;
+    clearTrails();
+    if (!s.count) {
+      box.replaceChildren(el("p", { className: "note" },
+        "Lajny tohoto parku zatím v datech nejsou (OpenStreetMap je pro něj nemá). Doplníme z Trailforks."));
+      return;
+    }
+    trailLayer = L.geoJSON({ type: "FeatureCollection", features: s.features }, {
+      style: (f) => ({ color: T.difficultyInfo(f.properties.difficulty).color, weight: 4, opacity: 0.9 }),
+      onEachFeature: (f, layer) => {
+        const p = f.properties;
+        layer.bindTooltip(`${p.name || "bez názvu"} · ${T.difficultyInfo(p.difficulty).label} · ${N.formatDistance(p.length_m)}`, { sticky: true });
+      },
+    }).addTo(map);
+    map.fitBounds(trailLayer.getBounds(), { padding: [30, 30], maxZoom: 15 });
+
+    const list = el("ul", { className: "trail-list" }, ...s.rows.map((r) =>
+      el("li", {},
+        el("i", { className: "swatch", style: `background:${T.difficultyInfo(r.difficulty).color}`, title: T.difficultyInfo(r.difficulty).label }),
+        r.name ? r.name : el("span", { className: "muted" }, r.segments > 1 ? `${r.segments}× bez názvu` : "bez názvu"),
+        el("small", { className: "muted" }, ` ${N.formatDistance(r.lengthM)}`))));
+    box.replaceChildren(
+      el("h3", {}, `Lajny `, el("small", { className: "muted" }, `${s.count} úseků · ${N.formatDistance(s.lengthM)}`)),
+      list,
+      el("p", { className: "attr" }, "Lajny: © přispěvatelé ",
+        el("a", { href: "https://www.openstreetmap.org/copyright", target: "_blank", rel: "noopener" }, "OpenStreetMap"),
+        " (ODbL). Obtížnost podle mtb:scale, může se lišit od značení v parku."));
   }
 
   // --- navigace ---------------------------------------------------------------
@@ -159,7 +245,7 @@
     b.disabled = true;
     try {
       await locate();
-      if (!activeId) map.flyTo([userPos.lat, userPos.lon], 9, { duration: 0.8 });
+      if (!activeId) map.setView([userPos.lat, userPos.lon], 9);
       else renderCard(parks.find((x) => x.properties.id === activeId).properties); // odkazy s výchozím bodem
       $("status").textContent += " · seřazeno podle vzdálenosti";
     } catch (err) {
@@ -245,10 +331,11 @@
     if (activeId && markers.has(activeId)) markers.get(activeId).setStyle({ weight: 2, radius: 7 });
     activeId = f ? id : null;
 
+    clearTrails();
     if (f) {
       markers.get(id).setStyle({ weight: 4, radius: 10 }).bringToFront();
       const [lon, lat] = f.geometry.coordinates;
-      if (fly) map.flyTo([lat, lon], PARK_ZOOM, { duration: 0.8 });
+      if (fly) map.setView([lat, lon], PARK_ZOOM); // bez flyTo: nenačítá dlaždice mezilehlých zoomů
       renderCard(f.properties);
       history.replaceState(null, "", `#${id}`);
     } else {
