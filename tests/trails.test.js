@@ -92,3 +92,16 @@ test("zdroje lajn (OSM / GPX / Trailforks)", () => {
   assert.deepEqual(T.summarize(fc, "kouty").sources, { osm: 1, trailforks: 1, gpx: 1 });
   assert.deepEqual(T.summarize(FC, "kouty").sources, { osm: 7 });
 });
+
+test("statistiky: nejdelší lajna a rozsah výšek", () => {
+  const s = T.summarize(FC, "kouty");
+  assert.deepEqual([s.longest.name, s.longest.lengthM], ["Flow", 1200]);   // pojmenovaná 1,2 km před nepojmenovanou
+  assert.equal(s.eleMin, null);
+  const withEle = { features: [
+    { ...line("kouty", "A", "blue", 500), properties: { ...line("kouty", "A", "blue", 500).properties, ele_min: 800, ele_max: 900 } },
+    { ...line("kouty", "B", "red", 300), properties: { ...line("kouty", "B", "red", 300).properties, ele_min: 700, ele_max: 850 } },
+  ] };
+  const e = T.summarize(withEle, "kouty");
+  assert.deepEqual([e.eleMin, e.eleMax, e.longest.name], [700, 900, "A"]);
+  assert.equal(T.summarize(FC, "lipno").longest, null);
+});
