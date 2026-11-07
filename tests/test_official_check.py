@@ -34,8 +34,13 @@ class Official(unittest.TestCase):
         self.assertIn("| `k` | 3 | 3 | 2 | Vlaštovka | Neznámá |", text)
         self.assertIn("Žádný soubor", oc.render({}))
 
-    def test_fold(self):
+    def test_fold_and_same(self):
         self.assertEqual(oc.fold("Modrý Flowčko "), "modry flowcko")
+        self.assertTrue(oc.same("Modrá trať", "Modrý trail"))
+        self.assertTrue(oc.same("Flowčko", "#2 Modrý Flowčko"))
+        self.assertTrue(oc.same("Červená jump lajna", "Jump line"))
+        self.assertFalse(oc.same("Modrá trať", "Červený trail"))
+        self.assertFalse(oc.same("trail", "lajna"))   # jen obecná slova = žádná shoda
 
     def test_repo_official_files_are_valid(self):
         parks = {f["properties"]["id"] for f in json.loads((oc.OFFICIAL_DIR.parent.parent / "web/data/parks.geojson").read_text())["features"]}

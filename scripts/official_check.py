@@ -2,8 +2,9 @@
 """Porovná lajny z OSM s oficiálními seznamy trailů provozovatelů (data/official/*.json), #22.
 
 Pro každý park se souborem data/official/<park_id>.json:
-  - spáruje oficiální traily s pojmenovanými lajnami z trails.geojson (jméno bez diakritiky
-    a velikosti písmen; stačí, když jedno jméno obsahuje druhé),
+  - spáruje oficiální traily s pojmenovanými lajnami z trails.geojson (jména bez diakritiky,
+    bez obecných slov trail / trať / lajna a se sjednocenými barvami: „Modrá trať“ ~ „Modrý
+    trail“; stačí, když slova jednoho jména jsou podmnožinou druhého),
   - vypíše traily, které v OSM chybí, lajny z OSM, které provozovatel neuvádí, a páry,
     kde se liší obtížnost nebo délka o víc než LENGTH_TOL.
 
@@ -13,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import unicodedata
 from collections import defaultdict
@@ -25,6 +27,31 @@ LENGTH_TOL = 0.3
 def fold(s: str | None) -> str:
     s = unicodedata.normalize("NFD", s or "")
     return "".join(c for c in s if unicodedata.category(c) != "Mn").lower().strip()
+
+
+GENERIC = {"trail", "trat", "lajna", "line", "trasa", "stezka", "okruh", "cesta", "singltrek", "singletrail", "flowtrail"}
+COLORS = {"modr": "blue", "cerven": "red", "cern": "black", "zelen": "green", "blue": "blue", "red": "red",
+          "black": "black", "green": "green"}
+
+
+def tokens(s: str | None) -> set[str]:
+    """Jméno → množina slov bez obecných slov (trail, trať, lajna…), barvy sjednocené
+    („Modrý trail“ ~ „Modrá trať“ ~ blue)."""
+    out = set()
+    for w in re.findall(r"[a-z0-9]+", fold(s)):
+        if w in GENERIC:
+            continue
+        for stem, color in COLORS.items():
+            if w.startswith(stem):
+                w = color
+                break
+        out.add(w)
+    return out
+
+
+def same(a: str | None, b: str | None) -> bool:
+    ta, tb = tokens(a), tokens(b)
+    return bool(ta and tb) and (ta <= tb or tb <= ta)
 
 
 def osm_trails(fc: dict) -> dict[str, dict[str, dict]]:
@@ -48,8 +75,7 @@ def match(official: list[dict], osm: dict[str, dict]) -> dict:
     """Vrací {"matched": [(off, name, osm_row)], "missing": [off], "extra": [name]}."""
     used, matched, missing = set(), [], []
     for off in official:
-        key = fold(off["name"])
-        hit = next((n for n in osm if n not in used and key and (key in fold(n) or fold(n) in key)), None)
+        hit = next((n for n in osm if n not in used and same(off["name"], n)), None)
         if hit:
             used.add(hit)
             matched.append((off, hit, osm[hit]))

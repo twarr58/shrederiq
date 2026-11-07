@@ -17,5 +17,5 @@ jinak a kde se liší délka nebo obtížnost.
 - Soubor `<id parku z web/data/parks.geojson>.json`.
 - `difficulty`: `green` / `blue` / `red` / `black`, nebo vynechat.
 - `length_m`: délka podle provozovatele v metrech, nebo vynechat.
-- Jména se porovnávají bez diakritiky a velikosti písmen; stačí, když jedno jméno obsahuje
-  druhé (`Flowčko` ~ `Modrý Flowčko`).
+- Jména se porovnávají bez diakritiky, bez obecných slov (trail, trať, lajna, line…) a se
+  sjednocenými barvami: `Modrá trať` ~ `Modrý trail`, `Flowčko` ~ `#2 Modrý Flowčko`.
