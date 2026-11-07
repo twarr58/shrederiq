@@ -139,31 +139,47 @@
     close.addEventListener("click", () => selectPark(null));
 
     const where = P.describePark(p).find(([k]) => k === "Lokalita")[1];
-    const sub = el("p", { className: "card-sub" }, el("i", { className: `dot ${p.kind}` }),
-      [P.KINDS[p.kind] || p.kind, where, p.lift ? (p.osm_lift ? `lanovka ${p.osm_lift}` : "lanovka / vlek") : ""].filter(Boolean).join(" · "));
-    const head = el("div", { className: "card-head" }, el("h2", {}, p.name), sub);
-    const stats = el("div", { className: "card-stats" });
+    const head = el("div", { className: "card-head" },
+      el("h2", {}, p.name),
+      el("p", { className: "card-sub" }, el("i", { className: `dot ${p.kind}` }), `${P.KINDS[p.kind] || p.kind} · ${where}`));
+
+    // chipy: stav trailů a teplota (po načtení počasí), lanovka, parkoviště, nadmořská výška (po načtení lajn)
+    const chip = (text, cls = "") => el("span", { className: `chip-status ${cls}`.trim() }, text);
+    const wxChip = chip("počasí…", "wx");
+    const eleChip = chip("", "ele");
+    eleChip.hidden = true;
+    const chips = el("div", { className: "chips-row" }, wxChip,
+      p.lift ? chip(p.osm_lift ? `lanovka ${p.osm_lift}` : "lanovka / vlek") : "",
+      p.parking ? chip(p.parking_name ? `P ${p.parking_name}` : "P u základny") : "",
+      eleChip);
+
+    const summary = el("p", { className: "card-summary muted" }, "Načítám lajny…");
+    const bar = el("div", { className: "diff-bar-wrap" });
+
+    const dest = N.destination(parks.find((x) => x.properties.id === p.id));
+    const links = N.navLinks(dest, userPos);
+    const actions = el("div", { className: "card-actions" },
+      el("a", { className: "btn primary", href: links.mapy, target: "_blank", rel: "noopener" }, "Navigovat"),
+      p.web ? el("a", { className: "btn", href: p.web, target: "_blank", rel: "noopener" }, "Web parku") : "");
 
     const trails = el("section", { className: "trails" }, el("p", { className: "muted" }, "Načítám lajny…"));
     const weather = el("section", { className: "weather" }, el("p", { className: "muted" }, "Načítám počasí…"));
     const bodies = { trails, weather, nav: renderNav(p.id), info: renderInfo(p) };
-    const loaded = new Set();
     const sections = Object.keys(SECTIONS).map((key) => {
       const d = el("details", { className: "section", open: !!openSections[key] });
       d.append(el("summary", {}, SECTIONS[key]), bodies[key]);
       d.addEventListener("toggle", () => {
         openSections[key] = d.open;
         try { localStorage.setItem("shrederiq.sections", JSON.stringify(openSections)); } catch (_) { /* bez storage */ }
-        if (d.open && key === "weather" && !loaded.has(key)) { loaded.add(key); loadWeather(p.id, weather); }
       });
-      if (d.open && key === "weather") { loaded.add(key); loadWeather(p.id, weather); }
       return d;
     });
 
-    $("card").replaceChildren(close, head, stats, ...sections);
+    $("card").replaceChildren(close, head, chips, summary, bar, actions, ...sections);
     $("card").hidden = false;
     $("card").scrollTop = 0;
-    loadTrails(p.id, trails, stats);
+    loadTrails(p.id, trails, { summary, bar, eleChip });
+    loadWeather(p.id, weather, wxChip); // jeden dotaz: chip hned, předpověď do sekce
   }
 
   function renderInfo(p) {
@@ -193,22 +209,33 @@
     trailLayer = null;
   }
 
-  async function loadTrails(id, box, stats) {
+  const DIFF_ORDER = ["green", "blue", "red", "black", "unknown"];
+
+  async function loadTrails(id, box, head) {
     const s = T.summarize(await fetchTrails(), id);
     if (activeId !== id || !box.isConnected) return;
     clearTrails();
     if (!s.segments) {
-      stats.remove();
+      head.summary.textContent = "Lajny tohoto parku zatím v datech nejsou.";
       box.replaceChildren(el("p", { className: "note" },
         "Lajny tohoto parku zatím v datech nejsou (OpenStreetMap je pro něj nemá). Doplníme z Trailforks."));
       return;
     }
-    const stat = (label, value, sub) => el("div", { className: "stat" },
-      el("b", {}, value), el("span", {}, label), sub ? el("small", { className: "muted" }, sub) : "");
-    stats.replaceChildren(
-      stat("celkem", N.formatDistance(s.lengthM)),
-      stat(plural(s.namedCount, "lajna", "lajny", "lajn").replace(/^\d+ /, ""), String(s.namedCount), `${plural(s.segments, "úsek", "úseky", "úseků")} v OSM`),
-      s.longest ? stat("nejdelší", N.formatDistance(s.longest.lengthM), s.longest.name || "bez názvu") : "");
+    head.summary.className = "card-summary";
+    head.summary.replaceChildren(el("b", {}, N.formatDistance(s.lengthM)),
+      el("span", { className: "muted" }, ` ve ${plural(s.namedCount, "lajně", "lajnách", "lajnách")}`
+        + (s.longest ? ` · nejdelší ${s.longest.name || "bez názvu"} ${N.formatDistance(s.longest.lengthM)}` : "")));
+    // pruh podílu obtížností s délkami pod ním
+    const diffs = DIFF_ORDER.filter((d) => s.byDifficulty[d]);
+    const info = (d) => T.difficultyInfo(d === "unknown" ? null : d);
+    head.bar.replaceChildren(
+      el("div", { className: "diff-bar", role: "img", ariaLabel: "Podíl obtížností: " + diffs.map((d) => `${info(d).label} ${N.formatDistance(s.byDifficulty[d])}`).join(", ") },
+        ...diffs.map((d) => el("span", { style: `flex:${s.byDifficulty[d]};background:${info(d).color}` }))),
+      el("div", { className: "diff-labels" }, ...diffs.map((d) => el("span", {}, `${info(d).label} ${N.formatDistance(s.byDifficulty[d])}`))));
+    if (s.eleMin != null) {
+      head.eleChip.textContent = `${s.eleMin}–${s.eleMax} m n. m.`;
+      head.eleChip.hidden = false;
+    }
     renderTrails(s, box, true);
   }
 
@@ -270,33 +297,22 @@
         el("span", {}, el("i", { className: "swatch", style: `background:${b.color}` }), b.label)))
       : "";
 
-    // statistiky parku: celková délka, počet lajn, nejdelší lajna, délky podle obtížnosti, převýšení
-    const stat = (label, value, sub) => el("div", { className: "stat" },
-      el("b", {}, value), el("span", {}, label), sub ? el("small", { className: "muted" }, sub) : "");
-    const byDiff = ["green", "blue", "red", "black", "unknown"].filter((d) => s.byDifficulty[d])
-      .map((d) => el("span", { className: "diff" },
-        el("i", { className: "swatch", style: `background:${T.difficultyInfo(d === "unknown" ? null : d).color}` }),
-        `${T.difficultyInfo(d === "unknown" ? null : d).label} ${N.formatDistance(s.byDifficulty[d])}`));
-    const stats = el("div", { className: "trail-stats" },
-      s.eleMin != null ? stat("převýšení", `${s.eleMax - s.eleMin} m`, `${s.eleMin}–${s.eleMax} m n. m.`) : "",
-      s.accessLengthM ? stat("přístupové cesty", N.formatDistance(s.accessLengthM)) : "",
-      byDiff.length ? el("div", { className: "stat diffs" }, ...byDiff) : "");
-
-    const list = el("ul", { className: "trail-list" }, ...s.rows.map((r) =>
-      el("li", {},
-        el("i", { className: "swatch", style: `background:${T.difficultyInfo(r.difficulty).color}`, title: T.difficultyInfo(r.difficulty).label }),
-        el("span", { className: "name" },
-          r.name ? r.name : el("span", { className: "muted" }, r.segments > 1 ? `bez názvu (${plural(r.segments, "úsek", "úseky", "úseků")})` : "bez názvu"),
-          r.slopeMax != null ? el("small", { className: "muted" }, ` ↕ ${r.eleMax - r.eleMin} m · max ${r.slopeMax} %`) : ""),
-        el("span", { className: "len" }, N.formatDistance(r.lengthM)))));
+    const name = (r) => r.name ? r.name : el("span", { className: "muted" }, r.segments > 1 ? `bez názvu (${plural(r.segments, "úsek", "úseky", "úseků")})` : "bez názvu");
+    const table = el("table", { className: "trail-table" },
+      el("thead", {}, el("tr", {}, el("th", { scope: "col" }, "Lajna"), el("th", { scope: "col" }, "Obtížnost"), el("th", { scope: "col", className: "num" }, "Délka"))),
+      el("tbody", {}, ...s.rows.map((r) => {
+        const d = T.difficultyInfo(r.difficulty);
+        return el("tr", { className: r.difficulty ? "" : "muted" },
+          el("td", {}, name(r), r.slopeMax != null ? el("small", { className: "muted" }, ` ↕ ${r.eleMax - r.eleMin} m · max ${r.slopeMax} %`) : ""),
+          el("td", { className: `diff-${r.difficulty || "unknown"}` }, el("i", { className: "swatch", style: `background:${d.color}` }), d.label),
+          el("td", { className: "num" }, N.formatDistance(r.lengthM)));
+      })),
+      s.accessLengthM ? el("tfoot", {}, el("tr", { className: "muted" }, el("td", { colSpan: 2 }, "lesní a přístupové cesty"), el("td", { className: "num" }, N.formatDistance(s.accessLengthM)))) : "");
 
     box.replaceChildren(
-      el("div", { className: "wx-head" },
-        el("h3", {}, "Lajny"),
-        toggle),
-      stats,
+      toggle ? el("div", { className: "wx-head" }, el("span", { className: "muted" }, "Barva v mapě"), toggle) : "",
       legend,
-      list,
+      table,
       el("p", { className: "attr" },
         s.sources.osm ? ["Lajny: © přispěvatelé ",
           el("a", { href: "https://www.openstreetmap.org/copyright", target: "_blank", rel: "noopener" }, "OpenStreetMap"),
@@ -395,7 +411,7 @@
   let weatherStep = 1;
   try { weatherStep = Number(localStorage.getItem("shrederiq.weatherStep")) === 3 ? 3 : 1; } catch (_) { /* bez storage */ }
 
-  async function loadWeather(id, box) {
+  async function loadWeather(id, box, chip) {
     const f = parks.find((x) => x.properties.id === id);
     const [lon, lat] = f.geometry.coordinates;
     try {
@@ -406,10 +422,18 @@
         hit = { at: Date.now(), data: await res.json() };
         weatherCache.set(id, hit);
       }
-      if (activeId === id && box.isConnected) renderWeather(box, hit.data);
+      if (activeId === id && box.isConnected) {
+        renderWeather(box, hit.data);
+        if (chip) {
+          const w = W.summarize(hit.data, new Date(), weatherStep);
+          chip.textContent = `${w.trail.label} · ${w.current.temperature} °C ${w.current.label}`;
+          chip.className = `chip-status wx ${w.trail.level}`;
+        }
+      }
     } catch (err) {
       console.warn("weather", err);
       if (box.isConnected) box.replaceChildren(el("p", { className: "muted" }, "Počasí se teď nepodařilo načíst."));
+      if (chip) chip.hidden = true;
     }
   }
 

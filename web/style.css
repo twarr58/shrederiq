@@ -46,10 +46,26 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 
 #card { top: 12px; right: 12px; width: 340px; padding: 0; }
 #card h2 { margin: 0 32px 2px 0; font-size: 19px; }
-.card-head { padding: 12px 14px 10px; }
+.card-head { padding: 12px 14px 6px; }
 .card-sub { margin: 0; color: var(--muted); font-size: 13px; }
 .card-sub .dot { margin-right: 5px; }
-.card-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 0 14px 10px; }
+.chips-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 14px 8px; }
+.chip-status { font-size: 12px; font-weight: 500; padding: 4px 9px; border-radius: 999px; background: color-mix(in srgb, var(--fg) 7%, transparent); color: var(--fg); }
+.chip-status.dry { background: color-mix(in srgb, #2a9d8f 18%, transparent); }
+.chip-status.damp { background: color-mix(in srgb, #e9c46a 28%, transparent); }
+.chip-status.wet { background: color-mix(in srgb, #8d5524 28%, transparent); }
+.chip-status.wx:empty, .chip-status[hidden] { display: none; }
+.card-summary { margin: 0; padding: 0 14px 6px; font-size: 14px; }
+.card-summary b { font-size: 20px; font-weight: 700; }
+.diff-bar-wrap { padding: 0 14px 8px; }
+.diff-bar-wrap:empty { display: none; }
+.diff-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; }
+.diff-bar span { display: block; min-width: 3px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 30%, transparent); } /* černá i bílá v obou režimech */
+.diff-labels { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 11px; color: var(--muted); margin-top: 4px; }
+.card-actions { display: flex; gap: 6px; padding: 2px 14px 12px; }
+.card-actions .btn { font-size: 13px; padding: 7px 12px; }
+.card-actions .btn.primary { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+#card .card-actions a.btn.primary { color: var(--bg); }
 .section { border-top: 1px solid var(--line); }
 .section summary { padding: 9px 14px; font-size: 13px; font-weight: 600; cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; min-height: 36px; }
 .section summary::-webkit-details-marker { display: none; }
@@ -59,7 +75,14 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 .section > :not(summary) { padding: 0 14px 12px; }
 .section > .trails, .section > .weather { border-top: 0; padding-top: 0; margin-bottom: 0; }
 .section > .trails h3, .section > .weather h3 { display: none; }
-.section .trail-list { max-height: none; }
+.trail-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.trail-table th { text-align: left; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 2px 0 4px; }
+.trail-table td { padding: 4px 0; border-top: 1px solid var(--line); vertical-align: top; }
+.trail-table td + td { padding-left: 8px; }
+.trail-table .num { text-align: right; white-space: nowrap; }
+.trail-table tr.muted td { color: var(--muted); }
+.trail-table .swatch { width: 10px; }
+.trail-table tfoot td { color: var(--muted); font-size: 12px; }
 .section .nav { margin-bottom: 0; }
 #card dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 10px; }
 #card dt { color: var(--muted); }
@@ -106,17 +129,7 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 .attr { font-size: 11px; color: var(--muted); margin: 6px 0 0; }
 
 .trails { border-top: 1px solid var(--line); padding-top: 8px; margin-bottom: 10px; }
-.trails h3 { margin: 0 0 6px; font-size: 15px; }
-.trail-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px; margin: 6px 0 8px; }
-.stat { display: flex; flex-direction: column; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: color-mix(in srgb, var(--fg) 4%, transparent); font-size: 11px; color: var(--muted); line-height: 1.25; }
-.stat b { font-size: 16px; color: var(--fg); }
-.stat small { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.stat.diffs { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; gap: 4px 12px; }
-.stat.diffs .diff { white-space: nowrap; }
-.trail-list { list-style: none; margin: 0; padding: 0; max-height: 180px; overflow-y: auto; font-size: 13px; }
-.trail-list li { display: flex; align-items: center; gap: 0; padding: 2px 0; }
-.trail-list .name { flex: 1 1 auto; min-width: 0; }
-.trail-list .len { flex: 0 0 auto; font-variant-numeric: tabular-nums; color: var(--muted); margin-left: 8px; }
+.trails .wx-head { margin-bottom: 6px; font-size: 12px; }
 .slope-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--muted); margin-bottom: 6px; }
 .swatch { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; box-shadow: 0 0 0 1px color-mix(in srgb, var(--fg) 25%, transparent); } /* černá i bílá lajna viditelná v obou režimech */
 
