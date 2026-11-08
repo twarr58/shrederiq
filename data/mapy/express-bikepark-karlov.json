@@ -1,0 +1,14 @@
+{
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com.",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Express trail",
+      "query": "Express trail"
+    },
+    {
+      "name": "Downhill Karlov",
+      "query": "Downhill Karlov"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com.",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Lehký trail",
+      "start": [
+        14.003534,
+        50.675753
+      ],
+      "end": [
+        13.997462,
+        50.677758
+      ],
+      "via": [
+        [
+          14.001625,
+          50.676161
+        ],
+        [
+          13.999693,
+          50.676976
+        ],
+        [
+          13.998513,
+          50.677928
+        ]
+      ]
+    }
+  ]
+}
