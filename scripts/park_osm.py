@@ -217,7 +217,55 @@ def select_trails(park_pt, osm, rel_names, radius=RADIUS_M, has_lift=None):
             _dist_to_line(c, l) <= LIFT_TRAIL_M for l in lifts for c in coords[::4] + [coords[-1]])
         if in_rel or strong or near_lift:
             out[wid] = (w, rel_names.get(wid))
-    return out
+    return add_named_siblings(park_pt, osm, out, radius)
+
+
+def inherit_difficulty(features: list[dict]) -> None:
+    """Úsek bez obtížnosti převezme obtížnost nejdelšího úseku lajny se stejným názvem."""
+    best: dict[str, tuple[int, str]] = {}
+    for f in features:
+        p = f["properties"]
+        if p["name"] and p["difficulty"] and p["length_m"] > best.get(_fold(p["name"]), (-1, ""))[0]:
+            best[_fold(p["name"])] = (p["length_m"], p["difficulty"])
+    for f in features:
+        p = f["properties"]
+        if p["name"] and not p["difficulty"] and _fold(p["name"]) in best:
+            p["difficulty"] = best[_fold(p["name"])][1]
+
+
+SIBLING_HIGHWAYS = {"path", "cycleway", "bridleway", "footway"}
+SIBLING_M = 60  # pokračování lajny začíná nebo končí nejvýš tak daleko od lajny se stejným názvem
+
+
+def _fold(name: str) -> str:
+    return " ".join(name.lower().split())
+
+
+def add_named_siblings(park_pt, osm, out, radius=RADIUS_M):
+    """Pěšina se stejným názvem jako vybraná lajna, která na ni navazuje, je její částí,
+    i když nemá MTB značky (Peklák: kus Koridy, Drtikolu a Vyhlídky jen s oneway=yes).
+    Opakuje se, dokud přibývají (řetěz úseků)."""
+    while True:
+        by_name: dict[str, list] = {}
+        for wid, (w, rel_name) in out.items():
+            name = w["tags"].get("name") or w["tags"].get("mtb:name") or rel_name
+            if name and w["tags"].get("highway") != "track":
+                by_name.setdefault(_fold(name), []).append(w["coords"])
+        added = 0
+        for wid, w in osm["ways"].items():
+            tags = w["tags"]
+            name = tags.get("name") or tags.get("mtb:name")
+            if (wid in out or not name or tags.get("highway") not in SIBLING_HIGHWAYS
+                    or tags.get("bicycle") == "no" or _fold(name) not in by_name):
+                continue
+            ends = [w["coords"][0], w["coords"][-1]]
+            if _dist_to_line(park_pt, w["coords"][::3] + [w["coords"][-1]]) > radius:
+                continue
+            if any(_dist_to_line(e, line) <= SIBLING_M for e in ends for line in by_name[_fold(name)]):
+                out[wid] = (w, None)
+                added += 1
+        if not added:
+            return out
 
 
 def lift_candidates(park_pt, trails, osm, has_lift=True):
@@ -352,6 +400,7 @@ def build(parks: list[dict], osm: dict):
                 "properties": {"park_id": pid, "name": name, "difficulty": rel_diff.get(wid) or difficulty(tags), "access": access,
                                "length_m": round(_length(w["coords"])), "osm": f"way/{wid}"},
             })
+        inherit_difficulty([x for x in features if x["properties"]["park_id"] == pid])
         moved = round(haversine_m(*pts[pid], *base["base"])) if base["base"] else None
         rows.append((pid, f["properties"]["name"], base["base_source"], base["lift"], moved,
                      parking["name"] if parking and parking["name"] else ("ano" if parking else "–"),

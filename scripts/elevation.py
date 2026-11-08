@@ -2,7 +2,9 @@
 """Doplní do web/data/trails.geojson výšky a sklon lajn z Mapy.com Elevation API.
 
 Pro každou lajnu:
-  1. převzorkuje geometrii po ~STEP_M metrech,
+  1. převzorkuje geometrii po ~STEP_M metrech (jen pro dotazy na výšky – geometrie lajny
+     zůstává původní, výšky jejích bodů se dopočítají lineárně podle vzdálenosti podél lajny;
+     dřív se geometrie přepisovala na body po 25 m a zatáčky se tím usekly),
   2. zjistí výšky bodů (Mapy.com /v1/elevation, až 256 bodů na dotaz; výsledky se
      ukládají do cache podle souřadnic zaokrouhlených na 5 desetinných míst),
   3. spočítá sklon každého úseku geometrie přes okno ~WINDOW_M metrů (DEM je mezi
@@ -138,18 +140,43 @@ def lookup_elevations(points: list[Point], cache: dict[str, float], fetch: Calla
     return calls
 
 
+def along(coords: list[Point]) -> list[float]:
+    """Vzdálenost každého bodu od začátku lomené čáry (m)."""
+    out = [0.0]
+    for a, b in zip(coords, coords[1:]):
+        out.append(out[-1] + haversine_m(a, b))
+    return out
+
+
+def interpolate(at: list[float], xs: list[float], ys: list[float]) -> list[float]:
+    """Lineární interpolace ys(xs) v bodech at (xs rostoucí)."""
+    out, j = [], 0
+    for x in at:
+        while j < len(xs) - 2 and xs[j + 1] < x:
+            j += 1
+        x0, x1 = xs[j], xs[min(j + 1, len(xs) - 1)]
+        y0, y1 = ys[j], ys[min(j + 1, len(ys) - 1)]
+        t = 0.0 if x1 == x0 else min(1.0, max(0.0, (x - x0) / (x1 - x0)))
+        out.append(y0 + (y1 - y0) * t)
+    return out
+
+
 def enrich(fc: dict, cache: dict[str, float], fetch: Callable[[list[Point]], list[float]]) -> int:
-    """Přepíše geometrii lajn na převzorkovanou a doplní sklon. Vrací počet dotazů na API."""
+    """Doplní výšky a sklon; geometrie lajn se nemění. Vrací počet dotazů na API."""
     resampled = []
     for f in fc["features"]:
         pts = resample([tuple(c[:2]) for c in f["geometry"]["coordinates"]])
         resampled.append(pts)
     calls = lookup_elevations([p for pts in resampled for p in pts], cache, fetch)
     for f, pts in zip(fc["features"], resampled):
-        eles = [cache[key_of(p)] for p in pts]
-        slopes = segment_slopes(pts, eles)
-        f["geometry"]["coordinates"] = [list(p) for p in pts]
-        f["properties"].update(slopes=slopes, **summarize(pts, eles, slopes))
+        coords = [tuple(c[:2]) for c in f["geometry"]["coordinates"]]
+        dist = along(coords)
+        # resample() klade body po STEP_M podél lajny, poslední bod je konec lajny
+        at = [min(i * STEP_M, dist[-1]) for i in range(len(pts))]
+        at[-1] = dist[-1]
+        eles = interpolate(dist, at, [cache[key_of(p)] for p in pts])
+        slopes = segment_slopes(coords, eles)
+        f["properties"].update(slopes=slopes, **summarize(coords, eles, slopes))
     return calls
 
 

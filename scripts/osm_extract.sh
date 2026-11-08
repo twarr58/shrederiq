@@ -48,8 +48,14 @@ else
       w/aerialway nwr/amenity=parking r/route=mtb \
       nwr/sport=pump_track nwr/leisure=track,pitch,sports_centre,bike_park \
       nwr/sport=mtb,downhill,bmx n/place=town,village \
-      -o "$MTB_PBF" --overwrite
-    rm -f "$TMP/cz.osm.pbf"
+      -o "$TMP/mtb-tags.osm.pbf" --overwrite
+    # Kolem parků navíc všechny pěšiny: část lajn má jen název a oneway (bez MTB značek)
+    # a park_osm.py je přibere jako pokračování lajny se stejným názvem.
+    python3 "$(dirname "$0")/park_area.py" > "$TMP/parks-area.geojson"
+    osmium extract -p "$TMP/parks-area.geojson" "$TMP/cz.osm.pbf" -o "$TMP/near.osm.pbf" --overwrite
+    osmium tags-filter "$TMP/near.osm.pbf" w/highway=path,cycleway,footway,bridleway -o "$TMP/near-paths.osm.pbf" --overwrite
+    osmium merge "$TMP/mtb-tags.osm.pbf" "$TMP/near-paths.osm.pbf" -o "$MTB_PBF" --overwrite
+    rm -f "$TMP/cz.osm.pbf" "$TMP/near.osm.pbf" "$TMP/near-paths.osm.pbf" "$TMP/mtb-tags.osm.pbf"
   elif [ -n "$FALLBACK" ] && [ -s "$FALLBACK" ]; then
     echo "::warning::Geofabrik nestihl za ${BUDGET} s, používám starší výřez ($FALLBACK)"
     rm -f "$TMP/cz.osm.pbf"

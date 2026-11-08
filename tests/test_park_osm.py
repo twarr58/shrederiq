@@ -74,6 +74,22 @@ class ParkOsm(unittest.TestCase):
         self.assertEqual([f["properties"]["name"] for f in fc["features"]], ["Expres DH"])
         self.assertEqual(fc["features"][0]["properties"]["difficulty"], "black")
 
+    def test_named_continuation_without_mtb_tags(self):
+        # Peklák: Korida má kus jen s oneway=yes; navazuje na lajnu Korida → patří k ní.
+        # Pěšina se stejným názvem daleko od lajny ani pěšina s jiným názvem se nepřiberou.
+        ways = [way(1, 50.0, 17.30, {"highway": "path", "mtb:scale": "3", "bicycle": "designated", "name": "Korida"}, n=6),
+                way(2, 50.005, 17.30, {"highway": "path", "oneway": "yes", "name": "Korida"}, n=4),      # navazuje na konec
+                way(3, 50.008, 17.30, {"highway": "path", "name": "korida"}, n=3),                     # navazuje na úsek 2
+                way(4, 50.0, 17.33, {"highway": "path", "name": "Korida"}, n=4),                       # 2 km stranou
+                way(5, 50.005, 17.3001, {"highway": "path", "name": "Lesní pěšina"}, n=4),
+                way(6, 50.005, 17.3002, {"highway": "path", "bicycle": "no", "name": "Korida"}, n=4)]
+        fc, _, _ = po.build([park("p", 17.30, 50.002, "Bikepark Peklák", lift=False)], po.parse({"elements": ways}))
+        self.assertEqual(sorted(f["properties"]["osm"] for f in fc["features"]), ["way/1", "way/2", "way/3"])
+        # pokračování převezmou obtížnost lajny (všechny úseky stejná barva jako úsek s mtb:scale)
+        diffs = {f["properties"]["osm"]: f["properties"]["difficulty"] for f in fc["features"]}
+        self.assertIsNotNone(diffs["way/1"])
+        self.assertEqual(set(diffs.values()), {diffs["way/1"]})
+
     def test_bikepark_lines_without_mtb_scale(self):
         # Bikepark Kopřivná (Gravity Line, Fun Trail, Spicy Freeride): path + bicycle=designated
         # + mtb=single track, bez mtb:scale, daleko od lanovky
