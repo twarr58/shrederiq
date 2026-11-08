@@ -96,6 +96,8 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 /* sbalená karta: jen název a souhrn lajn, lajny zůstávají v mapě */
 #card.min > :not(.card-tools):not(.card-head):not(.card-summary) { display: none; }
 #card.min .card-summary { padding-bottom: 10px; }
+.trail-table tr.missing td { color: var(--muted); }
+.trail-table tr.missing .swatch { opacity: .45; }
 .trail-ele .icon { font-size: 12px; margin-right: 1px; }
 #card .note { color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 8px; margin: 8px 0 0; }
 #card dl { margin-bottom: 0; }

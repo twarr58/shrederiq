@@ -84,7 +84,7 @@ jobs:
         run: python3 scripts/gpx_trails.py --merge web/data/trails.geojson
       # Barvy lajn podle oficiálních seznamů provozovatelů (data/official/*.json), #22
       - name: Difficulty from official trail lists
-        run: python3 scripts/official_check.py web/data/trails.geojson --apply --report .osm-cache/official.md && cat .osm-cache/official.md >> "$GITHUB_STEP_SUMMARY"
+        run: python3 scripts/official_check.py web/data/trails.geojson --apply --web web/data/official.json --report .osm-cache/official.md && cat .osm-cache/official.md >> "$GITHUB_STEP_SUMMARY"
       # Lajny z Trailforks API pro parky s trailforks_rid – jen když jsou secrets
       # TRAILFORKS_APP_ID / TRAILFORKS_APP_SECRET; bez nich skript jen přeskočí.
       - name: Trails from Trailforks API

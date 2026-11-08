@@ -223,6 +223,24 @@ def apply(fc: dict, official_dir: Path = OFFICIAL_DIR) -> int:
     return changed
 
 
+def web_lists(fc: dict, official_dir: Path = OFFICIAL_DIR) -> dict[str, dict]:
+    """Oficiální seznamy pro web: park_id → {source, trails: [{name, difficulty, length_m, mapped}]}.
+    mapped = trail má v trails.geojson aspoň jeden úsek; ostatní web ukáže jako „není v mapě“."""
+    by_park = osm_trails(fc)
+    names = _park_names()
+    out = {}
+    for path in sorted(official_dir.glob("*.json")):
+        pid = path.stem
+        data = json.loads(path.read_text())
+        trails = data.get("trails", [])
+        res = match(trails, by_park.get(pid, {}), park_tokens(pid, names.get(pid)))
+        mapped = {id(off) for off, _, _ in res["matched"]}
+        out[pid] = {"source": data.get("source"), "trails": [
+            {k: t[k] for k in ("name", "difficulty", "length_m") if t.get(k) is not None} | {"mapped": id(t) in mapped}
+            for t in trails]}
+    return out
+
+
 def render(result: dict[str, dict]) -> str:
     out = ["# Lajny × oficiální seznamy trailů", ""]
     if not result:
@@ -242,12 +260,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--official", type=Path, default=OFFICIAL_DIR)
     ap.add_argument("--report", type=Path)
     ap.add_argument("--apply", action="store_true", help="zapsat obtížnost z oficiálních seznamů do trails.geojson")
+    ap.add_argument("--web", type=Path, help="oficiální seznamy pro web (web/data/official.json): co v mapě chybí")
     args = ap.parse_args(argv)
     fc = json.loads(args.trails.read_text())
     result = compare(fc, args.official)
     text = render(result)
     if args.report:
         args.report.write_text(text)
+    if args.web:
+        args.web.write_text(json.dumps(web_lists(fc, args.official), ensure_ascii=False, separators=(",", ":")) + "\n")
     print(text, file=sys.stderr)
     if args.apply:
         n = apply(fc, args.official)
