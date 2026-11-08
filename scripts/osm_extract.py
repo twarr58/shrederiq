@@ -34,6 +34,7 @@ TRAIL_HIGHWAYS = {"path", "track", "cycleway", "bridleway", "footway"}
 NETWORK_HIGHWAYS = {"path", "track", "cycleway", "bridleway", "footway"}
 LIFT_TYPES = set(LIFTS.split("|"))
 MARGIN_M = 500  # rezerva navíc k RADIUS_M, ať se neuřízne cesta, která do okruhu jen zasahuje
+MEMBER_RADIUS_M = 15_000  # členy trailových relací se berou i dál od parku (celý okruh)
 
 
 def _tags(obj) -> dict:
@@ -228,6 +229,7 @@ def extract(pbf: str, parks: list[dict], radius_m: float = RADIUS_M + MARGIN_M) 
     import osmium  # pyosmium – jen pro tenhle krok
 
     near = Near(parks, radius_m)
+    near_member = Near(parks, MEMBER_RADIUS_M)
 
     class Relations(osmium.SimpleHandler):
         def __init__(self):
@@ -268,7 +270,10 @@ def extract(pbf: str, parks: list[dict], radius_m: float = RADIUS_M + MARGIN_M) 
                 geom = [(nd.location.lat, nd.location.lon) for nd in w.nodes if nd.location.valid()]
             except osmium.InvalidLocationError:
                 return
-            if len(geom) < 2 or not any(near(lat, lon) for lat, lon in geom):
+            # členy trailových relací do MEMBER_RADIUS_M: celé okruhy velkých sítí (Singltrek pod
+            # Smrkem: Hejnický hřeben, polské okruhy), park_osm.py je vezme, když se relace parku dotkne
+            close = near_member if w.id in member_ways else near
+            if len(geom) < 2 or not any(close(lat, lon) for lat, lon in geom):
                 return
             if parking:
                 lat = sum(p[0] for p in geom) / len(geom)

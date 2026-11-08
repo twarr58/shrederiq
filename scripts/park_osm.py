@@ -196,10 +196,33 @@ def select_trails(park_pt, osm, rel_names, radius=RADIUS_M, has_lift=None):
     lifts = [] if has_lift is False else [
         l["coords"] for l in osm["lifts"].values()
         if l["tags"].get("aerialway") in BIKE_LIFTS and _dist_to_line(park_pt, l["coords"]) <= radius + LIFT_TRAIL_M]
+    # trailová relace, která se okruhu parku dotkne, patří k parku celá (velké sítě mají
+    # okruhy 10–15 km: Singltrek pod Smrkem – Hejnický hřeben)
+    # Navazující relace (okruh, který začíná na jiném okruhu parku) patří k parku taky –
+    # opakuje se, dokud přibývají (Hejnický hřeben navazuje na Ludvíkovský traverz).
+    rels = [[w for w in rel["ways"] if w in rel_names and w in osm["ways"]] for rel in osm["rels"].values()]
+    whole: set[int] = set()
+    ends: list[tuple[float, float]] = []
+    pending = [ways for ways in rels if ways]
+    while True:
+        grown = False
+        for ways in list(pending):
+            touch = any(_dist_to_line(park_pt, osm["ways"][w]["coords"][::3] + [osm["ways"][w]["coords"][-1]]) <= radius
+                        for w in ways)
+            if not touch and ends:
+                touch = any(haversine_m(*c, *e) <= RELATION_TOUCH_M
+                            for w in ways for c in (osm["ways"][w]["coords"][0], osm["ways"][w]["coords"][-1]) for e in ends)
+            if touch:
+                whole.update(ways)
+                ends.extend(c for w in ways for c in osm["ways"][w]["coords"][::4] + [osm["ways"][w]["coords"][-1]])
+                pending.remove(ways)
+                grown = True
+        if not grown:
+            break
     out = {}
     for wid, w in osm["ways"].items():
         tags, coords = w["tags"], w["coords"]
-        if _dist_to_line(park_pt, coords[::3] + [coords[-1]]) > radius:
+        if wid not in whole and _dist_to_line(park_pt, coords[::3] + [coords[-1]]) > radius:
             continue
         in_rel = wid in rel_names
         hw, name = tags.get("highway"), tags.get("name") or tags.get("mtb:name") or ""
@@ -399,6 +422,7 @@ def add_connectors(features: list[dict], network: Network) -> list[dict]:
     return out
 
 
+RELATION_TOUCH_M = 30  # konec úseku relace takhle blízko jiné relaci parku = navazuje
 STRAY_M = 300  # cesta bez názvu dál od pojmenovaných lajn parku nepatří k parku
 
 
