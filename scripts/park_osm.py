@@ -419,6 +419,20 @@ def drop_strays(trails: dict, rel_names: dict) -> dict:
     return out
 
 
+def drop_far_access(features: list[dict], pid: str) -> None:
+    """Přístupová (lesní) cesta dál než STRAY_M od všech lajn parku k parku nepatří –
+    v mapě je jen šum a oddaluje přiblížení na park (Ještěd: cesty 2–3 km od lajn)."""
+    lines = [[(c[1], c[0]) for c in f["geometry"]["coordinates"]] for f in features
+             if f["properties"]["park_id"] == pid and not f["properties"]["access"]]
+    if not lines:
+        return
+    def near(f):
+        pts = [(c[1], c[0]) for c in f["geometry"]["coordinates"]]
+        return any(min(_dist_to_line(q, ln) for q in pts[::3] + [pts[-1]]) <= STRAY_M for ln in lines)
+    features[:] = [f for f in features
+                   if f["properties"]["park_id"] != pid or not f["properties"]["access"] or near(f)]
+
+
 def inherit_difficulty(features: list[dict]) -> None:
     """Úsek bez obtížnosti převezme obtížnost nejdelšího úseku lajny se stejným názvem."""
     best: dict[str, tuple[int, str]] = {}
@@ -601,6 +615,7 @@ def build(parks: list[dict], osm: dict):
                 "properties": {"park_id": pid, "name": name, "difficulty": rel_diff.get(wid) or difficulty(tags), "access": access,
                                "length_m": round(_length(w["coords"])), "osm": f"way/{wid}"},
             })
+        drop_far_access(features, pid)
         inherit_difficulty([x for x in features if x["properties"]["park_id"] == pid])
         features.extend(add_connectors([x for x in features if x["properties"]["park_id"] == pid], network))
         moved = round(haversine_m(*pts[pid], *base["base"])) if base["base"] else None

@@ -22,7 +22,7 @@ DATA = {"elements": [
     way(1, 50.090, 17.120, {"aerialway": "chair_lift", "name": "LD Medvědí hora"}, n=10),
     way(2, 50.098, 17.1205, {"highway": "path", "mtb:scale": "2", "name": "Flow"}, n=16, dlat=-0.0005),
     way(3, 50.098, 17.1215, {"highway": "path", "mtb:scale": "3"}, n=16, dlat=-0.0005),
-    way(4, 50.095, 17.1300, {"highway": "track", "mtb:scale": "0"}, n=5),                 # lesní cesta u lanovky
+    way(4, 50.095, 17.1230, {"highway": "track", "mtb:scale": "0"}, n=5),                 # lesní cesta u lanovky
     way(5, 50.080, 17.1000, {"highway": "path"}, n=5),                                       # člen singltrek relace
     way(6, 50.080, 17.1020, {"highway": "path"}, n=5),
     way(7, 50.070, 17.0900, {"highway": "track"}, n=5),                                      # člen dlouhé cyklotrasy
@@ -111,6 +111,15 @@ class ParkOsm(unittest.TestCase):
                 way(3, 50.000, 17.33, {"highway": "path", "mtb:scale": "1", "bicycle": "designated"}, n=4)]   # 2 km stranou
         fc, _, _ = po.build([park("p", 17.30, 50.002, "Trailpark", lift=False)], po.parse({"elements": ways}))
         self.assertEqual(sorted(f["properties"]["osm"] for f in fc["features"]), ["way/1", "way/2"])
+
+    def test_access_tracks_far_from_trails_are_dropped(self):
+        def feat(osm, lon, access):
+            return {"geometry": {"coordinates": [[lon, 50.0], [lon, 50.002]]},
+                    "properties": {"park_id": "p", "osm": osm, "access": access}}
+        fs = [feat("trail", 17.30, False), feat("near", 17.302, True), feat("far", 17.33, True),
+              {**feat("other", 17.40, True), "properties": {"park_id": "q", "osm": "other", "access": True}}]
+        po.drop_far_access(fs, "p")
+        self.assertEqual([f["properties"]["osm"] for f in fs], ["trail", "near", "other"])
 
     def test_bikepark_lines_without_mtb_scale(self):
         # Bikepark Kopřivná (Gravity Line, Fun Trail, Spicy Freeride): path + bicycle=designated
