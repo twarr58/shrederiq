@@ -2,8 +2,46 @@
   "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain), body ověřené na podkladu Mapy.com. Kudrňák a Vlaštovku geokódování zná, ale mapa je jako lajnu nekreslí – nepřidány.",
   "checked": "2026-11-08",
   "trails": [
-    {"name": "Fun Flow",
-     "start": [16.906199, 50.163787], "end": [16.913109, 50.170178],
-     "via": [[16.906672, 50.165683], [16.907315, 50.166714], [16.908174, 50.16813], [16.910062, 50.168955]]}
+    {
+      "name": "Fun Flow",
+      "start": [
+        16.906199,
+        50.163787
+      ],
+      "end": [
+        16.913109,
+        50.170178
+      ],
+      "via": [
+        [
+          16.906672,
+          50.165683
+        ],
+        [
+          16.907315,
+          50.166714
+        ],
+        [
+          16.908174,
+          50.16813
+        ],
+        [
+          16.910062,
+          50.168955
+        ]
+      ]
+    },
+    {
+      "name": "Enduro RZ-1",
+      "query": "Enduro-1"
+    },
+    {
+      "name": "Enduro RZ-2",
+      "query": "Enduro-2"
+    },
+    {
+      "name": "Enduro RZ-5",
+      "query": "Enduro-5"
+    }
   ]
 }
