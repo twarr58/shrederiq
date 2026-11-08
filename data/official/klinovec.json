@@ -1,0 +1,26 @@
+{
+  "source": "https://klinovec.cz/zahajeni-provoz-trailparku/",
+  "checked": "2026-11-08",
+  "note": "Délky podle provozovatele (Azur 10, Rubín 8, Baron 6, DHK 3 km); Rubín se v jiném textu areálu uvádí jen z části (4 km).",
+  "trails": [
+    {
+      "name": "Azur",
+      "difficulty": "blue",
+      "length_m": 10000
+    },
+    {
+      "name": "Rubín",
+      "difficulty": "red",
+      "length_m": 8000
+    },
+    {
+      "name": "Baron",
+      "difficulty": "black",
+      "length_m": 6000
+    },
+    {
+      "name": "DHK",
+      "length_m": 3000
+    }
+  ]
+}
