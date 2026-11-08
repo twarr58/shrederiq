@@ -196,10 +196,17 @@ def select_trails(park_pt, osm, rel_names, radius=RADIUS_M, has_lift=None):
     lifts = [] if has_lift is False else [
         l["coords"] for l in osm["lifts"].values()
         if l["tags"].get("aerialway") in BIKE_LIFTS and _dist_to_line(park_pt, l["coords"]) <= radius + LIFT_TRAIL_M]
+    # trailová relace, která se okruhu parku dotkne, patří k parku celá (velké sítě mají
+    # okruhy 10–15 km: Singltrek pod Smrkem – Hejnický hřeben)
+    whole = set()
+    for rel in osm["rels"].values():
+        ways = [w for w in rel["ways"] if w in rel_names and w in osm["ways"]]
+        if any(_dist_to_line(park_pt, osm["ways"][w]["coords"][::3] + [osm["ways"][w]["coords"][-1]]) <= radius for w in ways):
+            whole.update(ways)
     out = {}
     for wid, w in osm["ways"].items():
         tags, coords = w["tags"], w["coords"]
-        if _dist_to_line(park_pt, coords[::3] + [coords[-1]]) > radius:
+        if wid not in whole and _dist_to_line(park_pt, coords[::3] + [coords[-1]]) > radius:
             continue
         in_rel = wid in rel_names
         hw, name = tags.get("highway"), tags.get("name") or tags.get("mtb:name") or ""
