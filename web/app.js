@@ -21,6 +21,9 @@
   // --- mapa a podklad --------------------------------------------------------
   const map = L.map("map", { zoomControl: false }).setView(CZ_CENTER, 7);
   L.control.zoom({ position: "bottomright" }).addTo(map);
+  // Body parků ve vlastní vrstvě nad lajnami: canvas s lajnami leží v overlayPane
+  // a jinak by zachytil ťuknutí i kliknutí na body parků pod sebou.
+  map.createPane("parks").style.zIndex = 450;
 
   // Podklad: OpenStreetMap, nebo Mapy.com (s klíčem). Mapy.com mají limit 100k dlaždic
   // měsíčně, proto: přehled ČR z OSM a Mapy.com až od zoomu mapyMinZoom, dlaždice se
@@ -380,7 +383,7 @@
       navigator.geolocation.getCurrentPosition((pos) => {
         userPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
         if (!userMarker) {
-          userMarker = L.circleMarker([userPos.lat, userPos.lon], { radius: 7, weight: 3, color: "#fff", fillColor: "#3a86ff", fillOpacity: 1 })
+          userMarker = L.circleMarker([userPos.lat, userPos.lon], { radius: 7, weight: 3, color: "#fff", fillColor: "#3a86ff", fillOpacity: 1, pane: "parks" })
             .bindTooltip("Tady jsi", { direction: "top" }).addTo(map);
         } else {
           userMarker.setLatLng([userPos.lat, userPos.lon]);
@@ -561,7 +564,7 @@
     for (const f of parks) {
       const p = f.properties;
       const [lon, lat] = f.geometry.coordinates;
-      const m = L.circleMarker([lat, lon], { radius: 7, weight: 2, color: "#fff", fillColor: color(p.kind), fillOpacity: p.closed ? 0.35 : 0.95 })
+      const m = L.circleMarker([lat, lon], { radius: 7, weight: 2, color: "#fff", fillColor: color(p.kind), fillOpacity: p.closed ? 0.35 : 0.95, pane: "parks" })
         .bindTooltip(p.closed ? `${p.name} (mimo provoz)` : p.name, { direction: "top", offset: [0, -6] })
         .on("click", () => selectPark(p.id))
         .addTo(map);
