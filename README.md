@@ -105,7 +105,10 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
 - **Zdroj dat**: denní výřez OSM Česka od [Geofabriku](https://download.geofabrik.de/europe/czech-republic.html).
   `scripts/osm_extract.sh` ho stáhne, `osmium tags-filter` vybere MTB cesty, lanovky,
   parkoviště a relace `route=mtb` a `scripts/osm_extract.py` (pyosmium) z toho vytáhne
-  okolí parků. Overpass se už nepoužívá (býval přetížený a části dotazů občas tiše
+  okolí parků. Kolem parků (čtverce z `scripts/park_area.py`) se navíc berou všechny
+  pěšiny a cyklostezky: pojmenovaný úsek bez MTB značek, který navazuje na lajnu se
+  stejným názvem (do 60 m), je její částí a převezme její obtížnost (Peklák: kusy Koridy,
+  Drtikolu a Vyhlídky mají jen `oneway=yes`). Overpass se už nepoužívá (býval přetížený a části dotazů občas tiše
   vynechá. Vyfiltrovaný výřez se drží v Actions cache po dnech; stahování z Geofabriku
   má rozpočet 18 minut s navazováním a když ho nestihne, použije se včerejší výřez
   (`MTB_PBF_FALLBACK`), takže pomalý Geofabrik nasazení neshodí.
@@ -126,9 +129,10 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   k lajnám z OSM, viz `data/gpx/README.md`.
 - Lajna ≠ úsek: jedna lajna bývá v OSM rozdělená na víc cest (way). Panel počítá
   pojmenované lajny, úseky bez názvu ukazuje zvlášť a lesní cesty kreslí šedě čárkovaně.
-- **Sklon** (`scripts/elevation.py`): lajny se převzorkují po ~25 m a výšky bodů se
-  zjistí z Mapy.com Elevation API (až 256 bodů na dotaz, výšky se ukládají do cache
-  v Actions). Ke každému úseku se uloží sklon v %, počítaný přes okno ~75 m, protože
+- **Sklon** (`scripts/elevation.py`): výšky se zjistí z Mapy.com Elevation API v bodech
+  po ~25 m podél lajny (až 256 bodů na dotaz, výšky se ukládají do cache v Actions)
+  a na body lajny se dopočítají podle vzdálenosti. Geometrie lajny zůstává původní,
+  zatáčky se neusekávají. Ke každému úseku se uloží sklon v %, počítaný přes okno ~75 m, protože
   výškový model je zašuměný. K lajně se uloží převýšení a průměrný a maximální sklon.
   Ve webu jde přepnout barvu lajn: obtížnost / sklon.
   Klíč pro build: secret `MAPY_SERVER_KEY` (dřív `MAPY_ELEVATION_KEY`) (doporučeno – samostatný klíč jen se

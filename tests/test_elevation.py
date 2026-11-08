@@ -67,6 +67,20 @@ class Enrich(unittest.TestCase):
         self.assertEqual(el.enrich(fc2, cache, fake_fetch), 0)
         self.assertEqual(calls, [10])
 
+    def test_enrich_keeps_geometry(self):
+        # serpentina s body po 5 m: geometrie zůstane, sklon i výšky jsou na původních bodech
+        zigzag = [(15.0 + (0.00007 if i % 2 else 0.0), 50.0 + i * 0.000045) for i in range(40)]
+        fc = {"type": "FeatureCollection", "features": [
+            {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [list(p) for p in zigzag]}, "properties": {}}]}
+        el.enrich(fc, {}, lambda pts: [500.0 + (p[1] - 50.0) * 111_000 * 0.1 for p in pts])
+        f = fc["features"][0]
+        self.assertEqual(f["geometry"]["coordinates"], [list(p) for p in zigzag])
+        self.assertEqual(len(f["properties"]["slopes"]), len(zigzag) - 1)
+        self.assertEqual(f["properties"]["ele_min"], 500)
+
+    def test_interpolate(self):
+        self.assertEqual(el.interpolate([0, 5, 10, 12], [0, 10], [100, 200]), [100, 150, 200, 200])
+
     def test_batches_of_256(self):
         cache, sizes = {}, []
         pts = [(15.0 + i * 0.0001, 50.0) for i in range(600)]
