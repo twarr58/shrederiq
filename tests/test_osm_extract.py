@@ -70,6 +70,14 @@ class Country(unittest.TestCase):
 
 
 class Helpers(unittest.TestCase):
+    def test_country_trail_ok(self):
+        ok = ox.country_trail_ok
+        self.assertTrue(ok({"highway": "path", "mtb:scale": "2"}))
+        self.assertFalse(ok({"highway": "track", "mtb:scale": "0", "piste:type": "nordic"}))     # běžkařská stopa
+        self.assertFalse(ok({"highway": "path", "mtb:scale:imba": "1", "bicycle": "no"}))
+        self.assertFalse(ok({"highway": "path", "mtb:scale:imba": "2", "sac_scale": "mountain_hiking"}))
+        self.assertTrue(ok({"highway": "path", "mtb:scale": "1", "sac_scale": "hiking"}))
+
     def test_is_trail(self):
         self.assertTrue(ox.is_trail({"highway": "path", "mtb:scale": "1"}))
         self.assertTrue(ox.is_trail({"highway": "path", "bicycle": "designated"}))

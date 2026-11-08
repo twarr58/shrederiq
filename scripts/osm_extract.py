@@ -177,6 +177,10 @@ def extract_country(pbf: str) -> dict:
             hw = tags.get("highway")
             trail = ("mtb:scale:dh" in tags or "mtb:scale:imba" in tags or (hw == "path" and tags.get("mtb") == "designated")
                      or (hw in ("path", "track") and "mtb:scale" in tags))
+            # běžkařské stopy, pěšiny se zákazem kol a horské turistické pěšiny s mtb:scale nejsou
+            # lajny – v reportu dělaly falešné „chybějící parky“ (Portášky, Malá Úpa, Temný Důl)
+            if trail and not country_trail_ok(tags):
+                trail = False
             anchor = tags.get("leisure") == "bike_park" or (tags.get("leisure") in ANCHOR_LEISURE and _sporty(tags))
             if not (trail or anchor or w.id in member_of):
                 return
@@ -205,6 +209,15 @@ def extract_country(pbf: str) -> dict:
             p2.elements.append({"type": "relation", "id": rid, "tags": rel["tags"],
                                 "center": {"lat": sum(p[0] for p in pts) / len(pts), "lon": sum(p[1] for p in pts) / len(pts)}})
     return {"generator": "shrederiq osm_extract --country", "elements": p2.elements}
+
+
+def country_trail_ok(tags: dict) -> bool:
+    """Cesta s MTB značkou, která do celorepublikového hledání parků patří."""
+    if tags.get("bicycle") == "no" or "piste:type" in tags:
+        return False
+    if tags.get("sac_scale") not in (None, "hiking") and "mtb:scale:dh" not in tags:
+        return False
+    return True
 
 
 def _sporty(tags: dict) -> bool:
