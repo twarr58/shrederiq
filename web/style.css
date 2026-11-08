@@ -153,6 +153,8 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 @media (max-width: 640px) {
   #panel { left: 8px; right: 8px; width: auto; top: 8px; max-height: 40%; }
   #panel { padding: 10px 12px; }
+  /* iOS Safari přiblíží stránku při psaní do pole s písmem pod 16 px a už ji nevrátí */
+  #search { font-size: 16px; }
   #panel h1 { font-size: 18px; }
   .sub { display: none; }
   #card { left: 8px; right: 8px; top: auto; bottom: 24px; width: auto; max-height: 50%; overflow-y: auto; }
