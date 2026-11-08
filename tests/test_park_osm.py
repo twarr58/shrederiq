@@ -105,6 +105,13 @@ class ParkOsm(unittest.TestCase):
         self.assertEqual(sorted((c["name"], round(c["length_m"], -1)) for c in con), [("Stoupák", 40), ("Stoupák", 130)])
         self.assertTrue(all(c["access"] is False for c in con))
 
+    def test_unnamed_ways_far_from_named_trails_are_dropped(self):
+        ways = [way(1, 50.000, 17.30, {"highway": "path", "mtb:scale": "2", "bicycle": "designated", "name": "Niki"}, n=6),
+                way(2, 50.003, 17.301, {"highway": "path", "mtb:scale": "1", "bicycle": "designated"}, n=4),   # u Niki
+                way(3, 50.000, 17.33, {"highway": "path", "mtb:scale": "1", "bicycle": "designated"}, n=4)]   # 2 km stranou
+        fc, _, _ = po.build([park("p", 17.30, 50.002, "Trailpark", lift=False)], po.parse({"elements": ways}))
+        self.assertEqual(sorted(f["properties"]["osm"] for f in fc["features"]), ["way/1", "way/2"])
+
     def test_bikepark_lines_without_mtb_scale(self):
         # Bikepark Kopřivná (Gravity Line, Fun Trail, Spicy Freeride): path + bicycle=designated
         # + mtb=single track, bez mtb:scale, daleko od lanovky
