@@ -11,6 +11,24 @@ GPX = """<?xml version="1.0" encoding="UTF-8"?>
 </gpx>"""
 
 
+def gpx(*segs, timed=True):
+    """GPX s jedním <trk><trkseg> na stopu; body (lon, lat), s <time> = stopa s pořadím."""
+    t = "<time>2024-05-01T10:00:00Z</time>" if timed else ""
+    body = "".join("<trk><trkseg>" + "".join(f'<trkpt lat="{y:.6f}" lon="{x:.6f}">{t}</trkpt>' for x, y in seg)
+                   + "</trkseg></trk>" for seg in segs)
+    return f'<?xml version="1.0"?><gpx version="1.0" xmlns="http://www.topografix.com/GPX/1/0">{body}</gpx>'
+
+
+M_LON = 1 / (111_320 * 0.6428)   # stupňů délky na metr na 50° s. š.
+M_LAT = 1 / 111_320
+
+
+def bundle(east_m, lat0=50.0, lat1=50.004, step=0.00003, jitter=1.0):
+    """Svazek bodů stopy podél poledníku 14.6 posunutý o east_m metrů na východ."""
+    n = int((lat1 - lat0) / step)
+    return [(14.6 + (east_m + (jitter if i % 2 else -jitter)) * M_LON, lat0 + i * step) for i in range(n + 1)]
+
+
 def line(pid, name, lat0=50.0, lon=14.6, n=9):
     return {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[lon, lat0 + i * 0.0005] for i in range(n)]},
             "properties": {"park_id": pid, "name": name}}
@@ -18,8 +36,41 @@ def line(pid, name, lat0=50.0, lon=14.6, n=9):
 
 class GpsCheck(unittest.TestCase):
     def test_parse_trackpoints(self):
-        pts = gc.parse_trackpoints(GPX.format(pts='<trkpt lat="50.0" lon="14.6"/><trkpt lat="50.001" lon="14.601"><ele>5</ele></trkpt>'))
-        self.assertEqual(pts, [(14.6, 50.0), (14.601, 50.001)])
+        # bez <time> = soukromé body seřazené podle souřadnic → pytel
+        segs, bag = gc.parse_trackpoints(GPX.format(pts='<trkpt lat="50.0" lon="14.6"/><trkpt lat="50.001" lon="14.601"><ele>5</ele></trkpt>'))
+        self.assertEqual((segs, bag), ([], [(14.6, 50.0), (14.601, 50.001)]))
+        # stopy s časem po trkseg, kratší než MIN_SEG_PTS se zahodí
+        long_seg = [(14.6, 50.0 + i * 0.0001) for i in range(6)]
+        segs, bag = gc.parse_trackpoints(gpx(long_seg, [(14.7, 50.0)] * 3))
+        self.assertEqual(segs, [long_seg])
+        self.assertEqual(bag, [])
+
+    def test_cache_backward_compatible(self):
+        # starý formát cache (plochý seznam bodů) se čte jako jeden anonymní pytel,
+        # ale load_traces ho stáhne znovu, ať park dostane i rozlišení stop
+        drawn = line("p", "Flow")
+        key = ",".join(str(v) for v in gc.bbox_of([drawn]))
+        flat = [[14.60003, round(50.0 + i * 0.0001, 5)] for i in range(41)]
+        segs, bag = gc.from_cache(flat)
+        self.assertEqual((segs, len(bag)), ([], 41))
+        old = {key: flat}
+        trace = "".join(f'<trkpt lat="{50.0 + i * 0.0001:.5f}" lon="14.60003"/>' for i in range(41))
+        calls = []
+        summary = gc.check({"features": [drawn]}, old, lambda b, p: (calls.append(p), GPX.format(pts=trace))[1], fit=True)
+        self.assertEqual(calls, [0])
+        self.assertIsInstance(old[key], dict)
+        self.assertEqual(summary["p"]["points"], 41)
+        self.assertEqual(drawn["properties"]["gps_cov"], 100)
+        # nový formát: segmenty + pytel, po načtení z cache stejné
+        cache = {}
+        seg = bundle(0, lat1=50.001)
+        got = gc.load_traces((1, 2, 3, 4), cache, lambda b, p: gpx(seg) if p == 0 else gpx(seg[:3], timed=False))
+        self.assertEqual(set(cache["1,2,3,4"]), {"segs", "bag"})
+        self.assertEqual(len(got[0]), 1)
+        def boom(bbox, page):
+            raise AssertionError("cache se nepoužila")
+        again = gc.load_traces((1, 2, 3, 4), cache, boom)
+        self.assertEqual(len(again[0][0]), len(seg))
 
     def test_coverage_and_report(self):
         ridden = line("p", "Flow")                       # stopy podél celé lajny
@@ -66,7 +117,68 @@ class GpsCheck(unittest.TestCase):
         self.assertGreaterEqual(drawn["properties"]["gps_cov"], 70)
         self.assertEqual(summary["p"]["fitted"], 1)
         self.assertTrue(all(abs(c[0] - 14.6) < 0.00015 for c in drawn["geometry"]["coordinates"]))  # do ~11 m od stop
-        self.assertIn("| 1 |", gc.render(summary))
+        self.assertAlmostEqual(drawn["properties"]["gps_fit_shift_m"], 29, delta=3)
+        self.assertEqual(summary["p"]["shift"], drawn["properties"]["gps_fit_shift_m"])
+        self.assertEqual(summary["p"]["rejected"], {"traces": 0, "shape": 0, "gain": 0, "length": 0, "shift": 0})
+        text = gc.render(summary)
+        self.assertIn("medián posunu", text)
+        self.assertIn(f"| 1 | {summary['p']['shift']} m |", text)
+
+    def test_ridge_picks_nearer_bundle(self):
+        # dva rovnoběžné svazky 30 m od sebe (−10 m a +20 m): těžiště by bylo mezi nimi,
+        # hřbet zvolí bližší vrchol
+        offs = [-10 + d for d in (-1, 0, 1, 0, -1, 1, 0)] + [20 + d for d in (-1, 0, 1, 0, -1, 1, 0, 0, 1, -1)]
+        self.assertAlmostEqual(gc.ridge_offset(offs), -10, delta=1)
+        self.assertIsNone(gc.ridge_offset([]))
+        self.assertIsNone(gc.ridge_offset([-50 + 4 * i for i in range(26)]))  # rovnoměrný šum bez vrcholu
+        # celá lajna: OSM 17 m západně od svazku A, svazek B 30 m východně od A → přesune se
+        # na A, ne do těžiště obou svazků
+        drawn = line("p", "Rodeo", lon=14.6 - 17 * M_LON)
+        fc = {"features": [drawn]}
+        gc.check(fc, {}, lambda b, p: gpx(bundle(0), bundle(30)), fit=True)
+        self.assertTrue(drawn["properties"]["gps_fit"])
+        xs = [(c[0] - 14.6) / M_LON for c in drawn["geometry"]["coordinates"]]
+        self.assertTrue(all(abs(x) < 4 for x in xs), xs)
+
+    def test_segment_filter_prefers_trace_along_line(self):
+        # stopa A jede podél celé lajny 20 m západně; stopa B je sousední lajna 8 m východně
+        # jen na třetině délky. Bez filtru by ta třetina skočila na B, s filtrem jde celá na A.
+        drawn = line("p", "Korida", lon=14.6 + 20 * M_LON)
+        a = bundle(0)
+        b = bundle(28, lat1=50.0013)
+        grid = gc.Grid.of(([a, b], []))
+        coords = [tuple(c) for c in drawn["geometry"]["coordinates"]]
+        self.assertEqual(gc.following_segments(coords, grid), {0})
+        new, reason, shift = gc.fit_to_traces(coords, grid, gc.coverage(coords, grid), {0})
+        self.assertIsNone(reason)
+        self.assertTrue(all(abs((x - 14.6) / M_LON) < 4 for x, _ in new))
+        pts = gc.resample(coords, gc.FIT_STEP_M)
+        unfiltered = gc.ridge_shifts(pts, grid)
+        self.assertTrue(any(s is not None and s < -5 for s in unfiltered[:10]))  # bez filtru: B (na východ)
+        # bez stopy podél lajny se bere všechno
+        self.assertIsNone(gc.following_segments(coords, gc.Grid.of(([b], a))))
+
+    def test_reject_jumps_and_fill(self):
+        shifts = [0, 1, 2, 30, 31, 2, 1, None, 0]
+        self.assertEqual(gc.reject_jumps(shifts), [0, 1, 2, None, None, 2, 1, None, 0])
+        filled = gc.fill_gaps([None, 4, 4, None, None, 10, None])
+        self.assertEqual(filled, [4, 4, 4, 6, 8, 10, 10])          # krátké díry a konce dopočítat
+        long_gap = gc.fill_gaps([8] + [None] * 8 + [8], gap=3)
+        self.assertEqual(long_gap[:5], [8, 6, 4, 2, 0])             # dlouhá díra: plynulý návrat na OSM
+        self.assertEqual(long_gap[-4:], [2, 4, 6, 8])
+
+    def test_quality_gate_reasons(self):
+        self.assertIsNone(gc.gate(50, 80, 100, 110, 12))
+        self.assertEqual(gc.gate(65, 72, 100, 100, 5), "gain")      # +7 bodů nestačí
+        self.assertEqual(gc.gate(40, 60, 100, 100, 5), "gain")      # pod 70 %
+        self.assertEqual(gc.gate(40, 90, 100, 140, 5), "length")
+        self.assertEqual(gc.gate(40, 90, 100, 75, 5), "length")
+        self.assertEqual(gc.gate(40, 90, 100, 100, 45), "shift")
+        # v souhrnu parku se odmítnuté lajny počítají podle důvodu
+        drawn = line("p", "Ghost", lon=14.62)
+        summary = gc.check({"features": [drawn]}, {}, lambda b, p: gpx(bundle(0)), fit=True)
+        self.assertEqual(summary["p"]["rejected"]["traces"], 1)
+        self.assertIsNone(summary["p"]["shift"])
 
     def test_join_segments(self):
         # Rodeo ve třech kouscích (prostřední obráceně), Zmije jeden kus, bez názvu se nespojuje
