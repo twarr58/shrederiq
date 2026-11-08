@@ -374,7 +374,7 @@ def add_connectors(features: list[dict], network: Network) -> list[dict]:
             found = network.path(a, b, DETOUR * d + SNAP_M)
             merge(f, g)
             pair = tuple(sorted((a, b)))
-            if found and pair not in done and not _overlaps(found[0], trails):
+            if found and pair not in done and not _overlaps(found[0], trails + out):
                 done.add(pair)
                 out.append(_connector(f, *found))
         # výjezd: konec posledního kusu (jednosměrné kusy jdou ve směru jízdy) na začátek sjezdu
@@ -393,7 +393,7 @@ def add_connectors(features: list[dict], network: Network) -> list[dict]:
         if best:
             d, top, s = best
             found = network.path(top, s, DETOUR * d + SNAP_M)
-            if found and not _overlaps(found[0], trails):
+            if found and not _overlaps(found[0], trails + out):
                 src = next(f for f in pieces if _ends(f)[1] == top)
                 out.append(_connector(src, *found))
     return out
