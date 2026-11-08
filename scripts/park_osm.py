@@ -399,6 +399,26 @@ def add_connectors(features: list[dict], network: Network) -> list[dict]:
     return out
 
 
+STRAY_M = 300  # cesta bez názvu dál od pojmenovaných lajn parku nepatří k parku
+
+
+def drop_strays(trails: dict, rel_names: dict) -> dict:
+    """Bez cest bez názvu (a mimo trailové relace), které leží dál než STRAY_M od všech
+    pojmenovaných lajn parku: v okruhu 3 km bývají cizí cesty s mtb:scale (Plešivec:
+    pěšiny 2 km od areálu). Park bez pojmenovaných lajn se nemění."""
+    def named(wid, w):
+        return bool(w["tags"].get("name") or w["tags"].get("mtb:name") or rel_names.get(wid))
+    anchors = [w["coords"] for wid, (w, _) in trails.items() if named(wid, w) and w["tags"].get("highway") != "track"]
+    if not anchors:
+        return trails
+    out = {}
+    for wid, (w, rel) in trails.items():
+        if (named(wid, w) or w["tags"].get("highway") == "track"  # lesní cesta je jen přístupová (šedá)
+                or any(min(_dist_to_line(c, a) for c in w["coords"][::3] + [w["coords"][-1]]) <= STRAY_M for a in anchors)):
+            out[wid] = (w, rel)
+    return out
+
+
 def inherit_difficulty(features: list[dict]) -> None:
     """Úsek bez obtížnosti převezme obtížnost nejdelšího úseku lajny se stejným názvem."""
     best: dict[str, tuple[int, str]] = {}
@@ -551,6 +571,7 @@ def build(parks: list[dict], osm: dict):
     for f in parks:
         pid = f["properties"]["id"]
         trails = {wid: v for wid, v in per_park[pid].items() if owner.get(wid) == pid}
+        trails = drop_strays(trails, rel_names)
         base = choose_base(pts[pid], trails, osm, has_lift[pid], park_names[pid], towns[pid])
         parking = choose_parking(base["base"], osm)
         entry = {"base_source": base["base_source"], "lift": base["lift"]}
