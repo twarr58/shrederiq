@@ -1,0 +1,10 @@
+{
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain) od začátku z geokódování; průběh ověřený na podkladu Mapy.com.",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Enduro",
+      "query": "Bikepark Monínec enduro"
+    }
+  ]
+}
