@@ -234,6 +234,16 @@
     return trailsData;
   }
 
+  // oficiální seznamy lajn z webů parků (web/data/official.json generuje build): lajny,
+  // které v OSM nejsou, se v kartě ukážou šedě s poznámkou „není v mapě“
+  let officialData = null;
+  function fetchOfficial() {
+    officialData = officialData || fetch("data/official.json")
+      .then((res) => (res.ok ? res.json() : null))
+      .catch(() => null);
+    return officialData;
+  }
+
   function clearTrails() {
     if (trailLayer) map.removeLayer(trailLayer);
     trailLayer = null;
@@ -242,19 +252,26 @@
   const DIFF_ORDER = ["green", "blue", "red", "black", "unknown"];
 
   async function loadTrails(id, box, head) {
-    const s = T.summarize(await fetchTrails(), id);
+    const [fc, official] = await Promise.all([fetchTrails(), fetchOfficial()]);
+    const s = T.summarize(fc, id);
+    const offPark = official && official[id];
+    s.missing = offPark ? offPark.trails.filter((t) => !t.mapped) : [];
+    s.officialSource = offPark ? offPark.source : null;
     if (activeId !== id || !box.isConnected) return;
     clearTrails();
     if (!s.segments) {
-      head.summary.textContent = "Lajny tohoto parku zatím v datech nejsou.";
-      box.replaceChildren(el("p", { className: "note" },
-        "Lajny tohoto parku zatím v datech nejsou (OpenStreetMap je pro něj nemá). Doplníme z Trailforks."));
+      head.summary.textContent = "Lajny tohoto parku zatím v mapě nejsou.";
+      box.replaceChildren(
+        s.missing.length ? missingTable(s.missing) : "",
+        el("p", { className: "note" }, "Lajny tohoto parku zatím v mapě nejsou (OpenStreetMap je pro něj nemá).",
+          ...(s.officialSource ? [" Seznam lajn: ", sourceLink(s.officialSource), "."] : [])));
       return;
     }
     head.summary.className = "card-summary";
     head.summary.replaceChildren(el("b", {}, N.formatDistance(s.lengthM)),
       el("span", { className: "muted" }, ` ve ${plural(s.namedCount, "lajně", "lajnách", "lajnách")}`
-        + (s.longest ? ` · nejdelší ${s.longest.name || "bez názvu"} ${N.formatDistance(s.longest.lengthM)}` : "")));
+        + (s.longest ? ` · nejdelší ${s.longest.name || "bez názvu"} ${N.formatDistance(s.longest.lengthM)}` : "")
+        + (s.missing.length ? ` · další ${s.missing.length} jen na webu parku` : "")));
     // pruh podílu obtížností s délkami pod ním
     const diffs = DIFF_ORDER.filter((d) => s.byDifficulty[d]);
     const info = (d) => T.difficultyInfo(d === "unknown" ? null : d);
@@ -315,6 +332,22 @@
     trailLayer.addTo(map);
   }
 
+  const sourceLink = (url) => el("a", { href: url, target: "_blank", rel: "noopener" }, "web parku");
+
+  function missingRow(t) {
+    const d = T.difficultyInfo(t.difficulty);
+    return el("tr", { className: "missing", title: "Lajna je na webu parku, ale v mapových datech (OpenStreetMap) zatím není." },
+      el("td", {}, t.name, el("small", { className: "muted" }, " · není v mapě")),
+      el("td", { className: `diff-${t.difficulty || "unknown"}` }, el("i", { className: "swatch", style: `background:${d.color}` }), d.label),
+      el("td", { className: "num" }, t.length_m ? N.formatDistance(t.length_m) : "–"));
+  }
+
+  function missingTable(missing) {
+    return el("table", { className: "trail-table" },
+      el("thead", {}, el("tr", {}, el("th", { scope: "col" }, "Lajna"), el("th", { scope: "col" }, "Obtížnost"), el("th", { scope: "col", className: "num" }, "Délka"))),
+      el("tbody", {}, ...missing.map(missingRow)));
+  }
+
   function renderTrails(s, box, fit) {
     const mode = s.hasSlopes ? trailColor : "difficulty";
     drawTrails(s, mode);
@@ -350,7 +383,7 @@
           el("td", {}, name(r), r.slopeMax != null ? el("small", { className: "muted trail-ele", title: "převýšení a největší sklon" }, icon("mountain"), ` ${r.eleMax - r.eleMin} m · max ${r.slopeMax} %`) : ""),
           el("td", { className: `diff-${r.difficulty || "unknown"}` }, el("i", { className: "swatch", style: `background:${d.color}` }), d.label),
           el("td", { className: "num" }, N.formatDistance(r.lengthM)));
-      })),
+      }), ...(s.missing || []).map(missingRow)),
       s.accessLengthM ? el("tfoot", {}, el("tr", { className: "muted" }, el("td", { colSpan: 2 }, "lesní a přístupové cesty"), el("td", { className: "num" }, N.formatDistance(s.accessLengthM)))) : "");
 
     box.replaceChildren(
@@ -365,7 +398,10 @@
           ` (${plural(s.sources.trailforks, "úsek", "úseky", "úseků")}, jen pro nekomerční použití).`] : "",
         s.sources.gpx ? ` ${plural(s.sources.gpx, "úsek", "úseky", "úseků")} z ručně dodaných GPX.` : "",
         s.snapped ? ` Průběh ${plural(s.snapped, "úseku", "úseků", "úseků")} podle sítě Mapy.com (routing).` : "",
-        s.hasSlopes ? " Výšky: Mapy.com, sklon je orientační (výškový model, okno ~75 m)." : ""));
+        s.hasSlopes ? " Výšky: Mapy.com, sklon je orientační (výškový model, okno ~75 m)." : "",
+        s.missing && s.missing.length ? [` ${s.missing.length === 1 ? "1 lajna je jen na webu parku, v mapě zatím není"
+          : `${plural(s.missing.length, "lajna", "lajny", "lajn")} ${s.missing.length <= 4 ? "jsou" : "je"} jen na webu parku, v mapě zatím ${s.missing.length <= 4 ? "nejsou" : "není"}`}`,
+          ...(s.officialSource ? [" (", sourceLink(s.officialSource), ")"] : []), "."] : ""));
   }
 
   // --- navigace ---------------------------------------------------------------

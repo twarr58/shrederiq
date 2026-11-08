@@ -97,6 +97,16 @@ class Official(unittest.TestCase):
         p = fc["features"][0]["properties"]
         self.assertEqual((p["name"], p["osm_name"], p["difficulty"]), ("Kozí trail", "TT Kozí trail", "blue"))
 
+    def test_web_lists_mark_missing(self):
+        fc = {"features": [feat("k", "Fun Flow", "red", 1700)]}
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "k.json").write_text(json.dumps({"source": "https://x", "trails": [
+                {"name": "Fun Flow", "difficulty": "red"}, {"name": "Vlaštovka", "difficulty": "blue", "length_m": 2400}]}))
+            out = oc.web_lists(fc, Path(d))
+        self.assertEqual(out["k"], {"source": "https://x", "trails": [
+            {"name": "Fun Flow", "difficulty": "red", "mapped": True},
+            {"name": "Vlaštovka", "difficulty": "blue", "length_m": 2400, "mapped": False}]})
+
     def test_fold_and_same(self):
         self.assertEqual(oc.fold("Modrý Flowčko "), "modry flowcko")
         self.assertTrue(oc.same("Modrá trať", "Modrý trail"))
