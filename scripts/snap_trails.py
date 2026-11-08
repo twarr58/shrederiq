@@ -12,7 +12,7 @@ nedávají. Routing po jejich síti ale smí být zobrazený. Pro každou lajnu:
 Odpovědi se drží v cache podle id cesty a otisku souřadnic, takže se přepočítají jen
 změněné cesty. Lesní / přístupové cesty a lajny z GPX / Trailforks se nepřichytávají.
 
-Klíč: MAPY_SERVER_KEY, jinak MAPY_ELEVATION_KEY, jinak MAPY_API_KEY (serverový klíč
+Klíč: MAPY_SERVER_KEY, jinak MAPY_ELEVATION_KEY (serverový klíč
 bez omezení domény se službou Routing). Bez klíče skript nic nemění (exit 0).
 
   MAPY_SERVER_KEY=… python3 scripts/snap_trails.py web/data/trails.geojson --cache .osm-cache/snap.json
@@ -164,7 +164,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--report", type=Path, help="markdown se seznamem lajn k ruční kontrole")
     args = ap.parse_args(argv)
 
-    api_key = os.environ.get("MAPY_SERVER_KEY") or os.environ.get("MAPY_ELEVATION_KEY") or os.environ.get("MAPY_API_KEY")
+    api_key = os.environ.get("MAPY_SERVER_KEY") or os.environ.get("MAPY_ELEVATION_KEY")
     if not api_key:
         print("snap: bez MAPY_SERVER_KEY, lajny zůstávají podle OSM", file=sys.stderr)
         return 0
