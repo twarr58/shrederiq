@@ -128,6 +128,10 @@ def match(official: list[dict], osm: dict[str, dict], drop: frozenset[str] = fro
     Slabá shoda (jen barva, překlep) platí, jen když je jednoznačná z obou stran.
     Vrací {"matched": [(off, [jména], součet)], "missing": [off], "extra": [jméno]}."""
     def best(off, name):
+        # alias napsaný přesně jako jméno v OSM je výslovné přiřazení a vyhrává nad shodou slov
+        # (Hrubá Voda: OSM „Jump line“ je červená jump lajna, ne černá „Jump lajna“)
+        if any(fold(a) == fold(name) for a in off.get("aliases", [])):
+            return 4
         return max(score(n, name, drop) for n in [off["name"], *off.get("aliases", [])])
 
     pairs = {}  # jméno z OSM → index oficiálního trailu
@@ -149,7 +153,7 @@ def match(official: list[dict], osm: dict[str, dict], drop: frozenset[str] = fro
     matched, missing = [], []
     for i, off in enumerate(official):
         names = [n for n, j in pairs.items() if j == i]
-        exact = [n for n in names if best(off, n) == 3]
+        exact = [n for n in names if best(off, n) >= 3]
         if exact:
             names = exact
         if names:

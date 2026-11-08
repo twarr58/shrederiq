@@ -1,0 +1,41 @@
+{
+  "source": "https://www.koprivna.cz/bikepark/informace-o-bikeparku-koprivna/",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Funtrail",
+      "difficulty": "blue",
+      "aliases": [
+        "Fun Trail"
+      ]
+    },
+    {
+      "name": "Spicy Freeride",
+      "difficulty": "black"
+    },
+    {
+      "name": "Gravity Line",
+      "difficulty": "red"
+    },
+    {
+      "name": "Hypa Hypa Line - DH",
+      "difficulty": "red"
+    },
+    {
+      "name": "Dirtzilla",
+      "difficulty": "black",
+      "length_m": 750
+    },
+    {
+      "name": "Babyzilla",
+      "difficulty": "black"
+    },
+    {
+      "name": "Baba Yaga"
+    },
+    {
+      "name": "Skill Centrum",
+      "difficulty": "green"
+    }
+  ]
+}

@@ -85,6 +85,11 @@ class Official(unittest.TestCase):
         self.assertEqual(res["matched"][0][2]["length_m"], 4900)
         self.assertEqual(res["extra"], ["Schody"])
 
+    def test_exact_alias_beats_name_match(self):
+        osm = {"Jump line": {"length_m": 1588, "difficulty": "red"}}
+        res = oc.match([{"name": "Červená jump lajna", "aliases": ["Jump line"]}, {"name": "Jump lajna"}], osm)
+        self.assertEqual([(o["name"], n) for o, n, _ in res["matched"]], [("Červená jump lajna", ["Jump line"])])
+
     def test_color_only_match_must_be_unique(self):
         osm = {"Modrý A": {"length_m": 1, "difficulty": None}, "Modrý B": {"length_m": 1, "difficulty": None}}
         self.assertEqual(oc.match([{"name": "Modrá"}], osm)["matched"], [])

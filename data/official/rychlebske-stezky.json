@@ -1,22 +1,82 @@
 {
-  "source": "https://www.rychlebskestezky.cz/cs/traily",
+  "source": "https://www.rychlebskestezky.cz/storage/app/media/uploaded-files/250521_rychlebske-stezky_stylizovana-mapa.jpg",
   "checked": "2026-11-08",
   "trails": [
     {
-      "name": "Superflow"
+      "name": "Superflow",
+      "aliases": [
+        "Superflow - sekce 1",
+        "Superflow - sekce 2",
+        "Superflow - sekce 3",
+        "Superflow - sekce 4",
+        "Superflow - sekce 5",
+        "Superflow - sekce 6",
+        "Superflow - sekce 7",
+        "Superflow - sekce 8",
+        "Superflow - sekce 3, freeride"
+      ]
     },
     {
-      "name": "Wales"
+      "name": "Wales",
+      "difficulty": "black"
     },
     {
-      "name": "Velryba"
+      "name": "T-RYS"
     },
     {
-      "name": "Vidnavský okruh",
+      "name": "Naučná stezka",
+      "difficulty": "black"
+    },
+    {
+      "name": "Biskupský"
+    },
+    {
+      "name": "Velryba",
+      "difficulty": "black"
+    },
+    {
+      "name": "Obelix",
+      "difficulty": "black"
+    },
+    {
+      "name": "Prokletý",
+      "difficulty": "black"
+    },
+    {
+      "name": "Tajemný",
+      "difficulty": "red"
+    },
+    {
+      "name": "Velbloud"
+    },
+    {
+      "name": "Mramorový",
+      "difficulty": "red"
+    },
+    {
+      "name": "Hupcuk",
+      "difficulty": "red"
+    },
+    {
+      "name": "Jestřáb",
+      "difficulty": "black"
+    },
+    {
+      "name": "Sjezdy",
+      "difficulty": "red"
+    },
+    {
+      "name": "Dr. Wiessner",
+      "aliases": [
+        "dr. Wiessnera"
+      ]
+    },
+    {
+      "name": "Sokolík",
       "difficulty": "blue"
     },
     {
-      "name": "Trail podél Černého potoka",
+      "name": "Podél Černého potoka",
       "difficulty": "blue"
     },
     {
@@ -24,14 +84,8 @@
       "difficulty": "blue"
     },
     {
-      "name": "Sokolík",
+      "name": "Vidnavský okruh",
       "difficulty": "blue"
-    },
-    {
-      "name": "Tajemný"
-    },
-    {
-      "name": "Dr. Wiessnera"
     }
   ]
 }
