@@ -16,7 +16,7 @@
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [15.23, 50.925] },
       "properties": {"id": "singltrek-pod-smrkem", "name": "Singltrek pod Smrkem", "kind": "trail_center", "town": "Nové Město pod Smrkem", "region": "Liberecký", "web": "https://podsmrkem.singltrek.cz/en/trailheads", "lift": false, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [15.6028, 50.7137] },
-      "properties": {"id": "spindleruv-mlyn", "name": "Bikepark Špindlerův Mlýn", "kind": "bikepark", "town": "Špindlerův Mlýn", "region": "Královéhradecký", "web": null, "lift": true, "trails_count": null, "verified": false} },
+      "properties": {"id": "spindleruv-mlyn", "name": "Bikepark Špindlerův Mlýn", "kind": "bikepark", "town": "Špindlerův Mlýn", "region": "Královéhradecký", "web": "https://www.mestospindleruvmlyn.cz/en/spindl-bike-park", "lift": true, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [15.78, 50.631] },
       "properties": {"id": "cerna-hora", "name": "Bikepark Černá hora", "kind": "bikepark", "town": "Janské Lázně", "region": "Královéhradecký", "web": "https://leto.skiresort.cz/en/letni-aktivity/cyklistika/", "lift": true, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [16.824, 50.1457] },
