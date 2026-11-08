@@ -52,8 +52,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .osm-cache/mtb.osm.pbf
-          key: mtb-pbf-v3-${{ steps.day.outputs.date }}
-          restore-keys: mtb-pbf-v3-
+          key: mtb-pbf-v4-${{ steps.day.outputs.date }}
+          restore-keys: mtb-pbf-v4-
       - if: steps.pbf.outputs.cache-hit != 'true' && hashFiles('.osm-cache/mtb.osm.pbf') != ''
         run: mv .osm-cache/mtb.osm.pbf .osm-cache/mtb-stale.osm.pbf
       # lajny, základna a parkoviště kolem našich parků (to, co jde na web)
@@ -76,7 +76,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: .osm-cache/mtb.osm.pbf
-          key: mtb-pbf-v3-${{ steps.day.outputs.date }}
+          key: mtb-pbf-v4-${{ steps.day.outputs.date }}
       # kontrola lajn proti veřejným GPS stopám OSM (#22); stopy v cache po týdnech
       - id: week
         run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"

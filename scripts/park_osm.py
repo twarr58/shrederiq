@@ -26,6 +26,7 @@ Příklad:
 from __future__ import annotations
 
 import argparse
+import heapq
 import json
 import re
 import sys
@@ -220,6 +221,136 @@ def select_trails(park_pt, osm, rel_names, radius=RADIUS_M, has_lift=None):
     return add_named_siblings(park_pt, osm, out, radius)
 
 
+# --- spojky mezi kusy lajny ---------------------------------------------------
+# OSM často nemá celou lajnu: výjezd (Šembeřské stezky: Stoupák) vede kus po neznačené
+# lesní cestě, dva kusy téže lajny dělí pár metrů pěšiny. Spojka se hledá po síti cest
+# (pěšiny, lesní cesty, cyklostezky) a kreslí se čárkovaně jako neznačený úsek lajny.
+
+NETWORK_HIGHWAYS = {"path", "track", "cycleway", "footway", "bridleway"}
+GAP_M = 150           # největší mezera mezi kusy jedné lajny, která se spojí
+UPHILL_LINK_M = 300   # výjezd se napojí na začátek jiné lajny nejvýš tak daleko (vzdušně)
+DETOUR = 2.5          # spojka smí být nejvýš tolikrát delší než vzdušná vzdálenost (+ SNAP_M)
+SNAP_M = 25           # konec lajny se napojí na síť cest do této vzdálenosti
+UPHILL_RE = re.compile(r"stoup|uphill|climb|vyjezd|výjezd", re.I)
+
+
+class Network:
+    """Graf cest z OSM: uzel = souřadnice vrcholu (sdílené vrcholy spojují cesty)."""
+
+    def __init__(self, osm: dict):
+        self.adj: dict[tuple, list[tuple[tuple, float]]] = defaultdict(list)
+        for w in osm["ways"].values():
+            t = w["tags"]
+            if t.get("highway") not in NETWORK_HIGHWAYS or t.get("bicycle") == "no" or t.get("access") in ("no", "private"):
+                continue
+            pts = [(round(lat, 6), round(lon, 6)) for lat, lon in w["coords"]]
+            for a, b in zip(pts, pts[1:]):
+                d = haversine_m(*a, *b)
+                self.adj[a].append((b, d))
+                self.adj[b].append((a, d))
+        self.nodes = list(self.adj)
+
+    def nearest(self, p: tuple[float, float], max_m: float = SNAP_M):
+        best, best_d = None, max_m
+        for n in self.nodes:
+            if abs(n[0] - p[0]) > 0.0004 or abs(n[1] - p[1]) > 0.0006:
+                continue
+            d = haversine_m(*n, *p)
+            if d <= best_d:
+                best, best_d = n, d
+        return best
+
+    def path(self, a: tuple[float, float], b: tuple[float, float], limit_m: float):
+        """Nejkratší cesta po síti z bodu a do bodu b (lat, lon), nejvýš limit_m; jinak None."""
+        na, nb = self.nearest(a), self.nearest(b)
+        if na is None or nb is None:
+            return None
+        dist, prev, heap = {na: 0.0}, {}, [(0.0, na)]
+        while heap:
+            d, n = heapq.heappop(heap)
+            if n == nb:
+                out = [n]
+                while out[-1] in prev:
+                    out.append(prev[out[-1]])
+                return [a] + out[::-1] + [b], d
+            if d > dist.get(n, float("inf")) or d > limit_m:
+                continue
+            for m, w in self.adj[n]:
+                nd = d + w
+                if nd < dist.get(m, float("inf")) and nd <= limit_m:
+                    dist[m], prev[m] = nd, n
+                    heapq.heappush(heap, (nd, m))
+        return None
+
+
+def _ends(f: dict) -> tuple[tuple[float, float], tuple[float, float]]:
+    c = f["geometry"]["coordinates"]
+    return (c[0][1], c[0][0]), (c[-1][1], c[-1][0])
+
+
+def _connector(src: dict, path: list[tuple[float, float]], length: float) -> dict:
+    p = src["properties"]
+    return {"type": "Feature",
+            "geometry": {"type": "LineString", "coordinates": [[round(lon, 5), round(lat, 5)] for lat, lon in path]},
+            "properties": {"park_id": p["park_id"], "name": p["name"], "difficulty": p["difficulty"], "access": False,
+                           "length_m": round(length), "osm": "connector", "connector": True}}
+
+
+def add_connectors(features: list[dict], network: Network) -> list[dict]:
+    """Spojky pro lajny jednoho parku: mezi kusy lajny se stejným názvem (mezera do GAP_M)
+    a z konce výjezdu („Stoupák“) na nejbližší začátek jiné lajny (do UPHILL_LINK_M)."""
+    trails = [f for f in features if not f["properties"].get("access") and f["properties"].get("name")]
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for f in trails:
+        groups[_fold(f["properties"]["name"])].append(f)
+    out, done = [], set()
+    for key, pieces in groups.items():
+        # mezery mezi kusy: vždy nejbližší dvojice konců z různých skupin, dokud jde spojit
+        comp = {id(f): i for i, f in enumerate(pieces)}
+        while True:
+            best = None
+            for i, f in enumerate(pieces):
+                for g in pieces[i + 1:]:
+                    if comp[id(f)] == comp[id(g)]:
+                        continue
+                    for a in _ends(f):
+                        for b in _ends(g):
+                            d = haversine_m(*a, *b)
+                            if 1 < d <= GAP_M and (best is None or d < best[0]):
+                                best = (d, f, g, a, b)
+            if not best:
+                break
+            d, f, g, a, b = best
+            found = network.path(a, b, DETOUR * d + SNAP_M)
+            old, new = comp[id(g)], comp[id(f)]
+            for k, v in comp.items():
+                if v == old:
+                    comp[k] = new
+            pair = tuple(sorted((a, b)))
+            if found and pair not in done:
+                done.add(pair)
+                out.append(_connector(f, *found))
+        # výjezd: konec posledního kusu (jednosměrné kusy jdou ve směru jízdy) na začátek sjezdu
+        if not UPHILL_RE.search(key):
+            continue
+        starts = {_ends(f)[0] for f in pieces}
+        tops = [_ends(f)[1] for f in pieces if all(haversine_m(*_ends(f)[1], *s) > 20 for s in starts)]
+        others = [_ends(f)[0] for f in trails if _fold(f["properties"]["name"]) != key]
+        best = None
+        for top in tops:
+            for s in others:
+                d = haversine_m(*top, *s)
+                if 20 < d <= UPHILL_LINK_M and (best is None or d < best[0]):
+                    best = (d, top, s)
+        if best:
+            d, top, s = best
+            found = network.path(top, s, DETOUR * d + SNAP_M)
+            if found:
+                src = next(f for f in pieces if _ends(f)[1] == top)
+                out.append(_connector(src, *found))
+    return out
+
+
 def inherit_difficulty(features: list[dict]) -> None:
     """Úsek bez obtížnosti převezme obtížnost nejdelšího úseku lajny se stejným názvem."""
     best: dict[str, tuple[int, str]] = {}
@@ -367,6 +498,7 @@ def build(parks: list[dict], osm: dict):
             if wid not in owner or d < _dist_to_line(anchor[owner[wid]], w["coords"]):
                 owner[wid] = pid
 
+    network = Network(osm)
     features, info, rows = [], {}, []
     for f in parks:
         pid = f["properties"]["id"]
@@ -401,6 +533,7 @@ def build(parks: list[dict], osm: dict):
                                "length_m": round(_length(w["coords"])), "osm": f"way/{wid}"},
             })
         inherit_difficulty([x for x in features if x["properties"]["park_id"] == pid])
+        features.extend(add_connectors([x for x in features if x["properties"]["park_id"] == pid], network))
         moved = round(haversine_m(*pts[pid], *base["base"])) if base["base"] else None
         rows.append((pid, f["properties"]["name"], base["base_source"], base["lift"], moved,
                      parking["name"] if parking and parking["name"] else ("ano" if parking else "–"),

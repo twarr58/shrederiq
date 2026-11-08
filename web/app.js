@@ -319,7 +319,10 @@
         }
       } else {
         const weight = f.properties.difficulty ? 4 : 3; // bez obtížnosti (šlapací okruhy) tenčí
-        parts.push([f, { color: T.difficultyInfo(f.properties.difficulty).color, weight, opacity: 0.95 }, tooltip, true]);
+        // spojka po neznačené cestě (doplněná mezi kusy lajny) čárkovaně
+        const dash = f.properties.connector ? { dashArray: "6 6" } : {};
+        parts.push([f, { color: T.difficultyInfo(f.properties.difficulty).color, weight, opacity: 0.95, ...dash },
+          f.properties.connector ? `${tooltip} · neznačený úsek (lesní cesta / pěšina)` : tooltip, true]);
       }
     }
     const make = (geom, style, interactive) => (Array.isArray(geom)
@@ -353,9 +356,13 @@
     drawTrails(s, mode);
     if (fit) {
       // na mobilu panel nahoře a karta dole překrývají mapu – lajny se vejdou mezi ně
+      // na počítači je panel vlevo a karta vpravo – lajny se vejdou mezi ně
+      const card = $("card").hidden ? null : $("card").getBoundingClientRect();
       const top = isMobile() ? $("panel").getBoundingClientRect().bottom + 10 : 30;
-      const bottom = isMobile() && !$("card").hidden ? window.innerHeight - $("card").getBoundingClientRect().top + 10 : 30;
-      map.fitBounds(trailLayer.getBounds(), { paddingTopLeft: [20, top], paddingBottomRight: [20, bottom], maxZoom: 15 });
+      const bottom = isMobile() && card ? window.innerHeight - card.top + 10 : 30;
+      const left = isMobile() ? 20 : $("panel").getBoundingClientRect().right + 20;
+      const right = !isMobile() && card ? window.innerWidth - card.left + 20 : 20;
+      map.fitBounds(trailLayer.getBounds(), { paddingTopLeft: [left, top], paddingBottomRight: [right, bottom], maxZoom: 15 });
     }
 
     const toggle = s.hasSlopes ? el("div", { className: "wx-toggle", role: "group", ariaLabel: "Barva lajn" },

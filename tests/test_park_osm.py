@@ -90,6 +90,21 @@ class ParkOsm(unittest.TestCase):
         self.assertIsNotNone(diffs["way/1"])
         self.assertEqual(set(diffs.values()), {diffs["way/1"]})
 
+    def test_connectors_bridge_gaps_and_lead_uphill_to_trail_start(self):
+        # Stoupák: dva kusy s mezerou 44 m po lesní cestě, horní konec 133 m od začátku sjezdu
+        # Klouzek po pěšině bez značek. Spojky se kreslí jako neznačené úseky lajny.
+        ways = [way(1, 50.000, 17.30, {"highway": "path", "bicycle": "designated", "foot": "no", "oneway": "yes", "name": "Stoupák"}, n=5),
+                way(2, 50.0044, 17.30, {"highway": "track"}, n=2, dlat=0.0004),                 # 50.0040 → 50.0044 (mezera)
+                way(3, 50.0044, 17.30, {"highway": "path", "bicycle": "designated", "foot": "no", "oneway": "yes", "name": "Stoupák"}, n=5),
+                way(4, 50.0084, 17.30, {"highway": "path"}, n=13, dlat=0.0001),                  # 50.0084 → 50.0096
+                way(5, 50.0096, 17.30, {"highway": "path", "mtb:scale": "2", "bicycle": "designated", "name": "Klouzek"}, n=5),
+                way(6, 50.0084, 17.31, {"highway": "path", "bicycle": "no"}, n=13, dlat=0.0001)]  # zákaz kol se nepoužije
+        ways[1]["geometry"] = [{"lat": 50.0040, "lon": 17.30}, {"lat": 50.0044, "lon": 17.30}]
+        fc, _, _ = po.build([park("s", 17.30, 50.004, "Šemberské stezky", lift=False)], po.parse({"elements": ways}))
+        con = [f["properties"] for f in fc["features"] if f["properties"].get("connector")]
+        self.assertEqual(sorted((c["name"], round(c["length_m"], -1)) for c in con), [("Stoupák", 40), ("Stoupák", 130)])
+        self.assertTrue(all(c["access"] is False for c in con))
+
     def test_bikepark_lines_without_mtb_scale(self):
         # Bikepark Kopřivná (Gravity Line, Fun Trail, Spicy Freeride): path + bicycle=designated
         # + mtb=single track, bez mtb:scale, daleko od lanovky

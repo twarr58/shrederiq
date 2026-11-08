@@ -31,7 +31,7 @@ from fetch_osm_parks import PARKS, haversine_m, is_purpose_built  # noqa: E402
 from park_osm import LIFTS, RADIUS_M  # noqa: E402
 
 TRAIL_HIGHWAYS = {"path", "track", "cycleway", "bridleway", "footway"}
-NAMED_PATH_HIGHWAYS = {"path", "cycleway", "bridleway", "footway"}
+NETWORK_HIGHWAYS = {"path", "track", "cycleway", "bridleway", "footway"}
 LIFT_TYPES = set(LIFTS.split("|"))
 MARGIN_M = 500  # rezerva navíc k RADIUS_M, ať se neuřízne cesta, která do okruhu jen zasahuje
 
@@ -258,10 +258,11 @@ def extract(pbf: str, parks: list[dict], radius_m: float = RADIUS_M + MARGIN_M) 
             tags = _tags(w)
             trail, lift = is_trail(tags) or w.id in member_ways, tags.get("aerialway") in LIFT_TYPES
             parking = tags.get("amenity") == "parking"
-            # pojmenovaná pěšina bez MTB značek: park_osm.py ji vezme jen jako pokračování
-            # lajny se stejným názvem (Peklák: kus Koridy, Drtikolu a Vyhlídky jen s oneway)
-            named_path = tags.get("highway") in NAMED_PATH_HIGHWAYS and bool(tags.get("name") or tags.get("mtb:name"))
-            if not (trail or lift or parking or named_path):
+            # pěšina / lesní cesta bez MTB značek: park_osm.py ji vezme jen jako pokračování
+            # lajny se stejným názvem (Peklák: kus Koridy jen s oneway) nebo jako spojku mezi
+            # kusy lajny (Šembeřské stezky: výjezd Stoupák vede kus po lesní cestě)
+            network = tags.get("highway") in NETWORK_HIGHWAYS
+            if not (trail or lift or parking or network):
                 return
             try:
                 geom = [(nd.location.lat, nd.location.lon) for nd in w.nodes if nd.location.valid()]
