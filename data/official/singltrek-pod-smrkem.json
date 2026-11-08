@@ -5,57 +5,155 @@
     {
       "name": "Nástupní",
       "difficulty": "green",
-      "length_m": 1800
+      "length_m": 1800,
+      "aliases": [
+        "Na Gruntě"
+      ]
     },
     {
       "name": "Hřebenáč",
       "difficulty": "blue",
-      "length_m": 9800
+      "length_m": 9800,
+      "aliases": [
+        "Schebicht",
+        "Serpentyny Cesarza Wilhema",
+        "Gierałtówka",
+        "Rückert",
+        "Mauer",
+        "Mühlloch",
+        "Zippelbusch"
+      ]
     },
     {
       "name": "Obora",
       "difficulty": "red",
-      "length_m": 6800
+      "length_m": 6800,
+      "aliases": [
+        "Kochweise",
+        "Dafyddova radost",
+        "K Zirkelu",
+        "Nad Modřínem",
+        "Spodní cesta"
+      ]
     },
     {
       "name": "Rapický okruh",
       "difficulty": "red",
-      "length_m": 3600
+      "length_m": 3600,
+      "aliases": [
+        "Drtírna",
+        "Posílací serpentýny",
+        "Bohatá útěcha",
+        "Pilařská"
+      ]
     },
     {
       "name": "Libverdská strana",
       "difficulty": "red",
-      "length_m": 7400
+      "length_m": 7400,
+      "aliases": [
+        "K Hubertce",
+        "Bukový svah",
+        "Nad Libverdou",
+        "Nad sudem",
+        "Pod táborem",
+        "Nad Přebytkem"
+      ]
     },
     {
       "name": "Ludvíkovský traverz",
       "difficulty": "red",
-      "length_m": 4300
+      "length_m": 4300,
+      "aliases": [
+        "Winkel",
+        "Všech andělů",
+        "Pod černým kamenem",
+        "Bystrou Vodou",
+        "U Ztraceného potoka"
+      ]
     },
     {
       "name": "Novoměstská strana",
       "difficulty": "red",
-      "length_m": 3000
+      "length_m": 3000,
+      "aliases": [
+        "Nad Kyselkou",
+        "Nad Liščí farmou"
+      ]
     },
     {
       "name": "Okolo Měděnce",
       "difficulty": "black",
-      "length_m": 7100
+      "length_m": 7100,
+      "aliases": [
+        "Oukrop",
+        "Nadílka štěstí",
+        "Weichicht",
+        "Silbergrundl",
+        "Kamíková cesta"
+      ]
     },
     {
       "name": "Hejnický Hřeben",
       "difficulty": "black",
-      "length_m": 11800
+      "length_m": 11800,
+      "aliases": [
+        "Lázeňská",
+        "Hřbitovní",
+        "Táhlá",
+        "Stoupavá",
+        "Gabriel I",
+        "Gabriel II",
+        "Kočičí",
+        "Nad Bílým Potokem",
+        "Nad Hejnicemi",
+        "K Bukovému svahu"
+      ]
     },
     {
       "name": "Nad Czerniawą",
       "difficulty": "black",
-      "length_m": 12600
+      "length_m": 12600,
+      "aliases": [
+        "Cesarskie żródło",
+        "Przestawiony Kamień",
+        "Strużyna",
+        "Stare Kopalnie",
+        "Czarny Potok",
+        "Opalienec",
+        "Tewa",
+        "Kolonia",
+        "Lipowa Droga",
+        "Pod Czerniawską Kopą",
+        "Pod Małą Górą"
+      ]
     },
     {
       "name": "Zajęcznik",
       "difficulty": "red",
-      "length_m": 14800
+      "length_m": 14800,
+      "aliases": [
+        "Pod Młynicą",
+        "Długa Góra",
+        "Grota",
+        "Kopalniana",
+        "Łupkowa Droga",
+        "Stara Leśniczówka",
+        "Dziurawa Droga",
+        "Koliba",
+        "Iglica",
+        "Podgórze"
+      ]
+    },
+    {
+      "name": "Asfaltový traverz",
+      "difficulty": "red",
+      "length_m": 3300,
+      "aliases": [
+        "Asfatová agónie",
+        "Měděná cesta",
+        "Smuteční cesta"
+      ]
     }
   ]
 }
