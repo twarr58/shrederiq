@@ -47,7 +47,7 @@ class Official(unittest.TestCase):
                "Stará medvědice": {"length_m": 4000, "difficulty": "red"},
                "Koutíkův sen": {"length_m": 3000, "difficulty": "black"}}
         res = oc.match([{"name": "Stará Medvědice"}, {"name": "Koutíkův sen"}], osm)
-        self.assertEqual([m[1] for m in res["matched"]], ["Stará medvědice", "Koutíkův sen"])
+        self.assertEqual([m[1] for m in res["matched"]], [["Stará medvědice"], ["Koutíkův sen"]])
         self.assertEqual(res["extra"], ["Koutíkův sen, Stará medvědice"])
 
     def test_apply_sets_official_difficulty(self):
@@ -63,6 +63,39 @@ class Official(unittest.TestCase):
         self.assertEqual([p["difficulty"] for p in ps], ["black", "black", "blue", "red"])
         self.assertEqual(ps[0]["difficulty_source"], "official")
         self.assertNotIn("difficulty_source", ps[2])  # bez barvy v seznamu zůstává OSM
+
+    def test_park_prefix_typo_alias_and_parts(self):
+        osm = {"Kozí trail": {"length_m": 3000, "difficulty": "blue"},
+               "TT Kozí trail": {"length_m": 1900, "difficulty": "blue"},          # předpona parku
+               "Rýbrcour": {"length_m": 800, "difficulty": "red"},                 # překlep v OSM
+               "TT Skratka k trailům": {"length_m": 300, "difficulty": None},       # předpona + překlep
+               "Spičák Trail Modrý horní část": {"length_m": 900, "difficulty": "blue"},
+               "Spičák Trail Modrý dolní část": {"length_m": 700, "difficulty": "blue"},
+               "iXS Downhill": {"length_m": 2900, "difficulty": "black"},
+               "Schody": {"length_m": 50, "difficulty": None}}
+        official = [{"name": "Kozí trail", "length_m": 5100}, {"name": "Rýbrcoul"}, {"name": "Zkratka k trailům"},
+                    {"name": "Modrý flow trail"}, {"name": "DHK", "aliases": ["iXS Downhill"]}]
+        drop = oc.park_tokens("trutnov-trails", "Trutnov Trails") | oc.park_tokens("tanvaldsky-spicak", "Tanvaldský Špičák")
+        res = oc.match(official, osm, drop)
+        got = {off["name"]: sorted(names) for off, names, _ in res["matched"]}
+        self.assertEqual(got, {"Kozí trail": ["Kozí trail", "TT Kozí trail"], "Rýbrcoul": ["Rýbrcour"],
+                               "Zkratka k trailům": ["TT Skratka k trailům"],
+                               "Modrý flow trail": ["Spičák Trail Modrý dolní část", "Spičák Trail Modrý horní část"],
+                               "DHK": ["iXS Downhill"]})
+        self.assertEqual(res["matched"][0][2]["length_m"], 4900)
+        self.assertEqual(res["extra"], ["Schody"])
+
+    def test_color_only_match_must_be_unique(self):
+        osm = {"Modrý A": {"length_m": 1, "difficulty": None}, "Modrý B": {"length_m": 1, "difficulty": None}}
+        self.assertEqual(oc.match([{"name": "Modrá"}], osm)["matched"], [])
+
+    def test_apply_renames_to_official_name(self):
+        fc = {"features": [{"properties": {"park_id": "trutnov-trails", "name": "TT Kozí trail", "difficulty": "red", "length_m": 100}}]}
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "trutnov-trails.json").write_text(json.dumps({"trails": [{"name": "Kozí trail", "difficulty": "blue"}]}))
+            oc.apply(fc, Path(d))
+        p = fc["features"][0]["properties"]
+        self.assertEqual((p["name"], p["osm_name"], p["difficulty"]), ("Kozí trail", "TT Kozí trail", "blue"))
 
     def test_fold_and_same(self):
         self.assertEqual(oc.fold("Modrý Flowčko "), "modry flowcko")
@@ -80,6 +113,7 @@ class Official(unittest.TestCase):
             for t in data["trails"]:
                 self.assertTrue(t["name"], path)
                 self.assertIn(t.get("difficulty"), (None, "green", "blue", "red", "black"), path)
+                self.assertIsInstance(t.get("aliases", []), list, path)
 
 
 if __name__ == "__main__":

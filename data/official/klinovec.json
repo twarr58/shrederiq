@@ -20,7 +20,11 @@
     },
     {
       "name": "DHK",
-      "length_m": 3000
+      "length_m": 3000,
+      "aliases": [
+        "iXS Downhill",
+        "Downhill"
+      ]
     }
   ]
 }

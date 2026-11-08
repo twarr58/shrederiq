@@ -1,0 +1,83 @@
+{
+  "source": "https://peklak.cz/bike-park/",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Bukovka",
+      "difficulty": "green",
+      "length_m": 1600
+    },
+    {
+      "name": "Čipera",
+      "difficulty": "green",
+      "length_m": 5100
+    },
+    {
+      "name": "Dechovka",
+      "difficulty": "green",
+      "length_m": 3600
+    },
+    {
+      "name": "Růžovka",
+      "length_m": 2500
+    },
+    {
+      "name": "Slunečná",
+      "difficulty": "blue",
+      "length_m": 800
+    },
+    {
+      "name": "Vyhlídka",
+      "difficulty": "blue",
+      "length_m": 450
+    },
+    {
+      "name": "Rodeo",
+      "difficulty": "blue",
+      "length_m": 1300
+    },
+    {
+      "name": "Mechovka",
+      "difficulty": "blue",
+      "length_m": 1600
+    },
+    {
+      "name": "Northshore",
+      "difficulty": "red",
+      "length_m": 200
+    },
+    {
+      "name": "Airline",
+      "difficulty": "red",
+      "length_m": 500,
+      "aliases": [
+        "Air Line"
+      ]
+    },
+    {
+      "name": "Korida",
+      "difficulty": "red",
+      "length_m": 1000
+    },
+    {
+      "name": "Malinovka",
+      "difficulty": "red",
+      "length_m": 1000
+    },
+    {
+      "name": "Zmije",
+      "difficulty": "black",
+      "length_m": 800
+    },
+    {
+      "name": "Drtikol",
+      "difficulty": "black",
+      "length_m": 550
+    },
+    {
+      "name": "DH1",
+      "difficulty": "black",
+      "length_m": 400
+    }
+  ]
+}

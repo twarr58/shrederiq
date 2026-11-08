@@ -1,0 +1,61 @@
+{
+  "source": "https://podsmrkem.singltrek.cz/content/files/180219_SPS_mapa_A4_2018.pdf",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Nástupní",
+      "difficulty": "green",
+      "length_m": 1800
+    },
+    {
+      "name": "Hřebenáč",
+      "difficulty": "blue",
+      "length_m": 9800
+    },
+    {
+      "name": "Obora",
+      "difficulty": "red",
+      "length_m": 6800
+    },
+    {
+      "name": "Rapický okruh",
+      "difficulty": "red",
+      "length_m": 3600
+    },
+    {
+      "name": "Libverdská strana",
+      "difficulty": "red",
+      "length_m": 7400
+    },
+    {
+      "name": "Ludvíkovský traverz",
+      "difficulty": "red",
+      "length_m": 4300
+    },
+    {
+      "name": "Novoměstská strana",
+      "difficulty": "red",
+      "length_m": 3000
+    },
+    {
+      "name": "Okolo Měděnce",
+      "difficulty": "black",
+      "length_m": 7100
+    },
+    {
+      "name": "Hejnický Hřeben",
+      "difficulty": "black",
+      "length_m": 11800
+    },
+    {
+      "name": "Nad Czerniawą",
+      "difficulty": "black",
+      "length_m": 12600
+    },
+    {
+      "name": "Zajęcznik",
+      "difficulty": "red",
+      "length_m": 14800
+    }
+  ]
+}
