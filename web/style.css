@@ -54,6 +54,7 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 .chip-status.dry { background: color-mix(in srgb, #2a9d8f 18%, transparent); }
 .chip-status.damp { background: color-mix(in srgb, #e9c46a 28%, transparent); }
 .chip-status.wet { background: color-mix(in srgb, #8d5524 28%, transparent); }
+.chip-status.closed { background: color-mix(in srgb, #e63946 20%, transparent); }
 .chip-status.wx:empty, .chip-status[hidden] { display: none; }
 .card-summary { margin: 0; padding: 0 14px 6px; font-size: 14px; }
 .card-summary b { font-size: 20px; font-weight: 700; }

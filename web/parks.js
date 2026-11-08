@@ -46,6 +46,7 @@
           errors.push(`${at}: parking musí být [lon, lat] v ČR`);
         }
       }
+      if (p.closed != null && (typeof p.closed !== "string" || !p.closed.trim())) errors.push(`${at}: closed musí být neprázdný text nebo null`);
       if (p.lift != null && typeof p.lift !== "boolean") errors.push(`${at}: lift musí být true / false / null`);
       if (p.trails_count != null && !(Number.isInteger(p.trails_count) && p.trails_count >= 0)) {
         errors.push(`${at}: trails_count musí být nezáporné celé číslo nebo null`);

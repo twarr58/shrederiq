@@ -148,7 +148,8 @@
     const wxChip = chip("počasí…", "wx");
     const eleChip = chip("", "ele");
     eleChip.hidden = true;
-    const chips = el("div", { className: "chips-row" }, wxChip,
+    const closedChip = p.closed ? el("span", { className: "chip-status closed", title: p.closed }, "mimo provoz") : "";
+    const chips = el("div", { className: "chips-row" }, closedChip, wxChip,
       p.lift ? chip(p.osm_lift ? `lanovka ${p.osm_lift}` : "lanovka / vlek") : "",
       p.parking ? chip(p.parking_name ? `P ${p.parking_name}` : "P u základny") : "",
       eleChip);
@@ -560,8 +561,8 @@
     for (const f of parks) {
       const p = f.properties;
       const [lon, lat] = f.geometry.coordinates;
-      const m = L.circleMarker([lat, lon], { radius: 7, weight: 2, color: "#fff", fillColor: color(p.kind), fillOpacity: 0.95 })
-        .bindTooltip(p.name, { direction: "top", offset: [0, -6] })
+      const m = L.circleMarker([lat, lon], { radius: 7, weight: 2, color: "#fff", fillColor: color(p.kind), fillOpacity: p.closed ? 0.35 : 0.95 })
+        .bindTooltip(p.closed ? `${p.name} (mimo provoz)` : p.name, { direction: "top", offset: [0, -6] })
         .on("click", () => selectPark(p.id))
         .addTo(map);
       markers.set(p.id, m);
