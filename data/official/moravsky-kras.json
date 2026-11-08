@@ -6,16 +6,23 @@
       "name": "Stoupací"
     },
     {
-      "name": "Jedlovice"
+      "name": "Jedlovice",
+      "difficulty": "blue"
     },
     {
       "name": "Duchoslav"
     },
     {
-      "name": "Tipeček"
+      "name": "Tipeček",
+      "difficulty": "red"
     },
     {
-      "name": "Rakovecký"
+      "name": "U Konvičky",
+      "difficulty": "blue"
+    },
+    {
+      "name": "Rakovecký",
+      "difficulty": "red"
     },
     {
       "name": "Pod cestou",

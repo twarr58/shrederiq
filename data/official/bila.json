@@ -1,0 +1,26 @@
+{
+  "source": "https://www.skibila.cz/leto/bikepark/",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Refresh trail",
+      "difficulty": "blue",
+      "length_m": 3000
+    },
+    {
+      "name": "Rock’n’Roll trail",
+      "difficulty": "red",
+      "length_m": 2100
+    },
+    {
+      "name": "Medvěd trail"
+    },
+    {
+      "name": "Propojovací trail",
+      "length_m": 400
+    },
+    {
+      "name": "Skills centrum"
+    }
+  ]
+}
