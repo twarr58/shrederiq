@@ -15,7 +15,7 @@
     <p class="sub">Bikeparky, trailparky a singltreky v ČR</p>
     <div class="row">
       <input id="search" type="search" placeholder="Hledat park, obec, kraj…" autocomplete="off">
-      <button id="locate" type="button" title="Seřadit podle mé polohy" aria-label="Moje poloha">📍</button>
+      <button id="locate" type="button" title="Seřadit podle mé polohy" aria-label="Moje poloha"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12z"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><path d="M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg></button>
     </div>
     <div class="row chips">
       <button id="toggle-list" type="button" class="chip" aria-expanded="false" aria-controls="list">Seznam parků</button>
@@ -34,6 +34,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="config.js"></script>
+  <script src="icons.js"></script>
   <script src="parks.js"></script>
   <script src="weather.js"></script>
   <script src="nav.js"></script>

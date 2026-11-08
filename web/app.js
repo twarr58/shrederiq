@@ -12,6 +12,7 @@
   const $ = (id) => document.getElementById(id);
   const num = (x) => String(x).replace(".", ","); // české desetinné číslo
   const plural = (n, one, few, many) => `${n} ${n === 1 ? one : n >= 2 && n <= 4 ? few : many}`;
+  const icon = window.ShrederiqIcons.icon;
   const el = (tag, props, ...children) => {
     const n = Object.assign(document.createElement(tag), props || {});
     n.append(...children.flat());
@@ -138,11 +139,15 @@
   try { openSections = { ...openSections, ...JSON.parse(localStorage.getItem("shrederiq.sections") || "{}") }; } catch (_) { /* bez storage */ }
 
   function renderCard(p) {
-    const close = el("button", { className: "close", type: "button", title: "Zavřít", ariaLabel: "Zavřít" }, "×");
+    const close = el("button", { className: "card-btn", type: "button", title: "Zavřít park", ariaLabel: "Zavřít park" }, icon("close"));
     close.addEventListener("click", () => selectPark(null));
+    // sbalit kartu na lištu s názvem: lajny zůstanou v mapě
+    const fold = el("button", { className: "card-btn fold", type: "button" });
+    fold.addEventListener("click", () => setCardMin(!cardMin));
+    const tools = el("div", { className: "card-tools" }, fold, close);
 
     const where = P.describePark(p).find(([k]) => k === "Lokalita")[1];
-    const head = el("div", { className: "card-head" },
+    const head = el("div", { className: "card-head", title: "Sbalit / rozbalit kartu" },
       el("h2", {}, p.name),
       el("p", { className: "card-sub" }, el("i", { className: `dot ${p.kind}` }), `${P.KINDS[p.kind] || p.kind} · ${where}`));
 
@@ -179,12 +184,33 @@
       return d;
     });
 
-    $("card").replaceChildren(close, head, chips, summary, bar, actions, ...sections);
+    head.addEventListener("click", (e) => { if (!e.target.closest("a, button")) setCardMin(!cardMin); });
+    $("card").replaceChildren(tools, head, summary, chips, bar, actions, ...sections);
     $("card").hidden = false;
+    setCardMin(cardMin);
     $("card").scrollTop = 0;
     loadTrails(p.id, trails, { summary, bar, eleChip });
     loadWeather(p.id, weather, wxChip); // jeden dotaz: chip hned, předpověď do sekce
   }
+
+  // Sbalená karta = jen název a souhrn lajn. Na mobilu se karta otevírá sbalená,
+  // aby byla vidět mapa s lajnami; ťuknutí do mapy ji zase sbalí.
+  const isMobile = () => window.matchMedia("(max-width: 640px)").matches;
+  let cardMin = isMobile();
+  function setCardMin(min) {
+    cardMin = min;
+    const card = $("card");
+    card.classList.toggle("min", min);
+    const fold = card.querySelector(".fold");
+    if (fold) {
+      fold.replaceChildren(icon(min ? "chevron-up" : "chevron-down"));
+      fold.title = min ? "Rozbalit kartu" : "Sbalit kartu (lajny zůstanou v mapě)";
+      fold.setAttribute("aria-label", fold.title);
+      fold.setAttribute("aria-expanded", String(!min));
+    }
+    if (min) card.scrollTop = 0;
+  }
+  map.on("click", () => { if (activeId && isMobile() && !cardMin) setCardMin(true); });
 
   function renderInfo(p) {
     const dl = el("dl");
@@ -259,31 +285,45 @@
   function drawTrails(s, mode) {
     clearTrails();
     trailLayer = L.featureGroup();
+    // Lajny mají bílý obrys: podklad Mapy.com outdoor kreslí tytéž trasy tečkovaně,
+    // bez obrysu se čáry slévají. Canvas kreslí vrstvy v pořadí jejich id (L.stamp),
+    // proto se nejdřív vytvoří všechny obrysy a teprve potom lajny.
+    const parts = []; // [latlngs nebo GeoJSON, styl, tooltip]
     for (const f of s.features) {
       if (f.properties.access) { // lesní / přístupová cesta – tence a čárkovaně, není to lajna
-        L.geoJSON(f, { style: { color: "#8a8f98", weight: 2, opacity: 0.8, dashArray: "4 4" }, renderer: trailRenderer })
-          .bindTooltip(`lesní / přístupová cesta · ${N.formatDistance(f.properties.length_m)}`, { sticky: true }).addTo(trailLayer);
+        parts.push([f, { color: "#8a8f98", weight: 2, opacity: 0.8, dashArray: "4 4" }, `lesní / přístupová cesta · ${N.formatDistance(f.properties.length_m)}`, false]);
         continue;
       }
       const runs = mode === "slope" ? T.slopeRuns(f) : null;
       const tooltip = trailTooltip(f.properties);
       if (runs) {
         for (const r of runs) {
-          L.polyline(r.coordinates.map(([lon, lat]) => [lat, lon]), { color: r.color, weight: 5, opacity: 0.95, renderer: trailRenderer })
-            .bindTooltip(`${tooltip} · tady ${r.slopeMax} %`, { sticky: true }).addTo(trailLayer);
+          parts.push([r.coordinates.map(([lon, lat]) => [lat, lon]), { color: r.color, weight: 5, opacity: 0.95 }, `${tooltip} · tady ${r.slopeMax} %`, true]);
         }
       } else {
-        L.geoJSON(f, { style: { color: T.difficultyInfo(f.properties.difficulty).color, weight: 4, opacity: 0.9 }, renderer: trailRenderer })
-          .bindTooltip(tooltip, { sticky: true }).addTo(trailLayer);
+        const weight = f.properties.difficulty ? 4 : 3; // bez obtížnosti (šlapací okruhy) tenčí
+        parts.push([f, { color: T.difficultyInfo(f.properties.difficulty).color, weight, opacity: 0.95 }, tooltip, true]);
       }
     }
+    const make = (geom, style, interactive) => (Array.isArray(geom)
+      ? L.polyline(geom, { ...style, interactive, renderer: trailRenderer })
+      : L.geoJSON(geom, { style, interactive, renderer: trailRenderer }));
+    for (const [geom, style, , cased] of parts) {
+      if (cased) make(geom, { color: "#fff", weight: style.weight + 3, opacity: 0.85 }, false).addTo(trailLayer);
+    }
+    for (const [geom, style, tooltip] of parts) make(geom, style, true).bindTooltip(tooltip, { sticky: true }).addTo(trailLayer);
     trailLayer.addTo(map);
   }
 
   function renderTrails(s, box, fit) {
     const mode = s.hasSlopes ? trailColor : "difficulty";
     drawTrails(s, mode);
-    if (fit) map.fitBounds(trailLayer.getBounds(), { padding: [30, 30], maxZoom: 15 });
+    if (fit) {
+      // na mobilu panel nahoře a karta dole překrývají mapu – lajny se vejdou mezi ně
+      const top = isMobile() ? $("panel").getBoundingClientRect().bottom + 10 : 30;
+      const bottom = isMobile() && !$("card").hidden ? window.innerHeight - $("card").getBoundingClientRect().top + 10 : 30;
+      map.fitBounds(trailLayer.getBounds(), { paddingTopLeft: [20, top], paddingBottomRight: [20, bottom], maxZoom: 15 });
+    }
 
     const toggle = s.hasSlopes ? el("div", { className: "wx-toggle", role: "group", ariaLabel: "Barva lajn" },
       ...[["difficulty", "obtížnost"], ["slope", "sklon"]].map(([m, label]) => {
@@ -307,7 +347,7 @@
       el("tbody", {}, ...s.rows.map((r) => {
         const d = T.difficultyInfo(r.difficulty);
         return el("tr", { className: r.difficulty ? "" : "muted" },
-          el("td", {}, name(r), r.slopeMax != null ? el("small", { className: "muted" }, ` ↕ ${r.eleMax - r.eleMin} m · max ${r.slopeMax} %`) : ""),
+          el("td", {}, name(r), r.slopeMax != null ? el("small", { className: "muted trail-ele", title: "převýšení a největší sklon" }, icon("mountain"), ` ${r.eleMax - r.eleMin} m · max ${r.slopeMax} %`) : ""),
           el("td", { className: `diff-${r.difficulty || "unknown"}` }, el("i", { className: "swatch", style: `background:${d.color}` }), d.label),
           el("td", { className: "num" }, N.formatDistance(r.lengthM)));
       })),
@@ -446,7 +486,7 @@
     const c = s.current;
 
     const now = el("div", { className: "wx-now" },
-      el("span", { className: "wx-icon", title: c.label }, c.icon),
+      el("span", { className: "wx-icon", title: c.label }, icon(c.icon, c.label)),
       el("span", { className: "wx-temp" }, `${c.temperature} °C`),
       el("span", { className: "muted" }, `${c.label}, pocitově ${c.apparent} °C`, el("br"),
         `vítr ${c.windSpeed} km/h, nárazy ${c.windGusts} km/h`));
@@ -469,14 +509,14 @@
     const hourly = el("div", { className: "wx-hours" }, ...s.hourly.map((h) =>
       el("div", { className: "wx-hour", title: `${h.label}, srážky ${num(h.precipitation)} mm (${h.precipitationProbability} %), vítr ${h.windSpeed} km/h` },
         el("small", {}, `${h.hour}:00`),
-        el("span", { className: "wx-icon" }, h.icon),
+        el("span", { className: "wx-icon" }, icon(h.icon, h.label)),
         el("b", {}, `${Math.round(h.temperature)}°`),
         el("small", { className: h.precipitation > 0 ? "rain" : "muted" }, h.precipitation > 0 ? `${num(h.precipitation)} mm` : `${h.precipitationProbability} %`))));
 
     const daily = el("div", { className: "wx-days" }, ...s.daily.map((d) =>
       el("div", { className: "wx-day", title: `${d.label}, vítr až ${d.windMax} km/h` },
         el("b", {}, d.weekday),
-        el("span", { className: "wx-icon" }, d.icon),
+        el("span", { className: "wx-icon" }, icon(d.icon, d.label)),
         el("span", {}, `${d.min}° / ${d.max}°`),
         el("small", { className: d.precipitation > 0 ? "rain" : "muted" }, `${num(d.precipitation)} mm · ${d.precipitationProbability ?? 0} %`))));
 
@@ -564,7 +604,7 @@
     for (const f of parks) {
       const p = f.properties;
       const [lon, lat] = f.geometry.coordinates;
-      const m = L.circleMarker([lat, lon], { radius: 7, weight: 2, color: "#fff", fillColor: color(p.kind), fillOpacity: p.closed ? 0.35 : 0.95, pane: "parks" })
+      const m = L.circleMarker([lat, lon], { radius: 7, weight: 2, color: "#fff", fillColor: color(p.kind), fillOpacity: p.closed ? 0.35 : 0.95, pane: "parks", bubblingMouseEvents: false })
         .bindTooltip(p.closed ? `${p.name} (mimo provoz)` : p.name, { direction: "top", offset: [0, -6] })
         .on("click", () => selectPark(p.id))
         .addTo(map);

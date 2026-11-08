@@ -49,8 +49,8 @@ test("lokální čas v Praze včetně letního / zimního času", () => {
 });
 
 test("kódy počasí: den / noc a neznámý kód", () => {
-  assert.deepEqual(W.describeCode(0, 1), { icon: "☀️", label: "jasno" });
-  assert.equal(W.describeCode(0, 0).icon, "🌙");
+  assert.deepEqual(W.describeCode(0, 1), { icon: "sun", label: "jasno" });
+  assert.equal(W.describeCode(0, 0).icon, "moon");
   assert.equal(W.describeCode(95).label, "bouřka");
   assert.equal(W.describeCode(999).label, "neznámé");
 });
@@ -107,4 +107,11 @@ test("souhrn pro panel", () => {
   assert.equal(s.hourly.length, 8);
   assert.equal(s.daily.length, 3);
   assert.equal(s.elevation, 1123);
+});
+
+test("každý kód počasí má ikonu ze sady icons.js", () => {
+  const { names } = require("../web/icons.js");
+  for (let code = 0; code < 100; code++) {
+    for (const day of [0, 1]) assert.ok(names.includes(W.describeCode(code, day).icon), `kód ${code}, den ${day}`);
+  }
 });

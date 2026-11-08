@@ -26,29 +26,30 @@
     return `${API}?${q}`;
   }
 
-  // WMO weather codes → ikona + český popis (https://open-meteo.com/en/docs, sekce WMO)
+  // WMO weather codes → ikona (název z icons.js, den / noc) + český popis
+  // (https://open-meteo.com/en/docs, sekce WMO)
   const WMO = [
-    [[0], "☀️", "🌙", "jasno"],
-    [[1], "🌤️", "🌙", "skoro jasno"],
-    [[2], "⛅", "☁️", "polojasno"],
-    [[3], "☁️", "☁️", "zataženo"],
-    [[45, 48], "🌫️", "🌫️", "mlha"],
-    [[51, 53, 55], "🌦️", "🌧️", "mrholení"],
-    [[56, 57], "🌧️", "🌧️", "mrznoucí mrholení"],
-    [[61, 63], "🌧️", "🌧️", "déšť"],
-    [[65], "🌧️", "🌧️", "silný déšť"],
-    [[66, 67], "🌧️", "🌧️", "mrznoucí déšť"],
-    [[71, 73, 75, 77], "🌨️", "🌨️", "sněžení"],
-    [[80, 81], "🌦️", "🌧️", "přeháňky"],
-    [[82], "⛈️", "⛈️", "silné přeháňky"],
-    [[85, 86], "🌨️", "🌨️", "sněhové přeháňky"],
-    [[95], "⛈️", "⛈️", "bouřka"],
-    [[96, 99], "⛈️", "⛈️", "bouřka s krupobitím"],
+    [[0], "sun", "moon", "jasno"],
+    [[1], "cloud-sun", "moon", "skoro jasno"],
+    [[2], "cloud-sun", "cloud", "polojasno"],
+    [[3], "cloud", "cloud", "zataženo"],
+    [[45, 48], "fog", "fog", "mlha"],
+    [[51, 53, 55], "drizzle", "drizzle", "mrholení"],
+    [[56, 57], "drizzle", "drizzle", "mrznoucí mrholení"],
+    [[61, 63], "rain", "rain", "déšť"],
+    [[65], "rain", "rain", "silný déšť"],
+    [[66, 67], "rain", "rain", "mrznoucí déšť"],
+    [[71, 73, 75, 77], "snow", "snow", "sněžení"],
+    [[80, 81], "rain", "rain", "přeháňky"],
+    [[82], "storm", "storm", "silné přeháňky"],
+    [[85, 86], "snow", "snow", "sněhové přeháňky"],
+    [[95], "storm", "storm", "bouřka"],
+    [[96, 99], "storm", "storm", "bouřka s krupobitím"],
   ];
 
   function describeCode(code, isDay = 1) {
     const row = WMO.find(([codes]) => codes.includes(code));
-    if (!row) return { icon: "❔", label: "neznámé" };
+    if (!row) return { icon: "unknown", label: "neznámé" };
     return { icon: isDay ? row[1] : row[2], label: row[3] };
   }
 
