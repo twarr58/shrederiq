@@ -362,7 +362,10 @@
       const bottom = isMobile() && card ? window.innerHeight - card.top + 10 : 30;
       const left = isMobile() ? 20 : $("panel").getBoundingClientRect().right + 20;
       const right = !isMobile() && card ? window.innerWidth - card.left + 20 : 20;
-      map.fitBounds(trailLayer.getBounds(), { paddingTopLeft: [left, top], paddingBottomRight: [right, bottom], maxZoom: 15 });
+      // přiblížení jen na lajny (přístupové cesty bývají daleko a park by se zmenšil)
+      const trailsOnly = L.featureGroup(s.features.filter((f) => !f.properties.access).map((f) => L.geoJSON(f)));
+      const bounds = trailsOnly.getLayers().length ? trailsOnly.getBounds() : trailLayer.getBounds();
+      map.fitBounds(bounds, { paddingTopLeft: [left, top], paddingBottomRight: [right, bottom], maxZoom: 15 });
     }
 
     const toggle = s.hasSlopes ? el("div", { className: "wx-toggle", role: "group", ariaLabel: "Barva lajn" },
