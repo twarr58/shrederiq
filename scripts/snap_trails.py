@@ -163,7 +163,7 @@ def snap_feature(f: dict, cache: dict, route: Callable[[Point, Point, list[Point
     """Vrátí 'snapped' / 'kept' / 'skipped'. Upravuje f na místě."""
     p = f["properties"]
     coords = [tuple(c[:2]) for c in f["geometry"]["coordinates"]]
-    if p.get("access") or p.get("connector") or p.get("source") in ("gpx", "trailforks") or length_m(coords) < MIN_LENGTH_M:
+    if p.get("access") or p.get("connector") or p.get("source") in ("gpx", "trailforks", "mapy") or length_m(coords) < MIN_LENGTH_M:
         return "skipped"
     key = f"{p.get('osm') or p.get('name')}:{fingerprint(coords)}"
     entry = cache.get(key)

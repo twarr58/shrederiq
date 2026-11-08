@@ -38,6 +38,7 @@ jobs:
             .osm-cache/trailforks.json
             .osm-cache/snap.json
             .osm-cache/gps.json
+            .osm-cache/mapy_trails.json
           key: osm-parks-${{ github.run_id }}
           restore-keys: osm-parks-
       # Vyfiltrovaný výřez OSM (pár MB) se drží v cache po dnech – 800MB stahování
@@ -82,6 +83,14 @@ jobs:
       # Ruční GPX (data/gpx/<park_id>/*.gpx) pro parky, které v OSM lajny nemají
       - name: Trails from GPX files
         run: python3 scripts/gpx_trails.py --merge web/data/trails.geojson
+      # Lajny, které v OSM nejsou, z geokódování + routingu Mapy.com (data/mapy/*.json)
+      - name: Trails from Mapy.com (missing in OSM)
+        if: hashFiles('web/data/trails.geojson') != ''
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          MAPY_SERVER_KEY: ${{ secrets.MAPY_SERVER_KEY }}
+        run: python3 scripts/mapy_trails.py web/data/trails.geojson --cache .osm-cache/mapy_trails.json
       # Barvy lajn podle oficiálních seznamů provozovatelů (data/official/*.json), #22
       - name: Difficulty from official trail lists
         run: python3 scripts/official_check.py web/data/trails.geojson --apply --web web/data/official.json --report .osm-cache/official.md && cat .osm-cache/official.md >> "$GITHUB_STEP_SUMMARY"
@@ -138,6 +147,7 @@ jobs:
             .osm-cache/trailforks.json
             .osm-cache/snap.json
             .osm-cache/gps.json
+            .osm-cache/mapy_trails.json
           key: osm-parks-${{ github.run_id }}
 
       # Mapový podklad:

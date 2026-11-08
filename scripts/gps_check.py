@@ -464,7 +464,7 @@ def check(fc: dict, cache: dict, fetch, fit: bool = False) -> dict[str, dict]:
         fc["features"] = join_segments(fc["features"])
     by_park: dict[str, list[dict]] = defaultdict(list)
     for f in fc["features"]:
-        if not f["properties"].get("access") and not f["properties"].get("connector"):
+        if not f["properties"].get("access") and not f["properties"].get("connector") and f["properties"].get("source") != "mapy":
             by_park[f["properties"]["park_id"]].append(f)
     summary = {}
     # stopy všech parků najednou (sekvenčně to pro 32 parků trvalo 11 minut)
