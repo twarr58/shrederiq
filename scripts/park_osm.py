@@ -232,6 +232,8 @@ UPHILL_LINK_M = 300   # výjezd se napojí na začátek jiné lajny nejvýš tak
 DETOUR = 2.5          # spojka smí být nejvýš tolikrát delší než vzdušná vzdálenost (+ SNAP_M)
 SNAP_M = 25           # konec lajny se napojí na síť cest do této vzdálenosti
 UPHILL_RE = re.compile(r"stoup|uphill|climb|vyjezd|výjezd", re.I)
+TOUCH_M = 8           # konec kusu do této vzdálenosti od jiného kusu = kusy už navazují (odbočka v půlce)
+OVERLAP = 0.5         # spojka, která z víc než poloviny vede po už nakreslené lajně, se zahodí
 
 
 class Network:
@@ -288,6 +290,42 @@ def _ends(f: dict) -> tuple[tuple[float, float], tuple[float, float]]:
     return (c[0][1], c[0][0]), (c[-1][1], c[-1][0])
 
 
+def _line(f: dict) -> list[tuple[float, float]]:
+    return [(c[1], c[0]) for c in f["geometry"]["coordinates"]]
+
+
+def _touches(p: tuple[float, float], f: dict) -> bool:
+    return _dist_to_line(p, _line(f)) <= TOUCH_M
+
+
+def _samples(path: list[tuple[float, float]], step: float = 5.0, skip: float = 15.0) -> list[tuple[float, float]]:
+    """Body po step metrech podél cesty bez prvních a posledních skip metrů (u konců se
+    spojka lajny dotýká vždycky)."""
+    total = _length(path)
+    out, run = [], 0.0
+    for a, b in zip(path, path[1:]):
+        seg = haversine_m(*a, *b)
+        t = 0.0
+        while t <= seg:
+            pos = run + t
+            if skip <= pos <= total - skip:
+                k = t / seg if seg else 0.0
+                out.append((a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k))
+            t += step
+        run += seg
+    return out
+
+
+def _overlaps(path: list[tuple[float, float]], trails: list[dict]) -> bool:
+    """Vede spojka většinou po lajně, která už v mapě je?"""
+    pts = _samples(path)
+    if not pts:
+        return False
+    lines = [_line(f) for f in trails]
+    on = sum(1 for q in pts if any(_dist_to_line(q, ln) <= TOUCH_M for ln in lines))
+    return on > OVERLAP * len(pts)
+
+
 def _connector(src: dict, path: list[tuple[float, float]], length: float) -> dict:
     p = src["properties"]
     return {"type": "Feature",
@@ -307,6 +345,18 @@ def add_connectors(features: list[dict], network: Network) -> list[dict]:
     for key, pieces in groups.items():
         # mezery mezi kusy: vždy nejbližší dvojice konců z různých skupin, dokud jde spojit
         comp = {id(f): i for i, f in enumerate(pieces)}
+
+        def merge(f, g):
+            old, new = comp[id(g)], comp[id(f)]
+            for k, v in comp.items():
+                if v == old:
+                    comp[k] = new
+
+        # kusy, které na sebe už navazují (konec jednoho leží na druhém), jsou spojené
+        for f in pieces:
+            for g in pieces:
+                if f is not g and comp[id(f)] != comp[id(g)] and any(_touches(e, g) for e in _ends(f)):
+                    merge(f, g)
         while True:
             best = None
             for i, f in enumerate(pieces):
@@ -322,19 +372,17 @@ def add_connectors(features: list[dict], network: Network) -> list[dict]:
                 break
             d, f, g, a, b = best
             found = network.path(a, b, DETOUR * d + SNAP_M)
-            old, new = comp[id(g)], comp[id(f)]
-            for k, v in comp.items():
-                if v == old:
-                    comp[k] = new
+            merge(f, g)
             pair = tuple(sorted((a, b)))
-            if found and pair not in done:
+            if found and pair not in done and not _overlaps(found[0], trails):
                 done.add(pair)
                 out.append(_connector(f, *found))
         # výjezd: konec posledního kusu (jednosměrné kusy jdou ve směru jízdy) na začátek sjezdu
         if not UPHILL_RE.search(key):
             continue
         starts = {_ends(f)[0] for f in pieces}
-        tops = [_ends(f)[1] for f in pieces if all(haversine_m(*_ends(f)[1], *s) > 20 for s in starts)]
+        tops = [_ends(f)[1] for f in pieces if all(haversine_m(*_ends(f)[1], *s) > 20 for s in starts)
+                and not any(_touches(_ends(f)[1], g) for g in trails if g is not f)]
         others = [_ends(f)[0] for f in trails if _fold(f["properties"]["name"]) != key]
         best = None
         for top in tops:
@@ -345,7 +393,7 @@ def add_connectors(features: list[dict], network: Network) -> list[dict]:
         if best:
             d, top, s = best
             found = network.path(top, s, DETOUR * d + SNAP_M)
-            if found:
+            if found and not _overlaps(found[0], trails):
                 src = next(f for f in pieces if _ends(f)[1] == top)
                 out.append(_connector(src, *found))
     return out
