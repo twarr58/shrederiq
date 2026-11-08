@@ -105,7 +105,9 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   `scripts/osm_extract.sh` ho stáhne, `osmium tags-filter` vybere MTB cesty, lanovky,
   parkoviště a relace `route=mtb` a `scripts/osm_extract.py` (pyosmium) z toho vytáhne
   okolí parků. Overpass se už nepoužívá (býval přetížený a části dotazů občas tiše
-  vynechá.
+  vynechá. Vyfiltrovaný výřez se drží v Actions cache po dnech; stahování z Geofabriku
+  má rozpočet 18 minut s navazováním a když ho nestihne, použije se včerejší výřez
+  (`MTB_PBF_FALLBACK`), takže pomalý Geofabrik nasazení neshodí.
 - Výstup je `web/data/trails.geojson` a `web/data/parks_osm.json`. Soubory nejsou v repu,
   generuje je workflow `pages` při deployi a jednou týdně (s cache pro výpadky Overpass).
   Web posune bod neověřeného parku (`verified` není `true`) na základnu, ukáže

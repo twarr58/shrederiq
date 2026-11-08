@@ -44,14 +44,21 @@ jobs:
       # z Geofabriku pak proběhne jen jednou denně, ne při každém běhu.
       - id: day
         run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
+      # Dnešní výřez z cache; když není, obnoví se nejnovější starší a odloží se jako
+      # záloha pro případ, že Geofabrik nestihne (osm_extract.sh, MTB_PBF_FALLBACK).
+      - id: pbf
+        uses: actions/cache/restore@v4
         with:
           path: .osm-cache/mtb.osm.pbf
           key: mtb-pbf-v2-${{ steps.day.outputs.date }}
+          restore-keys: mtb-pbf-v2-
+      - if: steps.pbf.outputs.cache-hit != 'true' && hashFiles('.osm-cache/mtb.osm.pbf') != ''
+        run: mv .osm-cache/mtb.osm.pbf .osm-cache/mtb-stale.osm.pbf
       - name: Park data from OSM
         timeout-minutes: 30
         env:
           MTB_PBF: .osm-cache/mtb.osm.pbf
+          MTB_PBF_FALLBACK: .osm-cache/mtb-stale.osm.pbf
         run: |
           mkdir -p .osm-cache
           rm -f .osm-cache/fresh.json
@@ -66,6 +73,12 @@ jobs:
             echo "::warning::no OSM data source available, deploying without trails and bases"
           fi
           [ -f .osm-cache/summary.md ] && cat .osm-cache/summary.md >> "$GITHUB_STEP_SUMMARY" || true
+      # čerstvě stažený výřez pod dnešní klíč (starší záloha se pod něj neukládá)
+      - if: steps.pbf.outputs.cache-hit != 'true' && hashFiles('.osm-cache/mtb.osm.pbf') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .osm-cache/mtb.osm.pbf
+          key: mtb-pbf-v2-${{ steps.day.outputs.date }}
       # Ruční GPX (data/gpx/<park_id>/*.gpx) pro parky, které v OSM lajny nemají
       - name: Trails from GPX files
         run: python3 scripts/gpx_trails.py --merge web/data/trails.geojson
