@@ -1,0 +1,24 @@
+{
+  "source": "https://moninec.nhr.cz/storage/media/2025/05/16/mapa-bikepark.pdf",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Easy trail",
+      "difficulty": "blue"
+    },
+    {
+      "name": "Freeride/DH",
+      "difficulty": "red",
+      "aliases": [
+        "Červený trail Monínec"
+      ]
+    },
+    {
+      "name": "Nort Shore trail",
+      "difficulty": "black"
+    },
+    {
+      "name": "Enduro"
+    }
+  ]
+}

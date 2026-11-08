@@ -15,17 +15,28 @@
     {
       "name": "OAKLEY trail",
       "difficulty": "red",
-      "length_m": 4700
+      "length_m": 4700,
+      "aliases": [
+        "červená - Lesní trail"
+      ]
     },
     {
       "name": "Mamutí trail",
       "difficulty": "black",
-      "length_m": 4000
+      "length_m": 4000,
+      "aliases": [
+        "černá - Mamutovka",
+        "černá - Mamutovka AIR",
+        "černá - Mamutovka DH"
+      ]
     },
     {
       "name": "Downhill trail",
       "difficulty": "black",
-      "length_m": 2000
+      "length_m": 2000,
+      "aliases": [
+        "černá - DH"
+      ]
     },
     {
       "name": "Stoupák",

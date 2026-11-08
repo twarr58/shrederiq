@@ -11,8 +11,8 @@ Pro každý park se souborem data/official/<park_id>.json:
   python3 scripts/official_check.py web/data/trails.geojson --report out/official.md
   python3 scripts/official_check.py web/data/trails.geojson --apply   # barvy z oficiálních seznamů do lajn
 
---apply přepíše obtížnost spárovaných lajn barvou ze seznamu provozovatele (vlastnost
-`difficulty_source: "official"`): značení parku je to, co jezdec vidí na místě, mtb:scale
+--apply přepíše jméno a obtížnost spárovaných lajn podle seznamu provozovatele (původní
+jméno zůstane v `osm_name`, obtížnost s `difficulty_source: "official"`): značení parku je to, co jezdec vidí na místě, mtb:scale
 v OSM je technická škála a často se liší.
 """
 from __future__ import annotations
@@ -34,17 +34,21 @@ def fold(s: str | None) -> str:
     return "".join(c for c in s if unicodedata.category(c) != "Mn").lower().strip()
 
 
-GENERIC = {"trail", "trat", "lajna", "line", "trasa", "stezka", "okruh", "cesta", "singltrek", "singletrail", "flowtrail"}
+GENERIC = {"trail", "trat", "lajna", "line", "trasa", "stezka", "okruh", "cesta", "singltrek", "singletrail", "flowtrail",
+           # části jedné lajny v OSM („Spičák Trail Modrý horní část“)
+           "horni", "dolni", "cast", "usek"}
 COLORS = {"modr": "blue", "cerven": "red", "cern": "black", "zelen": "green", "blue": "blue", "red": "red",
           "black": "black", "green": "green"}
+COLOR_TOKENS = set(COLORS.values())
+PARK_WORDS = {"bikepark", "bike", "park", "trailpark", "resort", "areal", "ski", "skiareal"}
 
 
-def tokens(s: str | None) -> set[str]:
+def tokens(s: str | None, drop: frozenset[str] = frozenset()) -> set[str]:
     """Jméno → množina slov bez obecných slov (trail, trať, lajna…), barvy sjednocené
-    („Modrý trail“ ~ „Modrá trať“ ~ blue)."""
+    („Modrý trail“ ~ „Modrá trať“ ~ blue). drop = slova z názvu parku („TT“, „Spičák“)."""
     out = set()
     for w in re.findall(r"[a-z0-9]+", fold(s)):
-        if w in GENERIC:
+        if w in GENERIC or w in drop:
             continue
         for stem, color in COLORS.items():
             if w.startswith(stem):
@@ -54,9 +58,45 @@ def tokens(s: str | None) -> set[str]:
     return out
 
 
+def park_tokens(park_id: str, name: str | None = None) -> frozenset[str]:
+    """Slova názvu parku, která OSM dává před jména lajn: id parku, slova názvu a zkratka
+    (Trutnov Trails → tt, Tanvaldský Špičák → tanvaldsky, spicak)."""
+    words = [w for w in re.findall(r"[a-z0-9]+", fold(name)) if w not in PARK_WORDS]
+    out = set(park_id.split("-")) | set(words)
+    if len(words) >= 2:
+        out.add("".join(w[0] for w in words))
+    return frozenset(w for w in out if w not in COLOR_TOKENS)
+
+
+def _near(a: str, b: str) -> bool:
+    """Překlep: stejně dlouhá slova (aspoň 5 znaků) s jedním jiným písmenem, nebo jedno písmeno navíc."""
+    if a == b:
+        return True
+    if min(len(a), len(b)) < 5 or abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        return sum(x != y for x, y in zip(a, b)) == 1
+    short, long_ = sorted((a, b), key=len)
+    return any(long_[:i] + long_[i + 1:] == short for i in range(len(long_)))
+
+
+def score(a: str | None, b: str | None, drop: frozenset[str] = frozenset()) -> int:
+    """Jak dobře si jména odpovídají: 3 stejná slova, 2 slova jednoho jsou podmnožinou
+    druhého, 1 stejná slova až na překlep, 0 nic. Shoda jen v barvě je 1 (slabá)."""
+    ta, tb = tokens(a, drop), tokens(b, drop)
+    if not ta or not tb:
+        return 0
+    if ta == tb:
+        return 3
+    if ta <= tb or tb <= ta:
+        return 1 if (ta & tb) <= COLOR_TOKENS else 2
+    if len(ta) == len(tb) and all(any(_near(x, y) for y in tb) for x in ta):
+        return 1
+    return 0
+
+
 def same(a: str | None, b: str | None) -> bool:
-    ta, tb = tokens(a), tokens(b)
-    return bool(ta and tb) and (ta <= tb or tb <= ta)
+    return score(a, b) > 0
 
 
 def osm_trails(fc: dict) -> dict[str, dict[str, dict]]:
@@ -81,39 +121,73 @@ def osm_trails(fc: dict) -> dict[str, dict[str, dict]]:
     return named
 
 
-def match(official: list[dict], osm: dict[str, dict]) -> dict:
-    """Vrací {"matched": [(off, name, osm_row)], "missing": [off], "extra": [name]}."""
-    used, matched, missing = set(), [], []
-    for off in official:
-        # přesná shoda slov má přednost před podmnožinou („Koutíkův sen, Stará medvědice“ je
-        # společný kousek dvou lajn, ne Stará Medvědice), při víc kandidátech ten nejdelší
-        cands = [n for n in osm if n not in used and same(off["name"], n)]
-        hit = max(cands, key=lambda n: (tokens(n) == tokens(off["name"]), osm[n]["length_m"]), default=None)
-        if hit:
-            used.add(hit)
-            matched.append((off, hit, osm[hit]))
+def match(official: list[dict], osm: dict[str, dict], drop: frozenset[str] = frozenset()) -> dict:
+    """Každé jméno z OSM k nejlépe odpovídajícímu oficiálnímu trailu (i alias); jeden trail
+    může mít víc jmen v OSM („Kozí trail“ i „TT Kozí trail“). Jméno, které sedí stejně dobře
+    na dva traily (společný úsek „Koutíkův sen, Stará medvědice“), zůstane nespárované.
+    Slabá shoda (jen barva, překlep) platí, jen když je jednoznačná z obou stran.
+    Vrací {"matched": [(off, [jména], součet)], "missing": [off], "extra": [jméno]}."""
+    def best(off, name):
+        return max(score(n, name, drop) for n in [off["name"], *off.get("aliases", [])])
+
+    pairs = {}  # jméno z OSM → index oficiálního trailu
+    for name in osm:
+        scores = [best(off, name) for off in official]
+        top = max(scores, default=0)
+        winners = [i for i, sc in enumerate(scores) if sc == top]
+        if top and len(winners) == 1:
+            pairs[name] = (winners[0], top)
+    # slabé shody jen jednoznačné: všechna slabě spárovaná jména trailu musí být po vypuštění
+    # „horní / dolní část“ stejná (části jedné lajny), jinak je to hádání
+    weak = defaultdict(set)
+    for name, (i, sc) in pairs.items():
+        if sc == 1:
+            weak[i].add(frozenset(tokens(name, drop)))
+    pairs = {n: i for n, (i, sc) in pairs.items() if sc > 1 or len(weak[i]) == 1}
+    # přesná shoda jména (po vypuštění slov parku) má přednost: když ji trail má, podmnožiny
+    # se k němu nepřidají (jsou to jiné lajny, např. „Mamutovka AIR“ vedle „Mamutovka“)
+    matched, missing = [], []
+    for i, off in enumerate(official):
+        names = [n for n, j in pairs.items() if j == i]
+        exact = [n for n in names if best(off, n) == 3]
+        if exact:
+            names = exact
+        if names:
+            longest = max(names, key=lambda n: osm[n]["length_m"])
+            row = {"length_m": sum(osm[n]["length_m"] for n in names), "difficulty": osm[longest]["difficulty"]}
+            matched.append((off, names, row))
         else:
             missing.append(off)
+    used = {n for _, names, _ in matched for n in names}
     extra = [n for n in osm if n not in used]
     return {"matched": matched, "missing": missing, "extra": extra}
 
 
+def _park_names() -> dict[str, str]:
+    path = OFFICIAL_DIR.parent.parent / "web" / "data" / "parks.geojson"
+    try:
+        return {f["properties"]["id"]: f["properties"].get("name") for f in json.loads(path.read_text())["features"]}
+    except (OSError, ValueError, KeyError):
+        return {}
+
+
 def compare(fc: dict, official_dir: Path = OFFICIAL_DIR) -> dict[str, dict]:
     by_park = osm_trails(fc)
+    names = _park_names()
     out = {}
     for path in sorted(official_dir.glob("*.json")):
         pid = path.stem
         data = json.loads(path.read_text())
-        res = match(data.get("trails", []), by_park.get(pid, {}))
+        res = match(data.get("trails", []), by_park.get(pid, {}), park_tokens(pid, names.get(pid)))
         diffs = []
-        for off, name, row in res["matched"]:
+        for off, osm_names, row in res["matched"]:
             notes = []
             if off.get("difficulty") and row["difficulty"] and off["difficulty"] != row["difficulty"]:
                 notes.append(f"obtížnost {off['difficulty']} vs OSM {row['difficulty']}")
             if off.get("length_m") and row["length_m"] and abs(row["length_m"] - off["length_m"]) > LENGTH_TOL * off["length_m"]:
                 notes.append(f"délka {off['length_m']} m vs OSM {row['length_m']} m")
             if notes:
-                diffs.append((off["name"], name, "; ".join(notes)))
+                diffs.append((off["name"], " + ".join(osm_names), "; ".join(notes)))
         out[pid] = {"source": data.get("source"), "official": len(data.get("trails", [])), "osm": len(by_park.get(pid, {})),
                     "matched": len(res["matched"]), "missing": [o["name"] for o in res["missing"]],
                     "extra": res["extra"], "diffs": diffs}
@@ -121,23 +195,30 @@ def compare(fc: dict, official_dir: Path = OFFICIAL_DIR) -> dict[str, dict]:
 
 
 def apply(fc: dict, official_dir: Path = OFFICIAL_DIR) -> int:
-    """Obtížnost spárovaných lajn podle oficiálního seznamu; vrací počet změněných úseků."""
+    """Spárované lajny dostanou jméno a obtížnost podle oficiálního seznamu (původní jméno
+    z OSM zůstane v osm_name). Vrací počet úseků, kterým se změnila obtížnost."""
     by_park = osm_trails(fc)
-    want: dict[tuple[str, str], str] = {}  # (park_id, fold(name)) → difficulty
+    names = _park_names()
+    want: dict[tuple[str, str], dict] = {}  # (park_id, fold(jméno z OSM)) → oficiální trail
     for path in sorted(official_dir.glob("*.json")):
         pid = path.stem
         data = json.loads(path.read_text())
-        for off, name, _ in match(data.get("trails", []), by_park.get(pid, {}))["matched"]:
-            if off.get("difficulty"):
-                want[(pid, fold(name))] = off["difficulty"]
+        for off, osm_names, _ in match(data.get("trails", []), by_park.get(pid, {}), park_tokens(pid, names.get(pid)))["matched"]:
+            for n in osm_names:
+                want[(pid, fold(n))] = off
     changed = 0
     for f in fc.get("features", []):
         p = f["properties"]
-        d = want.get((p.get("park_id"), fold(p.get("name"))))
-        if d and not p.get("access"):
-            if p.get("difficulty") != d:
+        off = want.get((p.get("park_id"), fold(p.get("name"))))
+        if not off or p.get("access"):
+            continue
+        if p["name"] != off["name"]:
+            p["osm_name"] = p["name"]
+            p["name"] = off["name"]
+        if off.get("difficulty"):
+            if p.get("difficulty") != off["difficulty"]:
                 changed += 1
-            p["difficulty"] = d
+            p["difficulty"] = off["difficulty"]
             p["difficulty_source"] = "official"
     return changed
 

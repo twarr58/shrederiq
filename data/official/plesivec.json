@@ -1,0 +1,46 @@
+{
+  "source": "https://www.plesivec.cz/leto/trailpark-plesivec/",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Helen",
+      "difficulty": "blue",
+      "length_m": 5500
+    },
+    {
+      "name": "Niki",
+      "difficulty": "red",
+      "length_m": 4200
+    },
+    {
+      "name": "Rock n Rolla",
+      "difficulty": "red"
+    },
+    {
+      "name": "Saint Terese"
+    },
+    {
+      "name": "NIKI Enduro",
+      "difficulty": "red",
+      "length_m": 1000
+    },
+    {
+      "name": "Daniela",
+      "difficulty": "black",
+      "length_m": 1300
+    },
+    {
+      "name": "Jelena Extreme",
+      "difficulty": "black",
+      "length_m": 2200
+    },
+    {
+      "name": "Easy Ella",
+      "difficulty": "black",
+      "length_m": 1300
+    },
+    {
+      "name": "Jump Line"
+    }
+  ]
+}

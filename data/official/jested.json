@@ -3,7 +3,10 @@
   "checked": "2026-11-08",
   "trails": [
     {
-      "name": "La Spaghetta"
+      "name": "La Spaghetta",
+      "aliases": [
+        "Blue Line"
+      ]
     },
     {
       "name": "El Masacre Downhill"
