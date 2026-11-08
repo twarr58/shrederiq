@@ -60,6 +60,15 @@ class MapyTrails(unittest.TestCase):
         fc, (added, missing) = self.run_add([{"name": "Saint Terese"}], {}, get)
         self.assertEqual((added, missing, fc["features"]), (0, 1, []))
 
+    def test_rename_osm_trails(self):
+        fc = {"features": [{"properties": {"park_id": "p", "name": "Flow Rider", "access": False}},
+                           {"properties": {"park_id": "q", "name": "Flow Rider", "access": False}}]}
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "p.json").write_text(json.dumps({"rename": {"Flow Rider": "Black Wood"}, "trails": []}))
+            self.assertEqual(mt.apply_renames(fc, Path(d)), 1)
+        self.assertEqual([f["properties"]["name"] for f in fc["features"]], ["Black Wood", "Flow Rider"])
+        self.assertEqual(fc["features"][0]["properties"]["osm_name"], "Flow Rider")
+
     def test_repo_files_name_parks_and_trails(self):
         parks = {f["properties"]["id"] for f in json.loads((mt.MAPY_DIR.parent.parent / "web/data/parks.geojson").read_text())["features"]}
         for path in mt.MAPY_DIR.glob("*.json"):

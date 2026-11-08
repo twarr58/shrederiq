@@ -112,6 +112,24 @@ def add_trails(fc: dict, parks: dict[str, tuple[float, float]], cache: dict, get
     return added, missing
 
 
+def apply_renames(fc: dict, mapy_dir: Path = MAPY_DIR) -> int:
+    """Přejmenuje lajny z OSM podle "rename" v data/mapy/<park>.json ({"jméno v OSM": "jméno
+    na Mapy.com"}); původní jméno zůstane v osm_name. Oficiální seznam (official_check) má
+    přednost – běží až potom. Vrací počet přejmenovaných úseků."""
+    renames = {}
+    for path in sorted(mapy_dir.glob("*.json")):
+        for old, new in json.loads(path.read_text()).get("rename", {}).items():
+            renames[(path.stem, old)] = new
+    n = 0
+    for f in fc.get("features", []):
+        p = f["properties"]
+        new = renames.get((p.get("park_id"), p.get("name")))
+        if new and not p.get("access"):
+            p["osm_name"], p["name"] = p["name"], new
+            n += 1
+    return n
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("trails", type=Path, help="trails.geojson (doplní se)")
@@ -121,16 +139,16 @@ def main(argv: list[str] | None = None) -> int:
     key = os.environ.get("MAPY_SERVER_KEY") or os.environ.get("MAPY_ELEVATION_KEY")
     cache = json.loads(args.cache.read_text()) if args.cache and args.cache.exists() else {}
     if not key and not cache:
-        print("mapy: bez MAPY_SERVER_KEY a bez cache, lajny z Mapy.com se nepřidají", file=sys.stderr)
-        return 0
+        print("mapy: bez MAPY_SERVER_KEY a bez cache, lajny z Mapy.com se nepřidají (jen přejmenování)", file=sys.stderr)
     parks = {f["properties"]["id"]: tuple(f["geometry"]["coordinates"])
              for f in json.loads(args.parks.read_text())["features"]}
     fc = json.loads(args.trails.read_text())
+    renamed = apply_renames(fc)
     added, missing = add_trails(fc, parks, cache, mapy_get(key) if key else None)
     args.trails.write_text(json.dumps(fc, ensure_ascii=False, separators=(",", ":")))
     if args.cache:
         args.cache.write_text(json.dumps(cache, ensure_ascii=False, separators=(",", ":")))
-    print(f"mapy: přidáno {added} lajn z Mapy.com, nenalezeno {missing}", file=sys.stderr)
+    print(f"mapy: přidáno {added} lajn z Mapy.com, nenalezeno {missing}, přejmenováno {renamed} úseků", file=sys.stderr)
     return 0
 
 
