@@ -125,7 +125,6 @@ jobs:
         env:
           MAPY_SERVER_KEY: ${{ secrets.MAPY_SERVER_KEY }}
           MAPY_ELEVATION_KEY: ${{ secrets.MAPY_ELEVATION_KEY }}
-          MAPY_API_KEY: ${{ secrets.MAPY_API_KEY }}
         run: |
           cp web/data/trails.geojson /tmp/trails.bak
           python3 scripts/elevation.py web/data/trails.geojson --cache .osm-cache/elevation.json \
