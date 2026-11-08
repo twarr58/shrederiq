@@ -75,5 +75,28 @@ class Snap(unittest.TestCase):
         self.assertIn("sedí", st.report({"features": [feature(snapped=True)]}))
 
 
+class Accept(unittest.TestCase):
+    # rovná lajna z OSM 0→445 m na sever; body trasy po ~11 m
+    LINE = [(14.6, 50.0 + i * 0.0001) for i in range(41)]
+
+    def test_switchback_tip_beyond_25_m_is_accepted(self):
+        # trasa jede po lajně, jen jedna špička serpentiny je 40 m stranou (OSM ji zkracuje tětivou)
+        route = [(14.6 + (0.00056 if i == 20 else 0.0), y) for i, (_, y) in enumerate(self.LINE)]
+        ok, dev = st.accept(self.LINE, route)
+        self.assertGreater(dev, st.MAX_DEV_M)
+        self.assertTrue(ok)
+
+    def test_out_and_back_spur_is_rejected(self):
+        # trasa dojede na 300 m, vrátí se na 220 m a pokračuje: odbočka tam a zpět
+        ys = [50.0 + i * 0.0001 for i in range(28)] + [50.0027 - i * 0.0001 for i in range(1, 8)] + [50.002 + i * 0.0001 for i in range(1, 21)]
+        route = [(14.6 + (0.0004 if 28 <= i < 35 else 0.0), y) for i, y in enumerate(ys)]
+        ok, _ = st.accept(self.LINE, route)
+        self.assertFalse(ok)
+
+    def test_different_path_is_rejected(self):
+        route = [(14.6005, y) for _, y in self.LINE]  # celou cestu ~36 m vedle
+        self.assertFalse(st.accept(self.LINE, route)[0])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -7,7 +7,9 @@ nedávají. Routing po jejich síti ale smí být zobrazený. Pro každou lajnu:
      MAX_WAYPOINTS, jinak se rovnoměrně proředí),
   2. /v1/routing/route?routeType=bike_mountain vrátí trasu po síti Mapy.com,
   3. když se trasa od OSM neodchýlí o víc než MAX_DEV_M (oboustranně) a není o víc než
-     MAX_LONGER delší, nahradí geometrii lajny (vlastnost "snapped": true);
+     MAX_LONGER delší, nahradí geometrii lajny (vlastnost "snapped": true); hrubě
+     nakreslenou lajnu (serpentiny jako tětivy) nahradí i s odchylkou do LOOSE_DEV_M,
+     když medián odchylky je do LOOSE_MEDIAN_M a trasa podél lajny necouvá;
      jinak zůstane OSM a lajna dostane "snap_dev" (metry) pro ruční kontrolu.
 Odpovědi se drží v cache podle id cesty a otisku souřadnic, takže se přepočítají jen
 změněné cesty. Lesní / přístupové cesty a lajny z GPX / Trailforks se nepřichytávají.
@@ -40,6 +42,12 @@ WAYPOINT_M = 100
 MAX_WAYPOINTS = 15
 MAX_DEV_M = 25
 MAX_LONGER = 1.5
+# OSM má lajnu hrubě (serpentiny jako tětivy): trasa po síti Mapy.com se ve špičkách
+# zatáček odchýlí víc než MAX_DEV_M, i když jede po té samé lajně. Pak se přijme, když
+# většinou sedí (medián) a podél lajny z OSM jen postupuje (žádná odbočka tam a zpět).
+LOOSE_DEV_M = 50
+LOOSE_MEDIAN_M = 8
+BACKTRACK_M = 15
 MIN_LENGTH_M = 60
 
 
@@ -61,6 +69,48 @@ def _dist_to_line(p: Point, line: list[Point]) -> float:
 def deviation_m(a: list[Point], b: list[Point]) -> float:
     """Oboustranná největší odchylka dvou lomených čar (Hausdorff po vrcholech)."""
     return max(max(_dist_to_line(p, b) for p in a), max(_dist_to_line(p, a) for p in b))
+
+
+def median_dev_m(a: list[Point], b: list[Point]) -> float:
+    """Medián vzdáleností vrcholů obou čar od té druhé."""
+    d = sorted([_dist_to_line(p, b) for p in a] + [_dist_to_line(p, a) for p in b])
+    return d[len(d) // 2]
+
+
+def _along(p: Point, line: list[Point]) -> float:
+    """Vzdálenost podél line k bodu line nejbližšímu k p."""
+    best, best_d, run = 0.0, float("inf"), 0.0
+    for a, b in zip(line, line[1:]):
+        seg = haversine_m(a, b)
+        d = _dist_to_segment(p, a, b)
+        if d < best_d:
+            da, db = haversine_m(p, a), haversine_m(p, b)
+            t = 0.0 if seg == 0 else max(0.0, min(1.0, (da * da - db * db + seg * seg) / (2 * seg * seg)))
+            best, best_d = run + t * seg, d
+        run += seg
+    return best
+
+
+def backtracks(route: list[Point], line: list[Point], tol_m: float = BACKTRACK_M) -> bool:
+    """Couvá trasa podél lajny o víc než tol_m (odbočka tam a zpět, jiná cesta)?"""
+    top = 0.0
+    for p in route:
+        s = _along(p, line)
+        if s < top - tol_m:
+            return True
+        top = max(top, s)
+    return False
+
+
+def accept(coords: list[Point], snapped: list[Point]) -> tuple[bool, float]:
+    """Nahradit OSM trasou z Mapy.com? Vrací (ano/ne, největší odchylka)."""
+    dev = deviation_m(coords, snapped)
+    if length_m(snapped) > MAX_LONGER * length_m(coords):
+        return False, dev
+    if dev <= MAX_DEV_M:
+        return True, dev
+    ok = dev <= LOOSE_DEV_M and median_dev_m(coords, snapped) <= LOOSE_MEDIAN_M and not backtracks(snapped, coords)
+    return ok, dev
 
 
 def length_m(line: list[Point]) -> float:
@@ -128,8 +178,8 @@ def snap_feature(f: dict, cache: dict, route: Callable[[Point, Point, list[Point
     if len(snapped) < 2:
         p["snap_dev"] = None
         return "kept"
-    dev = deviation_m(coords, snapped)
-    if dev <= MAX_DEV_M and length_m(snapped) <= MAX_LONGER * length_m(coords):
+    ok, dev = accept(coords, snapped)
+    if ok:
         f["geometry"]["coordinates"] = [list(c) for c in snapped]
         p["length_m"] = round(length_m(snapped))
         p["snapped"] = True
