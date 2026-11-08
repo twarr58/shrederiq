@@ -131,6 +131,16 @@ class ParkOsm(unittest.TestCase):
         fc, _, _ = po.build([park("p", 17.30, 50.002, "Singltrek", lift=False)], po.parse({"elements": ways + [rel]}))
         self.assertEqual(sorted(f["properties"]["osm"] for f in fc["features"] if not f["properties"].get("connector")), ["way/1", "way/2"])
 
+    def test_relation_connected_to_a_park_relation_is_taken(self):
+        # okruh B nezasahuje do okruhu parku, ale navazuje na okruh A, který ano
+        ways = [way(1, 50.000, 17.30, {"highway": "path"}, n=31, dlat=0.001),     # A: 50.000 → 50.030
+                way(2, 50.030, 17.30, {"highway": "path"}, n=11, dlat=0.001),     # B: navazuje na konec A
+                way(3, 50.060, 17.40, {"highway": "path"}, n=5)]                  # C: samostatný daleko
+        rels = [{"type": "relation", "id": i, "tags": {"route": "mtb", "name": n}, "members": [{"type": "way", "ref": w}]}
+                for i, n, w in ((1, "Okruh A", 1), (2, "Okruh B", 2), (3, "Okruh C", 3))]
+        fc, _, _ = po.build([park("p", 17.30, 50.002, "Síť", lift=False)], po.parse({"elements": ways + rels}))
+        self.assertEqual(sorted(f["properties"]["osm"] for f in fc["features"] if not f["properties"].get("connector")), ["way/1", "way/2"])
+
     def test_bikepark_lines_without_mtb_scale(self):
         # Bikepark Kopřivná (Gravity Line, Fun Trail, Spicy Freeride): path + bicycle=designated
         # + mtb=single track, bez mtb:scale, daleko od lanovky
