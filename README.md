@@ -129,6 +129,12 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   k lajnám z OSM, viz `data/gpx/README.md`.
 - Lajna ≠ úsek: jedna lajna bývá v OSM rozdělená na víc cest (way). Panel počítá
   pojmenované lajny, úseky bez názvu ukazuje zvlášť a lesní cesty kreslí šedě čárkovaně.
+- **Lajny, které v OSM nejsou** (`scripts/mapy_trails.py`, `data/mapy/<park_id>.json`): Mapy.com
+  je mají, ale vektorová data nedávají. Geokódování „Trail <název>“ vrátí začátek lajny
+  a její obdélník, routing Mapy.com (bike_mountain) z toho spočítá průběh. Kde by routing
+  jel po cestě vedle, má lajna v souboru ručně ověřené průjezdní body (`via`, případně
+  `start` / `end`). Lajna dostane `source: "mapy"`, barvu a jméno pak podle oficiálního
+  seznamu; přichytávání ani GPS ji neposouvají. Bez `MAPY_SERVER_KEY` se berou z cache.
 - **Sklon** (`scripts/elevation.py`): výšky se zjistí z Mapy.com Elevation API v bodech
   po ~25 m podél lajny (až 256 bodů na dotaz, výšky se ukládají do cache v Actions)
   a na body lajny se dopočítají podle vzdálenosti. Geometrie lajny zůstává původní,

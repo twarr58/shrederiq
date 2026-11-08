@@ -1,0 +1,18 @@
+{
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain) od začátku z geokódování; průběh ověřený na podkladu Mapy.com.",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Dirtzilla",
+      "query": "Dirtzilla"
+    },
+    {
+      "name": "Babyzilla",
+      "query": "Babyzilla"
+    },
+    {
+      "name": "Hypa Hypa Line - DH",
+      "query": "Hypa hypa Jaecoo DH"
+    }
+  ]
+}

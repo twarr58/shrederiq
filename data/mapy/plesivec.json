@@ -1,0 +1,18 @@
+{
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain). Začátek a obdélník lajny dá geokódování „Trail <název>“; průjezdní body (via) jsou ručně ověřené na podkladu Mapy.com, aby routing jel po lajně, ne po cestě vedle.",
+  "checked": "2026-11-08",
+  "trails": [
+    {"name": "Easy Ella"},
+    {"name": "Rock n Rolla", "query": "Trail Rock n rolla"},
+    {"name": "Jump Line"},
+    {"name": "Daniela",
+     "start": [12.838275, 50.355551], "end": [12.824223, 50.349835],
+     "via": [[12.834241, 50.357495], [12.82995, 50.358111], [12.82759, 50.357427], [12.828877, 50.355236]]},
+    {"name": "Jelena Extreme",
+     "start": [12.838533, 50.355141], "end": [12.823864, 50.34721],
+     "via": [[12.831731, 50.351841], [12.827268, 50.350472]]},
+    {"name": "NIKI Enduro",
+     "start": [12.836924, 50.356578], "end": [12.832246, 50.356496],
+     "via": [[12.834992, 50.356633]]}
+  ]
+}

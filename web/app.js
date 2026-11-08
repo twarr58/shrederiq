@@ -292,6 +292,7 @@
   function trailTooltip(p) {
     const parts = [p.name || "bez názvu", T.difficultyInfo(p.difficulty).label, N.formatDistance(p.length_m)];
     if (p.source === "trailforks") parts.push("GPX Trailforks");
+    else if (p.source === "mapy") parts.push("průběh z Mapy.com");
     else if (p.source === "gpx") parts.push("GPX");
     if (p.slope_max != null) parts.push(`max ${p.slope_max} %`, `${p.ele_min}–${p.ele_max} m n. m.`);
     return parts.join(" · ");
@@ -407,6 +408,7 @@
         s.sources.trailforks ? [" Lajny z GPX: © ", el("a", { href: "https://www.trailforks.com/", target: "_blank", rel: "noopener" }, "Trailforks"),
           ` (${plural(s.sources.trailforks, "úsek", "úseky", "úseků")}, jen pro nekomerční použití).`] : "",
         s.sources.gpx ? ` ${plural(s.sources.gpx, "úsek", "úseky", "úseků")} z ručně dodaných GPX.` : "",
+        s.sources.mapy ? ` ${plural(s.sources.mapy, "lajna chybí", "lajny chybí", "lajn chybí")} v OSM, průběh je z routingu Mapy.com.` : "",
         s.snapped ? ` Průběh ${plural(s.snapped, "úseku", "úseků", "úseků")} podle sítě Mapy.com (routing).` : "",
         s.hasSlopes ? " Výšky: Mapy.com, sklon je orientační (výškový model, okno ~75 m)." : "",
         s.missing && s.missing.length ? [` ${s.missing.length === 1 ? "1 lajna je jen na webu parku, v mapě zatím není"
