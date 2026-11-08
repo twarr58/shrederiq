@@ -82,6 +82,7 @@ Formát `web/data/parks.geojson` – `FeatureCollection` bodů (`[lon, lat]`), v
 | `lift` | bool \| null | lanovka / vlek |
 | `trails_count` | int \| null | počet trailů |
 | `parking` | `[lon, lat]` \| null | cíl navigace (parkoviště / dolní stanice); bez něj se naviguje na bod parku |
+| `closed` | string \| null | park je mimo provoz; text je krátké vysvětlení (karta ukáže čip „mimo provoz“, bod na mapě je průhledný) |
 | `verified` | bool | `false` = poloha a údaje jsou orientační |
 
 Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.

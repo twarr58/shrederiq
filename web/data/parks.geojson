@@ -12,7 +12,7 @@
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [15.2889, 50.7448] },
       "properties": {"id": "tanvaldsky-spicak", "name": "Bikepark Tanvaldský Špičák", "kind": "bikepark", "town": "Albrechtice v Jizerských horách", "region": "Liberecký", "web": "https://www.skijizerky.cz/cz/leto/bikepark-tanvaldsky-spicak/lanova-draha", "lift": true, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [15.47, 50.735] },
-      "properties": {"id": "rokytnice", "name": "Bikepark Rokytnice nad Jizerou", "kind": "bikepark", "town": "Rokytnice nad Jizerou", "region": "Liberecký", "web": "https://rokytnice.nhr.cz/cyklistika", "lift": true, "trails_count": 3, "verified": false} },
+      "properties": {"id": "rokytnice", "name": "Bikepark Rokytnice nad Jizerou", "kind": "bikepark", "town": "Rokytnice nad Jizerou", "region": "Liberecký", "web": "https://rokytnice.nhr.cz/cyklistika", "closed": "Bikepark byl v sezóně 2025 zavřený a letní nabídka střediska kola nezmiňuje.", "lift": true, "trails_count": 3, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [15.23, 50.925] },
       "properties": {"id": "singltrek-pod-smrkem", "name": "Singltrek pod Smrkem", "kind": "trail_center", "town": "Nové Město pod Smrkem", "region": "Liberecký", "web": "https://podsmrkem.singltrek.cz/en/trailheads", "lift": false, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [15.6028, 50.7137] },

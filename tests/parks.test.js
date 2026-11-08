@@ -35,6 +35,13 @@ test("validace kontroluje volitelná metadata", () => {
   assert.deepEqual(P.validateParks(fc(park({ web: "https://example.com", lift: null, trails_count: 12, parking: [17.1, 50.1] }))), []);
 });
 
+test("closed je neprázdný text nebo null", () => {
+  assert.equal(P.validateParks(fc(park({ closed: "" }))).length, 1);
+  assert.equal(P.validateParks(fc(park({ closed: true }))).length, 1);
+  assert.deepEqual(P.validateParks(fc(park({ closed: "zavřeno 2025" }))), []);
+  assert.deepEqual(P.validateParks(fc(park({ closed: null }))), []);
+});
+
 test("vyhledávání ignoruje diakritiku a hledá i v obci a kraji, výsledek je seřazený", () => {
   const all = fc(
     park({ id: "spicak", name: "Bikepark Špičák", town: "Železná Ruda", region: "Plzeňský" }),
