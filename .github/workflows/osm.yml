@@ -46,15 +46,22 @@ jobs:
       - uses: actions/checkout@v7
       - id: day
         run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
+      # Dnešní výřez z cache; když není, obnoví se nejnovější starší a odloží se jako
+      # záloha pro případ, že Geofabrik nestihne (osm_extract.sh, MTB_PBF_FALLBACK).
+      - id: pbf
+        uses: actions/cache/restore@v4
         with:
           path: .osm-cache/mtb.osm.pbf
           key: mtb-pbf-v2-${{ steps.day.outputs.date }}
+          restore-keys: mtb-pbf-v2-
+      - if: steps.pbf.outputs.cache-hit != 'true' && hashFiles('.osm-cache/mtb.osm.pbf') != ''
+        run: mv .osm-cache/mtb.osm.pbf .osm-cache/mtb-stale.osm.pbf
       # lajny, základna a parkoviště kolem našich parků (to, co jde na web)
       - name: Park data from OSM
         timeout-minutes: 30
         env:
           MTB_PBF: .osm-cache/mtb.osm.pbf
+          MTB_PBF_FALLBACK: .osm-cache/mtb-stale.osm.pbf
         run: |
           mkdir -p out
           scripts/osm_extract.sh out/parks-osm.json out/pumptracks.geojson
@@ -64,6 +71,12 @@ jobs:
           python3 scripts/gpx_trails.py --merge out/trails.geojson
           cat out/parks-summary.md >> "$GITHUB_STEP_SUMMARY"
           cat out/parks-summary.md
+      # čerstvě stažený výřez pod dnešní klíč (starší záloha se pod něj neukládá)
+      - if: steps.pbf.outputs.cache-hit != 'true' && hashFiles('.osm-cache/mtb.osm.pbf') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .osm-cache/mtb.osm.pbf
+          key: mtb-pbf-v2-${{ steps.day.outputs.date }}
       # kontrola lajn proti veřejným GPS stopám OSM (#22); stopy v cache po týdnech
       - id: week
         run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
@@ -89,7 +102,8 @@ jobs:
         continue-on-error: true
         timeout-minutes: 15
         run: |
-          python3 scripts/osm_extract.py .osm-cache/mtb.osm.pbf --out /dev/null --country out/country.json
+          PBF=.osm-cache/mtb.osm.pbf; [ -s "$PBF" ] || PBF=.osm-cache/mtb-stale.osm.pbf
+          python3 scripts/osm_extract.py "$PBF" --out /dev/null --country out/country.json
           python3 scripts/fetch_osm_parks.py \
             --cache out/country.json --report out/osm-report.md \
             --geojson out/osm-clusters.geojson --trails out/osm-trails.geojson
