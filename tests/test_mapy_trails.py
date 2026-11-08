@@ -68,6 +68,11 @@ class MapyTrails(unittest.TestCase):
             self.assertEqual(mt.apply_renames(fc, Path(d)), 1)
         self.assertEqual([f["properties"]["name"] for f in fc["features"]], ["Black Wood", "Flow Rider"])
         self.assertEqual(fc["features"][0]["properties"]["osm_name"], "Flow Rider")
+        fc = {"features": [{"properties": {"park_id": "p", "name": None, "osm": "way/1+way/2", "access": False}}]}
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "p.json").write_text(json.dumps({"rename": {"way/2": "Skill trail"}, "trails": []}))
+            self.assertEqual(mt.apply_renames(fc, Path(d)), 1)
+        self.assertEqual(fc["features"][0]["properties"]["name"], "Skill trail")
 
     def test_repo_files_name_parks_and_trails(self):
         parks = {f["properties"]["id"] for f in json.loads((mt.MAPY_DIR.parent.parent / "web/data/parks.geojson").read_text())["features"]}

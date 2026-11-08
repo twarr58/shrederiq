@@ -1,0 +1,56 @@
+{
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com. Úpa trail je ve dvou úsecích, protože routing Mapy.com nemá spojení v mezeře u ulice Na Kopci.",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Úpa trail",
+      "start": [
+        15.951397,
+        50.57333
+      ],
+      "end": [
+        15.953865,
+        50.574107
+      ],
+      "via": [
+        [
+          15.952792,
+          50.573985
+        ]
+      ]
+    },
+    {
+      "name": "Úpa trail",
+      "start": [
+        15.954251,
+        50.574121
+      ],
+      "end": [
+        15.96777,
+        50.571314
+      ],
+      "via": [
+        [
+          15.957084,
+          50.574421
+        ],
+        [
+          15.96262,
+          50.57472
+        ],
+        [
+          15.964766,
+          50.574516
+        ],
+        [
+          15.966053,
+          50.573753
+        ],
+        [
+          15.966911,
+          50.572267
+        ]
+      ]
+    }
+  ]
+}

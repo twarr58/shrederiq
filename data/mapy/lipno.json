@@ -1,0 +1,50 @@
+{
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com.",
+  "checked": "2026-11-08",
+  "rename": {
+    "Flowtrail": "Floutrejl Lipno"
+  },
+  "trails": [
+    {
+      "name": "Nad Studeným",
+      "start": [
+        14.188446,
+        48.652581
+      ],
+      "end": [
+        14.17997,
+        48.657067
+      ],
+      "via": [
+        [
+          14.187105,
+          48.652333
+        ],
+        [
+          14.185495,
+          48.651305
+        ],
+        [
+          14.184873,
+          48.651248
+        ],
+        [
+          14.185978,
+          48.652616
+        ],
+        [
+          14.186515,
+          48.653963
+        ],
+        [
+          14.185281,
+          48.655877
+        ],
+        [
+          14.182706,
+          48.656762
+        ]
+      ]
+    }
+  ]
+}

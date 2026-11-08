@@ -1,0 +1,12 @@
+{
+  "note": "Skillcentrum: na Mapy.com jedna MTB lajna „Skillcentrum“ (obdélník 16.8155–16.8159, 50.1496–50.1510) přes celou plochu, kde má OSM pumptrackové lajny – přejmenováno. Stoupák Mapy.com nezná.",
+  "checked": "2026-11-08",
+  "rename": {
+    "pumptrack": "Skillcentrum",
+    "pumptrack - modrá": "Skillcentrum",
+    "pumptrack - vracečka": "Skillcentrum",
+    "pumptrack - černá": "Skillcentrum",
+    "pumptrack - červená": "Skillcentrum"
+  },
+  "trails": []
+}

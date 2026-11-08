@@ -1,0 +1,23 @@
+{
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com.",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Mini trail",
+      "start": [
+        16.052946,
+        49.57984
+      ],
+      "end": [
+        16.053042,
+        49.579492
+      ],
+      "via": [
+        [
+          16.052989,
+          49.579666
+        ]
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain), body ověřené na podkladu Mapy.com. Jump lajna (černá) = černá tečkovaná u konce červené jump lajny; OSM „Jump line“ v tomto úseku vede po ní místo po červené tečkované (tu routing nemá celou). Enduro Rot a Stoupací trail Mapy.com jako lajnu nekreslí.",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Jump lajna",
+      "start": [
+        17.434557,
+        49.667176
+      ],
+      "end": [
+        17.434289,
+        49.667958
+      ],
+      "via": [
+        [
+          17.434707,
+          49.667385
+        ],
+        [
+          17.434707,
+          49.667628
+        ],
+        [
+          17.434654,
+          49.667784
+        ]
+      ]
+    }
+  ]
+}

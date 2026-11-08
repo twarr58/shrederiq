@@ -113,8 +113,8 @@ def add_trails(fc: dict, parks: dict[str, tuple[float, float]], cache: dict, get
 
 
 def apply_renames(fc: dict, mapy_dir: Path = MAPY_DIR) -> int:
-    """Přejmenuje lajny z OSM podle "rename" v data/mapy/<park>.json ({"jméno v OSM": "jméno
-    na Mapy.com"}); původní jméno zůstane v osm_name. Oficiální seznam (official_check) má
+    """Přejmenuje lajny z OSM podle "rename" v data/mapy/<park>.json ({"jméno v OSM" nebo
+    "way/<id>": "jméno na Mapy.com"}); původní jméno zůstane v osm_name. Oficiální seznam (official_check) má
     přednost – běží až potom. Vrací počet přejmenovaných úseků."""
     renames = {}
     for path in sorted(mapy_dir.glob("*.json")):
@@ -124,8 +124,11 @@ def apply_renames(fc: dict, mapy_dir: Path = MAPY_DIR) -> int:
     for f in fc.get("features", []):
         p = f["properties"]
         new = renames.get((p.get("park_id"), p.get("name")))
+        # klíč může být i id cesty v OSM ("way/123") – pro lajny, které v OSM nemají jméno
+        for way in (p.get("osm") or "").split("+"):
+            new = new or renames.get((p.get("park_id"), way))
         if new and not p.get("access"):
-            p["osm_name"], p["name"] = p["name"], new
+            p["osm_name"], p["name"] = p.get("name"), new
             n += 1
     return n
 
