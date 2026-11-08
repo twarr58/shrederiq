@@ -417,7 +417,7 @@ def join_segments(feats: list[dict]) -> list[dict]:
     groups: dict[tuple, list[dict]] = defaultdict(list)
     for f in feats:
         p = f["properties"]
-        key = (p.get("park_id"), p.get("name"), p.get("difficulty"), p.get("source"), bool(p.get("access")))
+        key = (p.get("park_id"), p.get("name"), p.get("difficulty"), p.get("source"), bool(p.get("access")), bool(p.get("connector")))
         groups[key].append(f)
     out = []
     for key, members in groups.items():
@@ -464,7 +464,7 @@ def check(fc: dict, cache: dict, fetch, fit: bool = False) -> dict[str, dict]:
         fc["features"] = join_segments(fc["features"])
     by_park: dict[str, list[dict]] = defaultdict(list)
     for f in fc["features"]:
-        if not f["properties"].get("access"):
+        if not f["properties"].get("access") and not f["properties"].get("connector"):
             by_park[f["properties"]["park_id"]].append(f)
     summary = {}
     # stopy všech parků najednou (sekvenčně to pro 32 parků trvalo 11 minut)
