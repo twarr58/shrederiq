@@ -3,7 +3,7 @@ name: pages
 on:
   push:
     branches: [main]
-    paths: [web/**, scripts/**, .github/workflows/pages.yml]
+    paths: [web/**, scripts/**, data/**, .github/workflows/pages.yml]
   # lajny z OpenStreetMap se obnovují jednou týdně
   schedule:
     - cron: "23 3 * * 1"
