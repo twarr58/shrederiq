@@ -154,7 +154,7 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   v 0,8–1,3× OSM a medián posunu je do 40 m (vlastnosti `gps_fit`, `gps_fit_shift_m`;
   souhrn běhu ukáže medián posunu a počty odmítnutých lajn podle důvodu).
 - **Oficiální seznamy trailů** (`data/official/<park>.json`, `scripts/official_check.py`):
-  opsané z webů provozovatelů (12 parků); při nasazení přepíšou obtížnost spárovaných
+  opsané z webů provozovatelů (13 parků); při nasazení přepíšou obtížnost spárovaných
   lajn barvou podle značení parku (`difficulty_source: "official"`) a workflow `osm` ukáže, co z nich v OSM chybí, co je
   v OSM navíc a kde se liší obtížnost nebo délka o víc než 30 %.
 - **Trailforks API** (`scripts/trailforks_trails.py`): park s vlastností `trailforks_rid`

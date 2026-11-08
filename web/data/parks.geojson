@@ -4,7 +4,7 @@
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [13.2166, 49.1685] },
       "properties": {"id": "spicak", "name": "Bikepark Špičák", "kind": "bikepark", "town": "Železná Ruda", "region": "Plzeňský", "web": "https://sumava.spicak.cz/cz/", "lift": true, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [12.9548, 50.3884] },
-      "properties": {"id": "klinovec", "name": "Trailpark Klínovec", "kind": "bikepark", "town": "Boží Dar / Loučná pod Klínovcem", "region": "Karlovarský", "web": "https://www.trailpark.cz/en/trail-park/", "lift": true, "trails_count": null, "verified": false} },
+      "properties": {"id": "klinovec", "name": "Trailpark Klínovec", "kind": "bikepark", "town": "Boží Dar / Loučná pod Klínovcem", "region": "Karlovarský", "web": "https://klinovec.cz/en/klinovec-summer/", "lift": true, "trails_count": 4, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [14.9795, 50.7368] },
       "properties": {"id": "jested", "name": "Bikepark Ještěd", "kind": "bikepark", "town": "Liberec", "region": "Liberecký", "web": "https://www.skijested.cz/en/the-perfect-day-on-jested/aktivity/bikepark-jested", "lift": true, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [15.433, 50.773] },
