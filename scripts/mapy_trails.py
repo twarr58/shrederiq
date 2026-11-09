@@ -81,6 +81,27 @@ def length_m(coords) -> float:
     return sum(_dist(a, b) for a, b in zip(coords, coords[1:]))
 
 
+def _fold(name: str | None) -> str:
+    return " ".join((name or "").lower().split())
+
+
+def drop_replaced(fc: dict, mapy_dir: Path = MAPY_DIR) -> int:
+    """Lajny označené "replace": true v data/mapy/<park>.json nahrazují stejnojmennou lajnu
+    z OSM, která je v OSM zakreslená hrubě (Klínovec: Rubín, Baron rovnými úseky přes údolí).
+    Úseky z OSM se jménem té lajny se zahodí. Vrací počet zahozených úseků."""
+    drop = set()
+    for path in sorted(mapy_dir.glob("*.json")):
+        for spec in json.loads(path.read_text()).get("trails", []):
+            if spec.get("replace"):
+                drop.add((path.stem, _fold(spec["name"])))
+                drop.update((path.stem, _fold(n)) for n in spec.get("replace_names", []))
+    before = len(fc["features"])
+    fc["features"] = [f for f in fc["features"]
+                      if f["properties"].get("source") == "mapy"
+                      or (f["properties"].get("park_id"), _fold(f["properties"].get("name"))) not in drop]
+    return before - len(fc["features"])
+
+
 def add_trails(fc: dict, parks: dict[str, tuple[float, float]], cache: dict, get: Get | None,
                mapy_dir: Path = MAPY_DIR) -> tuple[int, int]:
     """Vrací (přidáno lajn, nenalezeno)."""
@@ -147,11 +168,12 @@ def main(argv: list[str] | None = None) -> int:
              for f in json.loads(args.parks.read_text())["features"]}
     fc = json.loads(args.trails.read_text())
     renamed = apply_renames(fc)
+    replaced = drop_replaced(fc)
     added, missing = add_trails(fc, parks, cache, mapy_get(key) if key else None)
     args.trails.write_text(json.dumps(fc, ensure_ascii=False, separators=(",", ":")))
     if args.cache:
         args.cache.write_text(json.dumps(cache, ensure_ascii=False, separators=(",", ":")))
-    print(f"mapy: přidáno {added} lajn z Mapy.com, nenalezeno {missing}, přejmenováno {renamed} úseků", file=sys.stderr)
+    print(f"mapy: přidáno {added} lajn z Mapy.com, nenalezeno {missing}, přejmenováno {renamed} úseků, nahrazeno {replaced} úseků z OSM", file=sys.stderr)
     return 0
 
 
