@@ -1,6 +1,6 @@
 {
-  "note": "Skillcentrum: na Mapy.com jedna MTB lajna „Skillcentrum“ (obdélník 16.8155–16.8159, 50.1496–50.1510) přes celou plochu, kde má OSM pumptrackové lajny – přejmenováno. Stoupák: podle GPX provozovatele (eresort.dolnimorava.cz/route/routeDownload?id=99&format=gpx, 5,27 km) – routing Mapy.com ve 4 úsecích s body z GPX (odchylka od GPX do 4 m). Úseky OSM way/691899230 a way/741027871 leží na trase, ale jsou to přístupové cesty (access), které rename nepřejmenuje.",
-  "checked": "2026-11-08",
+  "note": "Skillcentrum: na Mapy.com jedna MTB lajna „Skillcentrum“ (obdélník 16.8155–16.8159, 50.1496–50.1510) přes celou plochu, kde má OSM pumptrackové lajny – přejmenováno. Stoupák: podle GPX provozovatele (eresort.dolnimorava.cz/route/routeDownload?id=99&format=gpx, 5,27 km) – routing Mapy.com ve 4 úsecích s body z GPX (odchylka od GPX do 4 m). Úseky OSM way/691899230 a way/741027871 leží na trase, ale jsou to přístupové cesty (access), které rename nepřejmenuje. Mlýnský trail a Downhill trail nahrazené (\"replace\") trasami Mapy.com po tečkovaných lajnách (OSM zakreslení hrubé). Selská AirLine na Mapy.com tečkovaně zakreslená není (OSM úseky vedou mimo tečkované lajny) – ponechána z OSM. Mlýnský trail: úsek podél silnice 4361 (Vyhlídka – lanovka) Mapy.com jako MTB lajnu nekreslí (přejezd po silnici), proto mezi východní a západní částí mezera.",
+  "checked": "2026-11-09",
   "rename": {
     "pumptrack": "Skillcentrum",
     "pumptrack - modrá": "Skillcentrum",
@@ -158,6 +158,372 @@
         [
           16.833629,
           50.151537
+        ]
+      ]
+    },
+    {
+      "name": "Mlýnský trail",
+      "replace": true,
+      "replace_names": [
+        "zelená - Mlýnský trail"
+      ],
+      "start": [
+        16.833152,
+        50.150881
+      ],
+      "end": [
+        16.83401,
+        50.15029
+      ],
+      "via": [
+        [
+          16.833866,
+          50.151187
+        ],
+        [
+          16.83415,
+          50.151153
+        ],
+        [
+          16.83504,
+          50.151218
+        ],
+        [
+          16.834499,
+          50.151101
+        ],
+        [
+          16.834048,
+          50.150747
+        ],
+        [
+          16.834327,
+          50.150816
+        ],
+        [
+          16.834525,
+          50.150737
+        ],
+        [
+          16.834939,
+          50.150716
+        ],
+        [
+          16.834762,
+          50.150592
+        ]
+      ]
+    },
+    {
+      "name": "Mlýnský trail",
+      "replace_names": [
+        "zelená - Mlýnský trail"
+      ],
+      "start": [
+        16.83393,
+        50.1503
+      ],
+      "end": [
+        16.828115,
+        50.147096
+      ],
+      "via": [
+        [
+          16.831656,
+          50.149296
+        ],
+        [
+          16.829531,
+          50.148636
+        ],
+        [
+          16.832085,
+          50.148953
+        ],
+        [
+          16.834381,
+          50.149695
+        ],
+        [
+          16.836805,
+          50.149874
+        ],
+        [
+          16.836784,
+          50.149736
+        ],
+        [
+          16.834595,
+          50.149434
+        ],
+        [
+          16.832364,
+          50.14854
+        ],
+        [
+          16.830153,
+          50.147784
+        ],
+        [
+          16.829016,
+          50.147495
+        ],
+        [
+          16.828458,
+          50.147234
+        ],
+        [
+          16.828179,
+          50.147138
+        ]
+      ]
+    },
+    {
+      "name": "Mlýnský trail",
+      "replace_names": [
+        "zelená - Mlýnský trail"
+      ],
+      "start": [
+        16.823587,
+        50.142297
+      ],
+      "end": [
+        16.818631,
+        50.135242
+      ],
+      "via": [
+        [
+          16.823373,
+          50.141046
+        ],
+        [
+          16.822128,
+          50.140069
+        ],
+        [
+          16.821527,
+          50.140111
+        ],
+        [
+          16.822193,
+          50.139272
+        ],
+        [
+          16.821656,
+          50.138804
+        ],
+        [
+          16.822321,
+          50.138529
+        ],
+        [
+          16.822171,
+          50.138185
+        ],
+        [
+          16.821399,
+          50.137663
+        ],
+        [
+          16.821291,
+          50.137278
+        ],
+        [
+          16.819897,
+          50.136356
+        ],
+        [
+          16.820519,
+          50.136219
+        ],
+        [
+          16.820197,
+          50.135998
+        ]
+      ]
+    },
+    {
+      "name": "Mlýnský trail",
+      "replace_names": [
+        "zelená - Mlýnský trail"
+      ],
+      "start": [
+        16.818631,
+        50.135242
+      ],
+      "end": [
+        16.816335,
+        50.1448
+      ],
+      "via": [
+        [
+          16.81833,
+          50.134733
+        ],
+        [
+          16.817172,
+          50.135022
+        ],
+        [
+          16.817622,
+          50.136219
+        ],
+        [
+          16.817493,
+          50.136617
+        ],
+        [
+          16.816807,
+          50.135558
+        ],
+        [
+          16.817086,
+          50.13681
+        ],
+        [
+          16.817408,
+          50.138048
+        ],
+        [
+          16.817493,
+          50.139354
+        ],
+        [
+          16.817408,
+          50.140647
+        ],
+        [
+          16.817214,
+          50.141912
+        ],
+        [
+          16.816764,
+          50.14304
+        ],
+        [
+          16.816399,
+          50.144277
+        ]
+      ]
+    },
+    {
+      "name": "Mlýnský trail",
+      "replace_names": [
+        "zelená - Mlýnský trail"
+      ],
+      "start": [
+        16.816313,
+        50.144731
+      ],
+      "end": [
+        16.816195,
+        50.146299
+      ],
+      "via": [
+        [
+          16.816281,
+          50.145006
+        ],
+        [
+          16.816163,
+          50.14535
+        ]
+      ]
+    },
+    {
+      "name": "Downhill trail",
+      "replace": true,
+      "replace_names": [
+        "černá - DH"
+      ],
+      "start": [
+        16.832632,
+        50.151558
+      ],
+      "end": [
+        16.820315,
+        50.154095
+      ],
+      "via": [
+        [
+          16.83216,
+          50.151923
+        ],
+        [
+          16.832299,
+          50.152802
+        ],
+        [
+          16.831076,
+          50.152514
+        ],
+        [
+          16.829789,
+          50.153071
+        ],
+        [
+          16.828834,
+          50.153394
+        ],
+        [
+          16.82745,
+          50.153861
+        ],
+        [
+          16.825851,
+          50.153854
+        ],
+        [
+          16.8248,
+          50.153449
+        ],
+        [
+          16.823266,
+          50.153229
+        ],
+        [
+          16.821978,
+          50.152734
+        ],
+        [
+          16.82112,
+          50.152314
+        ],
+        [
+          16.821012,
+          50.153325
+        ]
+      ]
+    },
+    {
+      "name": "Downhill trail",
+      "replace_names": [
+        "černá - DH"
+      ],
+      "start": [
+        16.820315,
+        50.154095
+      ],
+      "end": [
+        16.816088,
+        50.151414
+      ],
+      "via": [
+        [
+          16.819285,
+          50.15338
+        ],
+        [
+          16.818019,
+          50.152734
+        ],
+        [
+          16.816818,
+          50.151971
+        ],
+        [
+          16.816335,
+          50.151572
         ]
       ]
     }

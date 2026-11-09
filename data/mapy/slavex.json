@@ -1,0 +1,64 @@
+{
+  "note": "Lajny z Mapy.com: trasa z routingu Mapy.com (bike_mountain), průběh ověřený na podkladu Mapy.com. Užovka je v OSM hrubá (rovné úseky vedle tečkované lajny) – nahrazena trasou z Mapy.com (\"replace\").",
+  "checked": "2026-11-09",
+  "trails": [
+    {
+      "name": "Slavex Trails - UŽOVKA",
+      "replace": true,
+      "start": [
+        17.896428,
+        49.065628
+      ],
+      "end": [
+        17.894969,
+        49.069522
+      ],
+      "via": [
+        [
+          17.89645,
+          49.065909
+        ],
+        [
+          17.89661,
+          49.066226
+        ],
+        [
+          17.896771,
+          49.066436
+        ],
+        [
+          17.897125,
+          49.066964
+        ],
+        [
+          17.897104,
+          49.067406
+        ],
+        [
+          17.896471,
+          49.067554
+        ],
+        [
+          17.895881,
+          49.067779
+        ],
+        [
+          17.89587,
+          49.068152
+        ],
+        [
+          17.895463,
+          49.06851
+        ],
+        [
+          17.894872,
+          49.06877
+        ],
+        [
+          17.89454,
+          49.069171
+        ]
+      ]
+    }
+  ]
+}
