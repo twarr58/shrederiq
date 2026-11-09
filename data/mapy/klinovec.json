@@ -1,0 +1,9 @@
+{
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com. Illegal je v OSM (way/694029926… a way/1327464093), jen pod jiným / žádným jménem – přejmenováno podle id cesty.",
+  "checked": "2026-11-08",
+  "trails": [],
+  "rename": {
+    "way/694029926": "Illegal",
+    "way/1327464093": "Illegal"
+  }
+}
