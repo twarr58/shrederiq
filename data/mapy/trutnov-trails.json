@@ -1,5 +1,5 @@
 {
-  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com. Úpa trail je ve dvou úsecích, protože routing Mapy.com nemá spojení v mezeře u ulice Na Kopci.",
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com. Úpa trail je ve dvou úsecích, protože routing Mapy.com nemá spojení v mezeře u ulice Na Kopci. Krakonoš trail je v OSM hrubý (rovně přes svah, horní část po Rýbrcoulu) – nahrazen trasou z Mapy.com („Trail Krakonoš“, \"replace\").",
   "checked": "2026-11-08",
   "trails": [
     {
@@ -86,6 +86,51 @@
         [
           15.98264,
           50.542761
+        ]
+      ]
+    },
+    {
+      "name": "Krakonoš trail",
+      "replace": true,
+      "replace_names": [
+        "Krakonoš"
+      ],
+      "start": [
+        15.976514,
+        50.579687
+      ],
+      "end": [
+        15.975988,
+        50.576642
+      ],
+      "via": [
+        [
+          15.976599,
+          50.579163
+        ],
+        [
+          15.976428,
+          50.578699
+        ],
+        [
+          15.976202,
+          50.578209
+        ],
+        [
+          15.976417,
+          50.577732
+        ],
+        [
+          15.976202,
+          50.577235
+        ],
+        [
+          15.976803,
+          50.577139
+        ],
+        [
+          15.976599,
+          50.576717
         ]
       ]
     }

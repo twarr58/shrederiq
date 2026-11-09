@@ -1,5 +1,5 @@
 {
-  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain), body ověřené na podkladu Mapy.com. Trail LČR je v OSM jako „Trail Lesů ČR“ (stejná linie jako na Mapy.com) – přejmenováno.",
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain), body ověřené na podkladu Mapy.com. Trail LČR je v OSM jako „Trail Lesů ČR“ (stejná linie jako na Mapy.com) – přejmenováno. Velbloud je v OSM hrubý (zkratky přes zatáčky) – nahrazen trasou z Mapy.com (\"replace\").",
   "checked": "2026-11-08",
   "rename": {
     "Trail Lesů ČR": "Trail LČR"
@@ -39,6 +39,52 @@
         [
           17.176759,
           50.294501
+        ]
+      ]
+    },
+    {
+      "name": "Velbloud",
+      "replace": true,
+      "start": [
+        17.165719,
+        50.280948
+      ],
+      "end": [
+        17.168906,
+        50.283553
+      ],
+      "via": [
+        [
+          17.165623,
+          50.281476
+        ],
+        [
+          17.166181,
+          50.281867
+        ],
+        [
+          17.166245,
+          50.282313
+        ],
+        [
+          17.166449,
+          50.282724
+        ],
+        [
+          17.167243,
+          50.282594
+        ],
+        [
+          17.168058,
+          50.282511
+        ],
+        [
+          17.168831,
+          50.282587
+        ],
+        [
+          17.168273,
+          50.282991
         ]
       ]
     }

@@ -84,6 +84,15 @@ class MapyTrails(unittest.TestCase):
             self.assertEqual(mt.drop_replaced(fc, Path(d)), 2)
         self.assertEqual([(f["properties"]["park_id"], f["properties"]["name"]) for f in fc["features"]], [("p", "Baron"), ("q", "Rubín")])
 
+    def test_replacement_keeps_osm_difficulty(self):
+        mt.REPLACED_DIFF.clear()
+        fc = {"features": [{"properties": {"park_id": "p", "name": "Velbloud", "difficulty": "black", "length_m": 500}}]}
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "p.json").write_text(json.dumps({"trails": [{"name": "Velbloud", "replace": True, "start": [12.84, 50.35], "end": [12.83, 50.35]}]}))
+            mt.drop_replaced(fc, Path(d))
+            mt.add_trails(fc, {"p": PARK}, {}, fake_get([]), Path(d))
+        self.assertEqual([f["properties"]["difficulty"] for f in fc["features"]], ["black"])
+
     def test_repo_files_name_parks_and_trails(self):
         parks = {f["properties"]["id"] for f in json.loads((mt.MAPY_DIR.parent.parent / "web/data/parks.geojson").read_text())["features"]}
         for path in mt.MAPY_DIR.glob("*.json"):

@@ -96,10 +96,21 @@ def drop_replaced(fc: dict, mapy_dir: Path = MAPY_DIR) -> int:
                 drop.add((path.stem, _fold(spec["name"])))
                 drop.update((path.stem, _fold(n)) for n in spec.get("replace_names", []))
     before = len(fc["features"])
-    fc["features"] = [f for f in fc["features"]
-                      if f["properties"].get("source") == "mapy"
-                      or (f["properties"].get("park_id"), _fold(f["properties"].get("name"))) not in drop]
+    keep = []
+    for f in fc["features"]:
+        p = f["properties"]
+        key = (p.get("park_id"), _fold(p.get("name")))
+        if p.get("source") != "mapy" and key in drop:
+            # obtížnost nejdelšího zahozeného úseku převezme trasa z Mapy.com (routing barvu nedává)
+            if p.get("difficulty") and (p.get("length_m") or 0) > REPLACED_DIFF.get(key, (0, None))[0]:
+                REPLACED_DIFF[key] = (p.get("length_m") or 0, p["difficulty"])
+            continue
+        keep.append(f)
+    fc["features"] = keep
     return before - len(fc["features"])
+
+
+REPLACED_DIFF: dict[tuple[str, str], tuple[int, str]] = {}
 
 
 def add_trails(fc: dict, parks: dict[str, tuple[float, float]], cache: dict, get: Get | None,
@@ -127,7 +138,10 @@ def add_trails(fc: dict, parks: dict[str, tuple[float, float]], cache: dict, get
                 continue
             fc["features"].append({
                 "type": "Feature", "geometry": {"type": "LineString", "coordinates": coords},
-                "properties": {"park_id": pid, "name": spec["name"], "difficulty": None, "access": False,
+                "properties": {"park_id": pid, "name": spec["name"], "access": False,
+                               "difficulty": spec.get("difficulty") or REPLACED_DIFF.get((pid, _fold(spec["name"])), (0, None))[1]
+                               or REPLACED_DIFF.get(next(((pid, _fold(n)) for n in spec.get("replace_names", [])
+                                                          if (pid, _fold(n)) in REPLACED_DIFF), None), (0, None))[1],
                                "length_m": round(length_m(coords)), "source": "mapy", "osm": f"mapy:{spec['name']}"}})
             added += 1
     return added, missing

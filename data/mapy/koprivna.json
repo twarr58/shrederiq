@@ -1,5 +1,5 @@
 {
-  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain) od začátku z geokódování; průběh ověřený na podkladu Mapy.com. DH 2 a navazující úsek „Downhill Kopřivná“ (kreslí Mapy.com, geokódování nezná; posledních ~15 m k napojení na Hypa Hypa routing nemá). Family trail a Snake trail patří Karlovu. Baba Yaga (nový trail) není na mapě provozovatele (koprivna-bike.png), v OSM ani na Mapy.com – nepřidán. Skill Centrum = plocha u půjčovny („Bike školka“ na mapě provozovatele), žádná linie – nepřidáno.",
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain) od začátku z geokódování; průběh ověřený na podkladu Mapy.com. DH 2 a navazující úsek „Downhill Kopřivná“ (kreslí Mapy.com, geokódování nezná; posledních ~15 m k napojení na Hypa Hypa routing nemá). Family trail a Snake trail patří Karlovu. Baba Yaga (nový trail) není na mapě provozovatele (koprivna-bike.png), v OSM ani na Mapy.com – nepřidán. Skill Centrum = plocha u půjčovny („Bike školka“ na mapě provozovatele), žádná linie – nepřidáno. Funtrail, Spicy Freeride a Gravity Line jsou v OSM hrubé (rovné úseky přes zatáčky, Gravity Line s mezerou) – nahrazeny trasou z Mapy.com po tečkované lajně (\"replace\").",
   "checked": "2026-11-08",
   "trails": [
     {
@@ -32,6 +32,326 @@
         [
           17.30498,
           50.034247
+        ]
+      ]
+    },
+    {
+      "name": "Funtrail",
+      "replace": true,
+      "replace_names": [
+        "Fun Trail"
+      ],
+      "start": [
+        17.296021,
+        50.032962
+      ],
+      "end": [
+        17.299347,
+        50.030123
+      ],
+      "via": [
+        [
+          17.295538,
+          50.032755
+        ],
+        [
+          17.295613,
+          50.032521
+        ],
+        [
+          17.294787,
+          50.032411
+        ],
+        [
+          17.294422,
+          50.032135
+        ],
+        [
+          17.295409,
+          50.031908
+        ],
+        [
+          17.294594,
+          50.031646
+        ],
+        [
+          17.294723,
+          50.031191
+        ],
+        [
+          17.296418,
+          50.030681
+        ],
+        [
+          17.297437,
+          50.030612
+        ],
+        [
+          17.298188,
+          50.03064
+        ],
+        [
+          17.299014,
+          50.030626
+        ],
+        [
+          17.298703,
+          50.030198
+        ],
+        [
+          17.29925,
+          50.030309
+        ]
+      ]
+    },
+    {
+      "name": "Funtrail",
+      "start": [
+        17.299347,
+        50.030123
+      ],
+      "end": [
+        17.307093,
+        50.033093
+      ],
+      "via": [
+        [
+          17.300345,
+          50.030419
+        ],
+        [
+          17.301171,
+          50.030736
+        ],
+        [
+          17.301847,
+          50.030681
+        ],
+        [
+          17.303231,
+          50.02993
+        ],
+        [
+          17.303542,
+          50.029323
+        ],
+        [
+          17.304196,
+          50.030261
+        ],
+        [
+          17.304572,
+          50.030833
+        ],
+        [
+          17.305001,
+          50.030571
+        ],
+        [
+          17.305151,
+          50.031784
+        ],
+        [
+          17.305859,
+          50.03115
+        ],
+        [
+          17.30617,
+          50.030943
+        ],
+        [
+          17.306224,
+          50.03137
+        ],
+        [
+          17.3069,
+          50.032128
+        ]
+      ]
+    },
+    {
+      "name": "Spicy Freeride",
+      "replace": true,
+      "start": [
+        17.296085,
+        50.032873
+      ],
+      "end": [
+        17.30572,
+        50.032817
+      ],
+      "via": [
+        [
+          17.296321,
+          50.032232
+        ],
+        [
+          17.296804,
+          50.031591
+        ],
+        [
+          17.29748,
+          50.03115
+        ],
+        [
+          17.298607,
+          50.030991
+        ],
+        [
+          17.299562,
+          50.030853
+        ],
+        [
+          17.300699,
+          50.030853
+        ],
+        [
+          17.301235,
+          50.031343
+        ],
+        [
+          17.301975,
+          50.031853
+        ],
+        [
+          17.303102,
+          50.031928
+        ],
+        [
+          17.304218,
+          50.032018
+        ],
+        [
+          17.305022,
+          50.032149
+        ],
+        [
+          17.305495,
+          50.032707
+        ]
+      ]
+    },
+    {
+      "name": "Spicy Freeride",
+      "start": [
+        17.30572,
+        50.032817
+      ],
+      "end": [
+        17.308531,
+        50.033431
+      ],
+      "via": [
+        [
+          17.306739,
+          50.033038
+        ],
+        [
+          17.307662,
+          50.033307
+        ]
+      ]
+    },
+    {
+      "name": "Gravity Line",
+      "replace": true,
+      "start": [
+        17.295967,
+        50.032762
+      ],
+      "end": [
+        17.303402,
+        50.028331
+      ],
+      "via": [
+        [
+          17.296118,
+          50.032046
+        ],
+        [
+          17.296654,
+          50.031701
+        ],
+        [
+          17.296965,
+          50.031212
+        ],
+        [
+          17.297684,
+          50.030777
+        ],
+        [
+          17.297952,
+          50.030336
+        ],
+        [
+          17.298145,
+          50.029985
+        ],
+        [
+          17.299004,
+          50.029937
+        ],
+        [
+          17.300259,
+          50.030247
+        ],
+        [
+          17.3013,
+          50.030419
+        ],
+        [
+          17.302244,
+          50.030288
+        ],
+        [
+          17.303027,
+          50.029709
+        ],
+        [
+          17.303274,
+          50.029013
+        ]
+      ]
+    },
+    {
+      "name": "Gravity Line",
+      "start": [
+        17.303402,
+        50.028331
+      ],
+      "end": [
+        17.307125,
+        50.032852
+      ],
+      "via": [
+        [
+          17.304475,
+          50.028662
+        ],
+        [
+          17.305484,
+          50.028772
+        ],
+        [
+          17.306267,
+          50.029268
+        ],
+        [
+          17.306643,
+          50.029861
+        ],
+        [
+          17.307168,
+          50.030502
+        ],
+        [
+          17.307447,
+          50.03115
+        ],
+        [
+          17.307136,
+          50.031846
         ]
       ]
     }
