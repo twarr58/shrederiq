@@ -1,5 +1,5 @@
 {
-  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain), body ověřené na podkladu Mapy.com. Rodinný Stříbrňák = na Mapy.com „Trail Rodinný“ (3 úseky kvůli počtu průjezdních bodů). Kudrňák, Vlaštovku a Hynčickou tečku mapa jako lajnu nekreslí (geokódování Kudrňák/Vlaštovka zná jen obdélník) – nepřidány. Skill trail už v OSM je (nepojmenované lajny u pumptracku).",
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain), body ověřené na podkladu Mapy.com. Rodinný Stříbrňák = na Mapy.com „Trail Rodinný“ (3 úseky kvůli počtu průjezdních bodů). Skill trail už v OSM je (nepojmenované lajny u pumptracku). Vlaštovka = OSM way/831106509 (nepojmenovaná mtb:scale 1 cesta; průběh podle mapy provozovatele mujkralicak.cz traily2025 – odbočka z Modrého Flowčka k rybníku Úžas; prvních ~575 m je společný horní úsek s Flowčkem). Kudrňák: lajna odpovídá OSM way/1555356357 (serpentiny), ta ale v našich datech není a Mapy.com ji nezná (routing jde po cestě) – nepřidán. Hynčická tečka: žádná linie v OSM ani na Mapy.com – nepřidána.",
   "checked": "2026-11-08",
   "trails": [
     {
@@ -361,6 +361,7 @@
   "rename": {
     "way/1447939535": "Skill trail a pumptrack",
     "way/1447939536": "Skill trail a pumptrack",
-    "way/1447939537": "Skill trail a pumptrack"
+    "way/1447939537": "Skill trail a pumptrack",
+    "way/831106509": "Vlaštovka"
   }
 }

@@ -1,6 +1,9 @@
 {
   "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain). Začátek a obdélník lajny dá geokódování „Trail <název>“; průjezdní body (via) jsou ručně ověřené na podkladu Mapy.com, aby routing jel po lajně, ne po cestě vedle.",
   "checked": "2026-11-08",
+  "rename": {
+    "way/1074993315": "Helen"
+  },
   "trails": [
     {
       "name": "Easy Ella"
@@ -121,6 +124,31 @@
         [
           12.831924,
           50.359385
+        ]
+      ]
+    },
+    {
+      "name": "Helen",
+      "start": [
+        12.822984,
+        50.349216
+      ],
+      "end": [
+        12.823277,
+        50.34787
+      ],
+      "via": [
+        [
+          12.822826,
+          50.348911
+        ],
+        [
+          12.822772,
+          50.3485
+        ],
+        [
+          12.822901,
+          50.348124
         ]
       ]
     }

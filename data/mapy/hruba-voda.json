@@ -1,5 +1,5 @@
 {
-  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain), body ověřené na podkladu Mapy.com. Jump lajna (černá) = černá tečkovaná u konce červené jump lajny; OSM „Jump line“ v tomto úseku vede po ní místo po červené tečkované (tu routing nemá celou). Enduro Rot a Stoupací trail Mapy.com jako lajnu nekreslí.",
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain), body ověřené na podkladu Mapy.com. Jump lajna (černá) = černá tečkovaná u konce červené jump lajny; OSM „Jump line“ v tomto úseku vede po ní místo po červené tečkované (tu routing nemá celou). Enduro Rot (80 m) a Stoupací trail (koloběžková trasa) mapa provozovatele (leto_mapa26web_full.jpg) jen naznačuje (Rot = krátký úsek u konce černých tratí, stoupací jen ikony na lesních cestách), v OSM ani na Mapy.com nejsou – nepřidány.",
   "checked": "2026-11-08",
   "trails": [
     {
