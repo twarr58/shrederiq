@@ -1,6 +1,6 @@
 {
-  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com.",
-  "checked": "2026-11-08",
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com. El Masacre Downhill (B3, vč. krátké odbočky od lanovky, jednosměrné) a La Spaghetta (B1 podél lanovky + B1b) nahrazené (\"replace\") trasami Mapy.com po tečkovaných lajnách – v OSM byly zakreslené hrubě.",
+  "checked": "2026-11-09",
   "trails": [
     {
       "name": "Flow Trail",
@@ -22,6 +22,164 @@
       "end": [
         15.012459,
         50.736397
+      ]
+    },
+    {
+      "name": "El Masacre Downhill",
+      "replace": true,
+      "replace_names": [
+        "El Masaacre Downhill"
+      ],
+      "start": [
+        14.997776,
+        50.727206
+      ],
+      "end": [
+        15.01286,
+        50.736021
+      ],
+      "via": [
+        [
+          14.99696,
+          50.728687
+        ],
+        [
+          14.998226,
+          50.72942
+        ],
+        [
+          15.000844,
+          50.729773
+        ],
+        [
+          15.003226,
+          50.73052
+        ],
+        [
+          15.005393,
+          50.731199
+        ],
+        [
+          15.007002,
+          50.732557
+        ],
+        [
+          15.009062,
+          50.733698
+        ],
+        [
+          15.010779,
+          50.734934
+        ]
+      ]
+    },
+    {
+      "name": "El Masacre Downhill",
+      "replace_names": [
+        "El Masaacre Downhill"
+      ],
+      "start": [
+        15.003317,
+        50.729512
+      ],
+      "end": [
+        15.002673,
+        50.730279
+      ],
+      "via": [
+        [
+          15.002984,
+          50.729892
+        ]
+      ]
+    },
+    {
+      "name": "La Spaghetta",
+      "replace": true,
+      "replace_names": [
+        "Blue Line"
+      ],
+      "start": [
+        14.998398,
+        50.726629
+      ],
+      "end": [
+        15.013204,
+        50.736238
+      ],
+      "via": [
+        [
+          14.998934,
+          50.726799
+        ],
+        [
+          14.999578,
+          50.726934
+        ],
+        [
+          15.001359,
+          50.728157
+        ],
+        [
+          15.00314,
+          50.729298
+        ],
+        [
+          15.004835,
+          50.730466
+        ],
+        [
+          15.00623,
+          50.731593
+        ],
+        [
+          15.008054,
+          50.73272
+        ],
+        [
+          15.009792,
+          50.733888
+        ],
+        [
+          15.011637,
+          50.735084
+        ]
+      ]
+    },
+    {
+      "name": "La Spaghetta",
+      "replace_names": [
+        "Blue Line"
+      ],
+      "start": [
+        15.0055,
+        50.730724
+      ],
+      "end": [
+        15.013247,
+        50.73617
+      ],
+      "via": [
+        [
+          15.007753,
+          50.730574
+        ],
+        [
+          15.010006,
+          50.731267
+        ],
+        [
+          15.011208,
+          50.732639
+        ],
+        [
+          15.013332,
+          50.73306
+        ],
+        [
+          15.013354,
+          50.734486
+        ]
       ]
     }
   ]
