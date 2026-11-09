@@ -5,6 +5,23 @@
     {
       "name": "Enduro",
       "query": "Bikepark Monínec enduro"
+    },
+    {
+      "name": "Easy trail",
+      "start": [
+        14.511515,
+        49.543002
+      ],
+      "end": [
+        14.51883,
+        49.550538
+      ],
+      "via": [
+        [
+          14.516308,
+          49.547071
+        ]
+      ]
     }
   ]
 }

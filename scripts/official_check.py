@@ -132,7 +132,9 @@ def match(official: list[dict], osm: dict[str, dict], drop: frozenset[str] = fro
         # (Hrubá Voda: OSM „Jump line“ je červená jump lajna, ne černá „Jump lajna“)
         if any(fold(a) == fold(name) for a in off.get("aliases", [])):
             return 4
-        return max(score(n, name, drop) for n in [off["name"], *off.get("aliases", [])])
+        # alias jen podle slov je slabší než vlastní jméno trailu (Hrubá Voda: alias „Jump line“
+        # červené lajny nesmí remizovat s trailem „Jump lajna“)
+        return max([score(off["name"], name, drop)] + [min(2, score(a, name, drop)) for a in off.get("aliases", [])])
 
     pairs = {}  # jméno z OSM → index oficiálního trailu
     for name in osm:

@@ -1,5 +1,5 @@
 {
-  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com.",
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com. Family trail Mapy.com kreslí, ale routing ji nemá (jede po silnici / přes Snake trail) – nepřidána.",
   "checked": "2026-11-08",
   "trails": [
     {
@@ -9,6 +9,55 @@
     {
       "name": "Downhill Karlov",
       "query": "Downhill Karlov"
+    },
+    {
+      "name": "Snake trail",
+      "start": [
+        17.28727,
+        50.01319
+      ],
+      "end": [
+        17.288833,
+        50.01826
+      ],
+      "via": [
+        [
+          17.286097,
+          50.013848
+        ],
+        [
+          17.285367,
+          50.014248
+        ],
+        [
+          17.285367,
+          50.014882
+        ],
+        [
+          17.28556,
+          50.015434
+        ],
+        [
+          17.285668,
+          50.015916
+        ],
+        [
+          17.286097,
+          50.016537
+        ],
+        [
+          17.287009,
+          50.017433
+        ],
+        [
+          17.287062,
+          50.017777
+        ],
+        [
+          17.288082,
+          50.018019
+        ]
+      ]
     }
   ]
 }

@@ -1,0 +1,46 @@
+{
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain), body ověřené na podkladu Mapy.com. Trail LČR je v OSM jako „Trail Lesů ČR“ (stejná linie jako na Mapy.com) – přejmenováno.",
+  "checked": "2026-11-08",
+  "rename": {
+    "Trail Lesů ČR": "Trail LČR"
+  },
+  "trails": [
+    {
+      "name": "Sokolík",
+      "start": [
+        17.17515,
+        50.289312
+      ],
+      "end": [
+        17.176545,
+        50.295666
+      ],
+      "via": [
+        [
+          17.175955,
+          50.290251
+        ],
+        [
+          17.17574,
+          50.291005
+        ],
+        [
+          17.176384,
+          50.291965
+        ],
+        [
+          17.17633,
+          50.292581
+        ],
+        [
+          17.177242,
+          50.293747
+        ],
+        [
+          17.176759,
+          50.294501
+        ]
+      ]
+    }
+  ]
+}

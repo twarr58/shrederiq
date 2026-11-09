@@ -1,0 +1,33 @@
+{
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com.",
+  "checked": "2026-11-08",
+  "rename": {
+    "Forest Bastard": "Good Year Family Line",
+    "Forest Virgin": "Good Year Family Line"
+  },
+  "trails": [
+    {
+      "name": "Experts Only",
+      "start": [
+        13.21224,
+        49.169134
+      ],
+      "end": [
+        13.216703,
+        49.166693
+      ],
+      "via": []
+    },
+    {
+      "name": "Jump Park",
+      "start": [
+        13.218999,
+        49.167244
+      ],
+      "end": [
+        13.220598,
+        49.166132
+      ]
+    }
+  ]
+}

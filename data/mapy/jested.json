@@ -1,0 +1,28 @@
+{
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com.",
+  "checked": "2026-11-08",
+  "trails": [
+    {
+      "name": "Flow Trail",
+      "start": [
+        15.01099,
+        50.73674
+      ],
+      "end": [
+        15.012317,
+        50.737118
+      ]
+    },
+    {
+      "name": "Skill Zone",
+      "start": [
+        15.01103,
+        50.7367
+      ],
+      "end": [
+        15.012459,
+        50.736397
+      ]
+    }
+  ]
+}
