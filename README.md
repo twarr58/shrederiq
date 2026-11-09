@@ -139,7 +139,9 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   pod ní se zapne stínovaný reliéf DMR 5G (WMS ČÚZK, otevřená data CC BY 4.0; ukáže zářezy
   lajn v lese), ostatní lajny se ztlumí a karta ukáže výškový profil (výšky bodů `eles`
   z `elevation.py`) s délkou, klesáním, stoupáním a nejprudším úsekem. Reliéf jde zapnout
-  i ručně v přepínači vrstev.
+  i ručně v přepínači vrstev. Tlačítko **3D** otevře lajnu na 3D terénu (MapLibre GL 4.7.1
+  z cdnjs, načítá se až na kliknutí; terén Terrain Tiles z AWS Open Data ~30 m, podklad
+  Mapy.com); náklon a otáčení pravým tlačítkem / Ctrl + tah, na mobilu dvěma prsty.
 - **Sklon** (`scripts/elevation.py`): výšky se zjistí z Mapy.com Elevation API v bodech
   po ~25 m podél lajny (až 256 bodů na dotaz, výšky se ukládají do cache v Actions)
   a na body lajny se dopočítají podle vzdálenosti. Geometrie lajny zůstává původní,

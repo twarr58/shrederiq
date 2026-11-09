@@ -101,7 +101,14 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 .trail-row { cursor: pointer; }
 .trail-row:hover td, .trail-row:focus-visible td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .trail-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.btn.back { display: inline-flex; align-items: center; gap: 2px; margin-bottom: 8px; }
+.detail-actions { display: flex; gap: 6px; margin-bottom: 8px; }
+.detail-actions .btn { display: inline-flex; align-items: center; gap: 2px; }
+.view3d { position: fixed; inset: 0; z-index: 3000; background: var(--bg); display: flex; flex-direction: column; }
+.view3d-head { display: flex; align-items: center; gap: 4px; padding: 6px 8px 6px 14px; border-bottom: 1px solid var(--line); }
+.view3d-head .muted { flex: 1; font-size: 12px; }
+.view3d-map { flex: 1; position: relative; }
+.view3d-logo { position: absolute; left: 8px; bottom: 8px; z-index: 2; }
+.btn.back { display: inline-flex; align-items: center; gap: 2px; }
 .trail-detail-name { display: flex; align-items: center; gap: 4px; font-weight: 600; font-size: 15px; }
 .trail-stats { margin: 2px 0 8px; font-size: 12px; }
 .profile { position: relative; padding-left: 44px; margin: 4px 0; }
