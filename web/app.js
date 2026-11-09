@@ -40,6 +40,16 @@
   let mapyLayer = null, mapyLogo = null, mapyErrors = 0, mapyFailed = false;
   let base = "osm";
 
+  // Stínovaný reliéf DMR 5G (ČÚZK, otevřená data CC BY 4.0): WMS, obrázky počítá server ČÚZK.
+  // Ukáže zářezy lajn v lese; zapíná se v přepínači vrstev a sám v detailu lajny.
+  map.createPane("relief").style.zIndex = 250; // nad podkladem, pod lajnami
+  const reliefLayer = L.tileLayer.wms("https://ags.cuzk.cz/arcgis2/services/dmr5g/ImageServer/WMSServer", {
+    layers: "dmr5g:GrayscaleHillshade", format: "image/png", version: "1.3.0", transparent: false,
+    pane: "relief", opacity: 0.75, minZoom: 11, maxZoom: 19, updateWhenIdle: true, keepBuffer: 1,
+    attribution: 'Reliéf: <a href="https://cuzk.gov.cz/Uvod/Produkty-a-sluzby/Otevrena-data/Otevrena-data-zakladni-informace.aspx" target="_blank" rel="noopener">&copy; ČÚZK</a> (CC BY 4.0)',
+  });
+  const overlays = { "Reliéf terénu (ČÚZK)": reliefLayer };
+
   if (cfg.mapyApiKey) {
     // Mapy.com – podmínky vyžadují atribuci i logo (https://developer.mapy.com/)
     const mapset = cfg.mapyMapset || "outdoor";
@@ -65,13 +75,15 @@
     try { base = localStorage.getItem("shrederiq.base") === "osm" ? "osm" : "mapy"; } catch (_) { base = "mapy"; }
     const choices = { "Mapy.com (turistická)": L.layerGroup(), "OpenStreetMap": L.layerGroup() };
     (base === "mapy" ? choices["Mapy.com (turistická)"] : choices.OpenStreetMap).addTo(map);
-    L.control.layers(choices, null, { position: "bottomright" }).addTo(map);
+    L.control.layers(choices, overlays, { position: "bottomright" }).addTo(map);
     map.on("baselayerchange", (e) => {
       base = e.layer === choices.OpenStreetMap ? "osm" : "mapy";
       try { localStorage.setItem("shrederiq.base", base); } catch (_) { /* bez storage */ }
       updateBase();
     });
   }
+
+  if (!cfg.mapyApiKey) L.control.layers(null, overlays, { position: "bottomright" }).addTo(map);
 
   function updateBase() {
     const useMapy = mapyLayer && base === "mapy" && !mapyFailed && map.getZoom() >= MAPY_MIN_ZOOM;
@@ -245,8 +257,120 @@
   }
 
   function clearTrails() {
+    clearTrailDetail();
     if (trailLayer) map.removeLayer(trailLayer);
     trailLayer = null;
+  }
+
+  // --- detail lajny: zvýrazněná lajna na reliéfu + výškový profil ------------
+  let trailDetail = null; // { layer, marker, reliefAdded }
+
+  function clearTrailDetail() {
+    if (!trailDetail) return;
+    map.removeLayer(trailDetail.layer);
+    if (map.hasLayer(trailDetail.marker)) map.removeLayer(trailDetail.marker);
+    if (trailDetail.reliefAdded && map.hasLayer(reliefLayer)) map.removeLayer(reliefLayer);
+    trailDetail = null;
+  }
+
+  // přiblížení tak, aby lajny nezakrýval panel ani karta
+  function fitTrails(bounds, maxZoom = 15) {
+    const card = $("card").hidden ? null : $("card").getBoundingClientRect();
+    const top = isMobile() ? $("panel").getBoundingClientRect().bottom + 10 : 30;
+    const bottom = isMobile() && card ? window.innerHeight - card.top + 10 : 30;
+    const left = isMobile() ? 20 : $("panel").getBoundingClientRect().right + 20;
+    const right = !isMobile() && card ? window.innerWidth - card.left + 20 : 20;
+    map.fitBounds(bounds, { paddingTopLeft: [left, top], paddingBottomRight: [right, bottom], maxZoom });
+  }
+
+  const fold = (n) => (n || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+  function showTrail(s, r, box) {
+    const feats = s.features.filter((f) => !f.properties.access && fold(f.properties.name) === fold(r.name));
+    if (!feats.length) return;
+    clearTrailDetail();
+    trailLayer.eachLayer((l) => l.setStyle && l.setStyle({ opacity: 0.2 })); // ostatní lajny ztlumit
+    const d = T.difficultyInfo(r.difficulty);
+    const layer = L.featureGroup();
+    for (const f of feats) L.geoJSON(f, { style: { color: "#fff", weight: 9, opacity: 0.95 }, interactive: false }).addTo(layer);
+    for (const f of feats) {
+      L.geoJSON(f, { style: { color: d.color, weight: 5, opacity: 1, ...(f.properties.connector ? { dashArray: "6 6" } : {}) }, interactive: false }).addTo(layer);
+    }
+    layer.addTo(map);
+    const marker = L.circleMarker([0, 0], { radius: 6, weight: 2, color: "#fff", fillColor: d.color, fillOpacity: 1, interactive: false, pane: "parks" });
+    const reliefAdded = !map.hasLayer(reliefLayer);
+    if (reliefAdded) reliefLayer.addTo(map);
+    trailDetail = { layer, marker, reliefAdded };
+    fitTrails(layer.getBounds(), 17);
+
+    const pts = T.profile(feats);
+    const st = T.profileStats(pts);
+    const back = el("button", { type: "button", className: "btn back" }, icon("chevron-left"), " Všechny lajny");
+    back.addEventListener("click", () => { clearTrailDetail(); renderTrails(s, box, true); });
+    const stats = st
+      ? [N.formatDistance(st.lengthM), `klesání ${st.down} m`, `stoupání ${st.up} m`, `${st.min}–${st.max} m n. m.`]
+        .concat(r.slopeMax != null ? [`max sklon ${r.slopeMax} %`] : []).join(" · ")
+      : N.formatDistance(r.lengthM);
+    box.replaceChildren(
+      back,
+      el("div", { className: "trail-detail-name" }, el("i", { className: "swatch", style: `background:${d.color}` }), r.name,
+        el("span", { className: "muted" }, ` · ${d.label}`)),
+      el("p", { className: "trail-stats muted" }, stats),
+      // černá lajna by v tmavém režimu v grafu zmizela – kreslí se barvou textu
+      pts ? profileChart(pts, r.difficulty === "black" ? "currentColor" : d.color, marker)
+        : el("p", { className: "note" }, "Výškový profil zatím není – výšky se doplní při dalším nasazení."),
+      el("p", { className: "attr" }, "Podklad: stínovaný reliéf DMR 5G © ČÚZK (CC BY 4.0). Výšky: Mapy.com, orientační."));
+  }
+
+  // Výškový profil: plocha + čára 2 px v barvě lajny, osa jen min/max výška a délka;
+  // nitkový kříž s popiskem a bodem na mapě při najetí / dotyku.
+  function profileChart(pts, color, marker) {
+    const W = 300, H = 90, PAD = 3;
+    const total = pts[pts.length - 1].d || 1;
+    const es = pts.map((p) => p.e);
+    let lo = Math.min(...es), hi = Math.max(...es);
+    if (hi - lo < 20) { const m = (hi + lo) / 2; lo = m - 10; hi = m + 10; }
+    const x = (d) => (d / total) * W;
+    const y = (e) => PAD + ((hi - e) / (hi - lo)) * (H - 2 * PAD);
+    const NS = "http://www.w3.org/2000/svg";
+    const mk = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
+    const line = pts.map((p, i) => `${i ? "L" : "M"}${x(p.d).toFixed(1)},${y(p.e).toFixed(1)}`).join("");
+    const svg = mk("svg", { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none", class: "profile-svg", role: "img",
+      "aria-label": `Výškový profil: ${Math.round(hi)} až ${Math.round(lo)} m n. m. na ${N.formatDistance(total)}` });
+    svg.append(mk("path", { d: `${line}L${W},${H}L0,${H}Z`, fill: color, "fill-opacity": "0.15", stroke: "none" }));
+    svg.append(mk("path", { d: line, fill: "none", stroke: color, "stroke-width": "2", "stroke-linejoin": "round", "vector-effect": "non-scaling-stroke" }));
+    const cross = mk("line", { x1: 0, x2: 0, y1: 0, y2: H, stroke: "currentColor", "stroke-opacity": "0.45", "stroke-width": "1", "vector-effect": "non-scaling-stroke", visibility: "hidden" });
+    svg.append(cross);
+    const tip = el("div", { className: "profile-tip", hidden: true });
+    const move = (ev) => {
+      const rect = svg.getBoundingClientRect();
+      const fx = Math.min(1, Math.max(0, (ev.clientX - rect.left) / rect.width));
+      let i = pts.findIndex((p) => p.d >= fx * total);
+      if (i < 0) i = pts.length - 1;
+      const p = pts[i];
+      cross.setAttribute("x1", x(p.d)); cross.setAttribute("x2", x(p.d)); cross.setAttribute("visibility", "visible");
+      const a = pts.find((q) => q.d >= p.d - 30) || pts[0];
+      const b = [...pts].reverse().find((q) => q.d <= p.d + 30) || p;
+      const slope = b.d > a.d ? Math.round(((b.e - a.e) / (b.d - a.d)) * 100) : 0;
+      tip.hidden = false;
+      tip.textContent = `${N.formatDistance(p.d)} · ${Math.round(p.e)} m n. m. · sklon ${slope} %`;
+      tip.style.left = `${Math.min(Math.max(0, fx * rect.width - 70), Math.max(0, rect.width - 150))}px`;
+      marker.setLatLng([p.lat, p.lon]);
+      if (!map.hasLayer(marker)) marker.addTo(map);
+    };
+    const leave = () => {
+      cross.setAttribute("visibility", "hidden");
+      tip.hidden = true;
+      if (map.hasLayer(marker)) map.removeLayer(marker);
+    };
+    svg.addEventListener("pointermove", move);
+    svg.addEventListener("pointerdown", move);
+    svg.addEventListener("pointerleave", leave);
+    return el("div", { className: "profile" },
+      el("span", { className: "profile-y top" }, `${Math.round(hi)} m`),
+      el("span", { className: "profile-y bottom" }, `${Math.round(lo)} m`),
+      svg, tip,
+      el("div", { className: "profile-x" }, el("span", {}, "0"), el("span", {}, N.formatDistance(total))));
   }
 
   const DIFF_ORDER = ["green", "blue", "red", "black", "unknown"];
@@ -356,17 +480,9 @@
     const mode = s.hasSlopes ? trailColor : "difficulty";
     drawTrails(s, mode);
     if (fit) {
-      // na mobilu panel nahoře a karta dole překrývají mapu – lajny se vejdou mezi ně
-      // na počítači je panel vlevo a karta vpravo – lajny se vejdou mezi ně
-      const card = $("card").hidden ? null : $("card").getBoundingClientRect();
-      const top = isMobile() ? $("panel").getBoundingClientRect().bottom + 10 : 30;
-      const bottom = isMobile() && card ? window.innerHeight - card.top + 10 : 30;
-      const left = isMobile() ? 20 : $("panel").getBoundingClientRect().right + 20;
-      const right = !isMobile() && card ? window.innerWidth - card.left + 20 : 20;
       // přiblížení jen na lajny (přístupové cesty bývají daleko a park by se zmenšil)
       const trailsOnly = L.featureGroup(s.features.filter((f) => !f.properties.access).map((f) => L.geoJSON(f)));
-      const bounds = trailsOnly.getLayers().length ? trailsOnly.getBounds() : trailLayer.getBounds();
-      map.fitBounds(bounds, { paddingTopLeft: [left, top], paddingBottomRight: [right, bottom], maxZoom: 15 });
+      fitTrails(trailsOnly.getLayers().length ? trailsOnly.getBounds() : trailLayer.getBounds());
     }
 
     const toggle = s.hasSlopes ? el("div", { className: "wx-toggle", role: "group", ariaLabel: "Barva lajn" },
@@ -390,10 +506,17 @@
       el("thead", {}, el("tr", {}, el("th", { scope: "col" }, "Lajna"), el("th", { scope: "col" }, "Obtížnost"), el("th", { scope: "col", className: "num" }, "Délka"))),
       el("tbody", {}, ...s.rows.map((r) => {
         const d = T.difficultyInfo(r.difficulty);
-        return el("tr", { className: r.difficulty ? "" : "muted" },
+        const tr = el("tr", { className: `${r.difficulty ? "" : "muted"}${r.name ? " trail-row" : ""}`.trim() },
           el("td", {}, name(r), r.slopeMax != null ? el("small", { className: "muted trail-ele", title: "převýšení a největší sklon" }, icon("mountain"), ` ${r.eleMax - r.eleMin} m · max ${r.slopeMax} %`) : ""),
           el("td", { className: `diff-${r.difficulty || "unknown"}` }, el("i", { className: "swatch", style: `background:${d.color}` }), d.label),
           el("td", { className: "num" }, N.formatDistance(r.lengthM)));
+        if (r.name) { // detail lajny: reliéf + výškový profil
+          tr.tabIndex = 0;
+          tr.title = "Detail lajny: reliéf terénu a výškový profil";
+          tr.addEventListener("click", () => showTrail(s, r, box));
+          tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showTrail(s, r, box); } });
+        }
+        return tr;
       }), ...(s.missing || []).map(missingRow)),
       s.accessLengthM ? el("tfoot", {}, el("tr", { className: "muted" }, el("td", { colSpan: 2 }, "lesní a přístupové cesty"), el("td", { className: "num" }, N.formatDistance(s.accessLengthM)))) : "");
 

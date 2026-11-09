@@ -128,3 +128,17 @@ test("stejná lajna s úseky různé obtížnosti je jeden řádek", () => {
   ]);
   assert.equal(T.summarize(fc, "klinovec").namedCount, 2);
 });
+
+test("výškový profil spojí úseky ve směru nejdelšího a sečte stoupání a klesání", () => {
+  // nejdelší úsek: 3 body na sever, 100 → 80 m; kratší úsek navazuje, ale je otočený
+  const f = (coords, eles) => ({ geometry: { coordinates: coords }, properties: { eles } });
+  const a = f([[15, 50], [15, 50.001], [15, 50.002]], [100, 90, 80]);
+  const b = f([[15, 50.003], [15, 50.0025]], [70, 75]);                    // kreslený proti směru
+  const pts = T.profile([b, a]);
+  assert.deepEqual(pts.map((p) => p.e), [100, 90, 80, 75, 70]);
+  assert.ok(Math.abs(pts[pts.length - 1].d - 333) < 3);
+  const s = T.profileStats(pts, 1);
+  assert.deepEqual([s.up, s.down, s.min, s.max], [0, 30, 70, 100]);
+  assert.equal(T.profile([f([[15, 50], [15, 50.001]], null)]), null);     // bez výšek
+});
+

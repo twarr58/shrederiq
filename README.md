@@ -135,6 +135,11 @@ Neznámé hodnoty jsou `null` a v UI se zobrazí jako „neověřeno“.
   jel po cestě vedle, má lajna v souboru ručně ověřené průjezdní body (`via`, případně
   `start` / `end`). Lajna dostane `source: "mapy"`, barvu a jméno pak podle oficiálního
   seznamu; přichytávání ani GPS ji neposouvají. Bez `MAPY_SERVER_KEY` se berou z cache.
+- **Detail lajny**: řádek lajny v kartě parku otevře detail – mapa se přiblíží na lajnu,
+  pod ní se zapne stínovaný reliéf DMR 5G (WMS ČÚZK, otevřená data CC BY 4.0; ukáže zářezy
+  lajn v lese), ostatní lajny se ztlumí a karta ukáže výškový profil (výšky bodů `eles`
+  z `elevation.py`) s délkou, klesáním, stoupáním a nejprudším úsekem. Reliéf jde zapnout
+  i ručně v přepínači vrstev.
 - **Sklon** (`scripts/elevation.py`): výšky se zjistí z Mapy.com Elevation API v bodech
   po ~25 m podél lajny (až 256 bodů na dotaz, výšky se ukládají do cache v Actions)
   a na body lajny se dopočítají podle vzdálenosti. Geometrie lajny zůstává původní,

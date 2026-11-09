@@ -22,6 +22,7 @@
     close: ["M6 6l12 12M18 6L6 18"],
     "chevron-down": ["M6 9l6 6 6-6"],
     "chevron-up": ["M6 15l6-6 6 6"],
+    "chevron-left": ["M15 6l-6 6 6 6"],
   };
 
   const NS = "http://www.w3.org/2000/svg";

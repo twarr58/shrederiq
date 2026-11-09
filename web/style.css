@@ -98,6 +98,20 @@ html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, "
 #card.min .card-summary { padding-bottom: 10px; }
 .trail-table tr.missing td { color: var(--muted); }
 .trail-table tr.missing .swatch { opacity: .45; }
+.trail-row { cursor: pointer; }
+.trail-row:hover td, .trail-row:focus-visible td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.trail-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.btn.back { display: inline-flex; align-items: center; gap: 2px; margin-bottom: 8px; }
+.trail-detail-name { display: flex; align-items: center; gap: 4px; font-weight: 600; font-size: 15px; }
+.trail-stats { margin: 2px 0 8px; font-size: 12px; }
+.profile { position: relative; padding-left: 44px; margin: 4px 0; }
+.profile-svg { display: block; width: 100%; height: 90px; color: var(--fg); touch-action: none; }
+.profile-y { position: absolute; left: 0; font-size: 11px; color: var(--muted); }
+.profile-y.top { top: 0; }
+.profile-y.bottom { top: 76px; }
+.profile-x { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+.profile-tip { position: absolute; top: 2px; margin-left: 44px; padding: 2px 6px; font-size: 11px; white-space: nowrap;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 4px; pointer-events: none; }
 .trail-ele .icon { font-size: 12px; margin-right: 1px; }
 #card .note { color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 8px; margin: 8px 0 0; }
 #card dl { margin-bottom: 0; }
