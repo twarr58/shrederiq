@@ -11,6 +11,7 @@ Pro každou lajnu:
      sousedními body zašuměný) a uloží:
        slopes     – sklon v % pro každý úsek (znaménko podle směru geometrie,
                     který v OSM nemusí odpovídat směru jízdy),
+       eles       – výška každého bodu geometrie v m (výškový profil),
        ele_min, ele_max, slope_avg (|konec − začátek| / délka), slope_max (max |sklon|).
 
 Klíč: proměnná prostředí MAPY_SERVER_KEY (serverový klíč Mapy.com s Elevation + Routing),
@@ -176,7 +177,8 @@ def enrich(fc: dict, cache: dict[str, float], fetch: Callable[[list[Point]], lis
         at[-1] = dist[-1]
         eles = interpolate(dist, at, [cache[key_of(p)] for p in pts])
         slopes = segment_slopes(coords, eles)
-        f["properties"].update(slopes=slopes, **summarize(coords, eles, slopes))
+        # eles = výška každého bodu lajny (m) pro výškový profil ve webu
+        f["properties"].update(slopes=slopes, eles=[round(e) for e in eles], **summarize(coords, eles, slopes))
     return calls
 
 

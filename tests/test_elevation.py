@@ -77,6 +77,8 @@ class Enrich(unittest.TestCase):
         self.assertEqual(f["geometry"]["coordinates"], [list(p) for p in zigzag])
         self.assertEqual(len(f["properties"]["slopes"]), len(zigzag) - 1)
         self.assertEqual(f["properties"]["ele_min"], 500)
+        self.assertEqual(len(f["properties"]["eles"]), len(zigzag))
+        self.assertEqual(f["properties"]["eles"][0], 500)
 
     def test_interpolate(self):
         self.assertEqual(el.interpolate([0, 5, 10, 12], [0, 10], [100, 200]), [100, 150, 200, 200])

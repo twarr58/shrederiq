@@ -117,7 +117,69 @@
     };
   }
 
-  const api = { DIFFICULTY, SLOPE_BINS, difficultyInfo, slopeBin, slopeRuns, hasSlopes, summarize };
+  // --- výškový profil lajny ---------------------------------------------------
+  function distM(a, b) { // [lon, lat]
+    const r = 6371000, rad = Math.PI / 180;
+    const dLat = (b[1] - a[1]) * rad, dLon = (b[0] - a[0]) * rad;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[1] * rad) * Math.cos(b[1] * rad) * Math.sin(dLon / 2) ** 2;
+    return 2 * r * Math.asin(Math.sqrt(h));
+  }
+
+  // Úseky jedné lajny (mohou být rozházené a různě otočené) → body profilu v pořadí jízdy:
+  // [{d (m od začátku), e (m n. m.), lon, lat}]. Směr dává nejdelší úsek (OSM i routing kreslí
+  // lajny ve směru jízdy), ostatní se připojují k bližšímu konci; mezery mezi úseky se do
+  // vzdálenosti nepočítají. Úseky bez výšek (eles) se vynechají. Vrací null, když nic nezbude.
+  function profile(features) {
+    const pieces = features
+      .filter((f) => Array.isArray(f.properties.eles) && f.properties.eles.length === f.geometry.coordinates.length && f.geometry.coordinates.length > 1)
+      .map((f) => f.geometry.coordinates.map((c, i) => ({ lon: c[0], lat: c[1], e: f.properties.eles[i] })));
+    if (!pieces.length) return null;
+    const len = (pts) => pts.reduce((a, p, i) => (i ? a + distM([pts[i - 1].lon, pts[i - 1].lat], [p.lon, p.lat]) : 0), 0);
+    pieces.sort((a, b) => len(b) - len(a));
+    let chain = pieces.shift().slice();
+    const at = (p) => [p.lon, p.lat];
+    while (pieces.length) {
+      const head = at(chain[0]), tail = at(chain[chain.length - 1]);
+      let best = null;
+      pieces.forEach((pc, i) => {
+        const s = at(pc[0]), e = at(pc[pc.length - 1]);
+        for (const [d, how] of [[distM(tail, s), "tail"], [distM(tail, e), "tail-rev"], [distM(head, e), "head"], [distM(head, s), "head-rev"]]) {
+          if (!best || d < best.d) best = { d, i, how };
+        }
+      });
+      const pc = pieces.splice(best.i, 1)[0];
+      if (best.how === "tail") chain = chain.concat(pc);
+      else if (best.how === "tail-rev") chain = chain.concat(pc.slice().reverse());
+      else if (best.how === "head") chain = pc.concat(chain);
+      else chain = pc.slice().reverse().concat(chain);
+    }
+    let d = 0;
+    return chain.map((p, i) => {
+      if (i) {
+        const step = distM(at(chain[i - 1]), at(p));
+        if (step < 150) d += step; // mezera mezi úseky (> 150 m) se nepočítá
+      }
+      return { d, e: p.e, lon: p.lon, lat: p.lat };
+    });
+  }
+
+  // Souhrn profilu: délka, stoupání a klesání (vyhlazené přes ~ smoothM, ať šum výškového
+  // modelu nesčítá desítky metrů navíc), nejvyšší a nejnižší bod.
+  function profileStats(pts, smoothM = 50) {
+    if (!pts || pts.length < 2) return null;
+    let up = 0, down = 0, last = pts[0];
+    for (const p of pts) {
+      if (p.d - last.d >= smoothM || p === pts[pts.length - 1]) {
+        const dz = p.e - last.e;
+        if (dz > 0) up += dz; else down -= dz;
+        last = p;
+      }
+    }
+    const es = pts.map((p) => p.e);
+    return { lengthM: pts[pts.length - 1].d, up: Math.round(up), down: Math.round(down), min: Math.min(...es), max: Math.max(...es) };
+  }
+
+  const api = { DIFFICULTY, SLOPE_BINS, difficultyInfo, slopeBin, slopeRuns, hasSlopes, summarize, profile, profileStats };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.ShrederiqTrails = api;
 })(typeof window !== "undefined" ? window : globalThis);
