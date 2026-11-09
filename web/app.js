@@ -307,12 +307,14 @@
     const st = T.profileStats(pts);
     const back = el("button", { type: "button", className: "btn back" }, icon("chevron-left"), " Všechny lajny");
     back.addEventListener("click", () => { clearTrailDetail(); renderTrails(s, box, true); });
+    const btn3d = el("button", { type: "button", className: "btn", title: "Lajna na 3D terénu – naklonit a otočit" }, icon("mountain"), " 3D");
+    btn3d.addEventListener("click", () => open3D(feats, d.color, r.name, T.profile(feats)));
     const stats = st
       ? [N.formatDistance(st.lengthM), `klesání ${st.down} m`, `stoupání ${st.up} m`, `${st.min}–${st.max} m n. m.`]
         .concat(r.slopeMax != null ? [`max sklon ${r.slopeMax} %`] : []).join(" · ")
       : N.formatDistance(r.lengthM);
     box.replaceChildren(
-      back,
+      el("div", { className: "detail-actions" }, back, btn3d),
       el("div", { className: "trail-detail-name" }, el("i", { className: "swatch", style: `background:${d.color}` }), r.name,
         el("span", { className: "muted" }, ` · ${d.label}`)),
       el("p", { className: "trail-stats muted" }, stats),
@@ -320,6 +322,91 @@
       pts ? profileChart(pts, r.difficulty === "black" ? "currentColor" : d.color, marker)
         : el("p", { className: "note" }, "Výškový profil zatím není – výšky se doplní při dalším nasazení."),
       el("p", { className: "attr" }, "Podklad: stínovaný reliéf DMR 5G © ČÚZK (CC BY 4.0). Výšky: Mapy.com, orientační."));
+  }
+
+  // --- 3D náhled lajny (MapLibre GL, načte se až na požádání) --------------------
+  // Terén: Terrain Tiles (Mapzen / AWS Open Data, ~30 m), podklad Mapy.com (nebo OSM),
+  // lajna navrch. Náklon a otáčení: pravé tlačítko / Ctrl + tah, na mobilu dva prsty.
+  const ML_VER = "4.7.1";
+  let maplibre = null;
+  function loadMapLibre() {
+    maplibre = maplibre || new Promise((resolve, reject) => {
+      document.head.append(el("link", { rel: "stylesheet", href: `https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/${ML_VER}/maplibre-gl.min.css` }));
+      const sc = el("script", { src: `https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/${ML_VER}/maplibre-gl.min.js` });
+      sc.onload = () => resolve(window.maplibregl);
+      sc.onerror = () => { maplibre = null; reject(new Error("maplibre")); };
+      document.head.append(sc);
+    });
+    return maplibre;
+  }
+
+  async function open3D(feats, color, title, pts) {
+    const close = el("button", { className: "card-btn", type: "button", title: "Zavřít 3D", ariaLabel: "Zavřít 3D" }, icon("close"));
+    const hint = isMobile() ? "dvěma prsty naklop a otoč" : "pravým tlačítkem nebo Ctrl + tah naklop a otoč";
+    const mapBox = el("div", { className: "view3d-map" });
+    const wrap = el("div", { className: "view3d", role: "dialog", ariaLabel: `${title} ve 3D` },
+      el("div", { className: "view3d-head" }, el("b", {}, title), el("span", { className: "muted" }, ` · 3D · ${hint}`), close),
+      mapBox);
+    document.body.append(wrap);
+    let m3 = null;
+    const esc = (e) => { if (e.key === "Escape") done(); };
+    function done() { if (m3) m3.remove(); wrap.remove(); document.removeEventListener("keydown", esc); }
+    close.addEventListener("click", done);
+    document.addEventListener("keydown", esc);
+    let gl;
+    try { gl = await loadMapLibre(); } catch (_) {
+      mapBox.append(el("p", { className: "note" }, "3D zobrazení se nepodařilo načíst."));
+      return;
+    }
+    if (!wrap.isConnected) return;
+    const base = cfg.mapyApiKey && !mapyFailed
+      ? { tiles: [`https://api.mapy.com/v1/maptiles/outdoor/256/{z}/{x}/{y}?apikey=${encodeURIComponent(cfg.mapyApiKey)}`],
+        attribution: '<a href="https://api.mapy.com/copyright" target="_blank" rel="noopener">&copy; Seznam.cz a.s. a další</a>' }
+      : { tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' };
+    const lines = feats.flatMap((f) => (f.geometry.type === "MultiLineString" ? f.geometry.coordinates : [f.geometry.coordinates]));
+    const all = lines.flat();
+    const bounds = [[Math.min(...all.map((c) => c[0])), Math.min(...all.map((c) => c[1]))],
+      [Math.max(...all.map((c) => c[0])), Math.max(...all.map((c) => c[1]))]];
+    // pohled po směru jízdy: od začátku ke konci lajny
+    const a = pts ? [pts[0].lon, pts[0].lat] : all[0];
+    const b = pts ? [pts[pts.length - 1].lon, pts[pts.length - 1].lat] : all[all.length - 1];
+    const bearing = (Math.atan2((b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180), b[1] - a[1]) * 180) / Math.PI;
+    m3 = new gl.Map({
+      container: mapBox,
+      attributionControl: { compact: true },
+      maxPitch: 80,
+      style: {
+        version: 8,
+        sources: {
+          base: { type: "raster", tileSize: 256, maxzoom: 19, ...base },
+          dem: {
+            type: "raster-dem", encoding: "terrarium", tileSize: 256, maxzoom: 15,
+            tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
+            attribution: 'Terén: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles</a>',
+          },
+          trail: { type: "geojson", data: { type: "FeatureCollection", features: feats.map((f) => ({ type: "Feature", geometry: f.geometry, properties: {} })) } },
+        },
+        layers: [
+          { id: "base", type: "raster", source: "base" },
+          { id: "casing", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#fff", "line-width": 8 } },
+          { id: "line", type: "line", source: "trail", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": color, "line-width": 4.5 } },
+        ],
+        terrain: { source: "dem", exaggeration: 1.4 },
+      },
+      bounds, fitBoundsOptions: { padding: 60 },
+    });
+    m3.addControl(new gl.NavigationControl({ visualizePitch: true }), "top-right");
+    if (cfg.mapyApiKey) {
+      mapBox.append(el("a", { className: "mapy-logo view3d-logo", href: "https://mapy.com/", target: "_blank", rel: "noopener" },
+        el("img", { src: "https://api.mapy.com/img/api/logo.svg", alt: "Mapy.com" })));
+    }
+    m3.once("load", () => {
+      // přiblížit na lajnu: zoom pro pohled shora, při náklonu se lajna zmenší – proto o kus blíž
+      const cam = m3.cameraForBounds(bounds, { padding: 40, bearing });
+      if (cam) m3.jumpTo({ center: cam.center, zoom: Math.min(16.5, cam.zoom + 0.4), pitch: 60, bearing });
+      window.__m3 = m3; // pro testy
+    });
   }
 
   // Výškový profil: plocha + čára 2 px v barvě lajny, osa jen min/max výška a délka;
