@@ -1,5 +1,5 @@
 {
-  "note": "Skillcentrum: na Mapy.com jedna MTB lajna „Skillcentrum“ (obdélník 16.8155–16.8159, 50.1496–50.1510) přes celou plochu, kde má OSM pumptrackové lajny – přejmenováno. Stoupák Mapy.com nezná.",
+  "note": "Skillcentrum: na Mapy.com jedna MTB lajna „Skillcentrum“ (obdélník 16.8155–16.8159, 50.1496–50.1510) přes celou plochu, kde má OSM pumptrackové lajny – přejmenováno. Stoupák: podle GPX provozovatele (eresort.dolnimorava.cz/route/routeDownload?id=99&format=gpx, 5,27 km) – routing Mapy.com ve 4 úsecích s body z GPX (odchylka od GPX do 4 m). Úseky OSM way/691899230 a way/741027871 leží na trase, ale jsou to přístupové cesty (access), které rename nepřejmenuje.",
   "checked": "2026-11-08",
   "rename": {
     "pumptrack": "Skillcentrum",
@@ -8,5 +8,158 @@
     "pumptrack - černá": "Skillcentrum",
     "pumptrack - červená": "Skillcentrum"
   },
-  "trails": []
+  "trails": [
+    {
+      "name": "Stoupák",
+      "start": [
+        16.815672,
+        50.152108
+      ],
+      "end": [
+        16.823498,
+        50.144566
+      ],
+      "via": [
+        [
+          16.815419,
+          50.15265
+        ],
+        [
+          16.816534,
+          50.154852
+        ],
+        [
+          16.816047,
+          50.156749
+        ],
+        [
+          16.818469,
+          50.15849
+        ],
+        [
+          16.820043,
+          50.157851
+        ],
+        [
+          16.821174,
+          50.155653
+        ],
+        [
+          16.821645,
+          50.153478
+        ],
+        [
+          16.820996,
+          50.15119
+        ],
+        [
+          16.822198,
+          50.149004
+        ],
+        [
+          16.822342,
+          50.146692
+        ]
+      ]
+    },
+    {
+      "name": "Stoupák",
+      "start": [
+        16.823498,
+        50.144566
+      ],
+      "end": [
+        16.836385,
+        50.149577
+      ],
+      "via": [
+        [
+          16.824865,
+          50.144849
+        ],
+        [
+          16.825984,
+          50.14572
+        ],
+        [
+          16.827221,
+          50.146519
+        ],
+        [
+          16.828694,
+          50.147134
+        ],
+        [
+          16.830279,
+          50.147612
+        ],
+        [
+          16.831807,
+          50.148162
+        ],
+        [
+          16.833374,
+          50.148674
+        ],
+        [
+          16.834815,
+          50.149318
+        ]
+      ]
+    },
+    {
+      "name": "Stoupák",
+      "start": [
+        16.836385,
+        50.149577
+      ],
+      "end": [
+        16.836425,
+        50.146762
+      ],
+      "via": [
+        [
+          16.836476,
+          50.148557
+        ],
+        [
+          16.836528,
+          50.14753
+        ]
+      ]
+    },
+    {
+      "name": "Stoupák",
+      "start": [
+        16.836425,
+        50.146762
+      ],
+      "end": [
+        16.831955,
+        50.15068
+      ],
+      "via": [
+        [
+          16.837367,
+          50.148023
+        ],
+        [
+          16.837763,
+          50.149398
+        ],
+        [
+          16.837675,
+          50.150802
+        ],
+        [
+          16.835763,
+          50.15124
+        ],
+        [
+          16.833629,
+          50.151537
+        ]
+      ]
+    }
+  ]
 }

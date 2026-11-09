@@ -1,13 +1,12 @@
 {
   "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain). Začátek a obdélník lajny dá geokódování „Trail <název>“; průjezdní body (via) jsou ručně ověřené na podkladu Mapy.com, aby routing jel po lajně, ne po cestě vedle.",
   "checked": "2026-11-08",
+  "rename": {
+    "way/1074993315": "Helen"
+  },
   "trails": [
     {
       "name": "Easy Ella"
-    },
-    {
-      "name": "Rock n Rolla",
-      "query": "Trail Rock n rolla"
     },
     {
       "name": "Jump Line"
@@ -121,6 +120,115 @@
         [
           12.831924,
           50.359385
+        ]
+      ]
+    },
+    {
+      "name": "Helen",
+      "start": [
+        12.822984,
+        50.349216
+      ],
+      "end": [
+        12.823277,
+        50.34787
+      ],
+      "via": [
+        [
+          12.822826,
+          50.348911
+        ],
+        [
+          12.822772,
+          50.3485
+        ],
+        [
+          12.822901,
+          50.348124
+        ]
+      ]
+    },
+    {
+      "name": "Rock n Rolla",
+      "start": [
+        12.829499,
+        50.350308
+      ],
+      "end": [
+        12.828319,
+        50.349178
+      ],
+      "via": [
+        [
+          12.82907,
+          50.349863
+        ],
+        [
+          12.828426,
+          50.349438
+        ]
+      ]
+    },
+    {
+      "name": "Rock n Rolla",
+      "start": [
+        12.828319,
+        50.349178
+      ],
+      "end": [
+        12.827246,
+        50.348302
+      ],
+      "via": [
+        [
+          12.827836,
+          50.34887
+        ],
+        [
+          12.827622,
+          50.348507
+        ]
+      ]
+    },
+    {
+      "name": "Rock n Rolla",
+      "start": [
+        12.827246,
+        50.348302
+      ],
+      "end": [
+        12.825401,
+        50.349027
+      ],
+      "via": [
+        [
+          12.826731,
+          50.348411
+        ]
+      ]
+    },
+    {
+      "name": "Rock n Rolla",
+      "start": [
+        12.825723,
+        50.348836
+      ],
+      "end": [
+        12.823792,
+        50.347843
+      ],
+      "via": [
+        [
+          12.825454,
+          50.349007
+        ],
+        [
+          12.824199,
+          50.348925
+        ],
+        [
+          12.82392,
+          50.348322
         ]
       ]
     }

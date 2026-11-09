@@ -1,5 +1,5 @@
 {
-  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com. Family trail Mapy.com kreslí, ale routing ji nemá (jede po silnici / přes Snake trail) – nepřidána.",
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain); průběh ověřený na podkladu Mapy.com. Family trail: routing s průjezdními body po zelené tečkované lajně Mapy.com (ověřeno po celé délce).",
   "checked": "2026-11-08",
   "trails": [
     {
@@ -56,6 +56,51 @@
         [
           17.288082,
           50.018019
+        ]
+      ]
+    },
+    {
+      "name": "Family trail",
+      "start": [
+        17.286247,
+        50.013758
+      ],
+      "end": [
+        17.289197,
+        50.018294
+      ],
+      "via": [
+        [
+          17.284584,
+          50.013903
+        ],
+        [
+          17.284262,
+          50.014399
+        ],
+        [
+          17.283565,
+          50.014951
+        ],
+        [
+          17.283028,
+          50.015847
+        ],
+        [
+          17.283833,
+          50.016537
+        ],
+        [
+          17.28512,
+          50.017212
+        ],
+        [
+          17.286623,
+          50.017502
+        ],
+        [
+          17.28791,
+          50.017881
         ]
       ]
     }

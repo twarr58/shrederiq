@@ -1,5 +1,5 @@
 {
-  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain) od začátku z geokódování; průběh ověřený na podkladu Mapy.com. DH 2 a navazující úsek „Downhill Kopřivná“ (kreslí Mapy.com, geokódování nezná; posledních ~15 m k napojení na Hypa Hypa routing nemá). Family trail a Snake trail patří Karlovu. Baba Yaga a Skill Centrum Mapy.com nezná.",
+  "note": "Lajny, které v OSM nejsou: trasa z routingu Mapy.com (bike_mountain) od začátku z geokódování; průběh ověřený na podkladu Mapy.com. DH 2 a navazující úsek „Downhill Kopřivná“ (kreslí Mapy.com, geokódování nezná; posledních ~15 m k napojení na Hypa Hypa routing nemá). Family trail a Snake trail patří Karlovu. Baba Yaga (nový trail) není na mapě provozovatele (koprivna-bike.png), v OSM ani na Mapy.com – nepřidán. Skill Centrum = plocha u půjčovny („Bike školka“ na mapě provozovatele), žádná linie – nepřidáno.",
   "checked": "2026-11-08",
   "trails": [
     {

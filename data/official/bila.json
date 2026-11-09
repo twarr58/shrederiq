@@ -10,10 +10,10 @@
     {
       "name": "Rock’n’Roll trail",
       "difficulty": "red",
-      "length_m": 2100
-    },
-    {
-      "name": "Medvěd trail"
+      "length_m": 2100,
+      "aliases": [
+        "Medvěd trail"
+      ]
     },
     {
       "name": "Propojovací trail",
@@ -22,5 +22,6 @@
     {
       "name": "Skills centrum"
     }
-  ]
+  ],
+  "note": "Medvěd trail = starší název Rock’n’Roll trailu (mapa parku 2019: Medvěd trail 2,1 km červený; dnešní web zmiňuje Medvěd v sekci Rock’n’Roll)."
 }
