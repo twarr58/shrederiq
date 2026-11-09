@@ -404,7 +404,16 @@
     m3.once("load", () => {
       // přiblížit na lajnu: zoom pro pohled shora, při náklonu se lajna zmenší – proto o kus blíž
       const cam = m3.cameraForBounds(bounds, { padding: 40, bearing });
-      if (cam) m3.jumpTo({ center: cam.center, zoom: Math.min(16.5, cam.zoom + 0.4), pitch: 60, bearing });
+      if (!cam) return;
+      // při náklonu se vzdálená část lajny zmenší a může utéct za horizont: oddalovat,
+      // dokud se celá lajna nevejde do pohledu s okrajem
+      const W = mapBox.clientWidth, H = mapBox.clientHeight, M = 30;
+      const sample = all.filter((_, i) => i % Math.max(1, Math.floor(all.length / 60)) === 0).concat([all[all.length - 1]]);
+      for (let z = Math.min(16.5, cam.zoom + 0.4); z > cam.zoom - 3; z -= 0.25) {
+        m3.jumpTo({ center: cam.center, zoom: z, pitch: 60, bearing });
+        const fits = sample.every((c) => { const p = m3.project(c); return p.x > M && p.x < W - M && p.y > M + 20 && p.y < H - M; });
+        if (fits) break;
+      }
       window.__m3 = m3; // pro testy
     });
   }

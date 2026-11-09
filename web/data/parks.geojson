@@ -17,8 +17,6 @@
       "properties": {"id": "singltrek-pod-smrkem", "name": "Singltrek pod Smrkem", "kind": "trail_center", "town": "Nové Město pod Smrkem", "region": "Liberecký", "web": "https://podsmrkem.singltrek.cz/en/trailheads", "lift": false, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [15.6146, 50.7204] },
       "properties": {"id": "spindleruv-mlyn", "name": "Bikepark Špindlerův Mlýn", "kind": "bikepark", "town": "Špindlerův Mlýn", "region": "Královéhradecký", "web": "https://www.mestospindleruvmlyn.cz/en/spindl-bike-park", "closed": "Bike park u Svatého Petra je od roku 2022 mimo provoz kvůli stavbě propojení Svatý Petr – Medvědín.", "lift": true, "trails_count": null, "verified": false} },
-    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [15.78, 50.631] },
-      "properties": {"id": "cerna-hora", "name": "Bikepark Černá hora", "kind": "bikepark", "town": "Janské Lázně", "region": "Královéhradecký", "web": "https://leto.skiresort.cz/en/letni-aktivity/cyklistika/", "lift": true, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [16.824, 50.1457] },
       "properties": {"id": "dolni-morava", "name": "Bikepark Dolní Morava", "kind": "bikepark", "town": "Dolní Morava", "region": "Pardubický", "web": "https://eresort.dolnimorava.cz/atrakce/trail-park-17/", "lift": true, "trails_count": null, "verified": false} },
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [17.1679, 50.2754] },
