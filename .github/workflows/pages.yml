@@ -30,7 +30,7 @@ jobs:
       # Data parků z OSM (scripts/park_osm.py): lajny → web/data/trails.geojson,
       # základna a parkoviště → web/data/parks_osm.json. Poslední úspěšná data se drží
       # v cache pro případ výpadku Geofabriku; bez nich se stránka nasadí bez těchto dat.
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: |
             .osm-cache/parks.json
@@ -48,7 +48,7 @@ jobs:
       # Dnešní výřez z cache; když není, obnoví se nejnovější starší a odloží se jako
       # záloha pro případ, že Geofabrik nestihne (osm_extract.sh, MTB_PBF_FALLBACK).
       - id: pbf
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .osm-cache/mtb.osm.pbf
           key: mtb-pbf-v4-${{ steps.day.outputs.date }}
@@ -76,7 +76,7 @@ jobs:
           [ -f .osm-cache/summary.md ] && cat .osm-cache/summary.md >> "$GITHUB_STEP_SUMMARY" || true
       # čerstvě stažený výřez pod dnešní klíč (starší záloha se pod něj neukládá)
       - if: steps.pbf.outputs.cache-hit != 'true' && hashFiles('.osm-cache/mtb.osm.pbf') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .osm-cache/mtb.osm.pbf
           key: mtb-pbf-v4-${{ steps.day.outputs.date }}
@@ -139,7 +139,7 @@ jobs:
           python3 scripts/elevation.py web/data/trails.geojson --cache .osm-cache/elevation.json \
             || { echo "::warning::elevation failed, deploying trails without slope"; cp /tmp/trails.bak web/data/trails.geojson; }
       - if: hashFiles('.osm-cache/parks.json') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             .osm-cache/parks.json

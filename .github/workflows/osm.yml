@@ -49,7 +49,7 @@ jobs:
       # Dnešní výřez z cache; když není, obnoví se nejnovější starší a odloží se jako
       # záloha pro případ, že Geofabrik nestihne (osm_extract.sh, MTB_PBF_FALLBACK).
       - id: pbf
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .osm-cache/mtb.osm.pbf
           key: mtb-pbf-v4-${{ steps.day.outputs.date }}
@@ -73,14 +73,14 @@ jobs:
           cat out/parks-summary.md
       # čerstvě stažený výřez pod dnešní klíč (starší záloha se pod něj neukládá)
       - if: steps.pbf.outputs.cache-hit != 'true' && hashFiles('.osm-cache/mtb.osm.pbf') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .osm-cache/mtb.osm.pbf
           key: mtb-pbf-v4-${{ steps.day.outputs.date }}
       # kontrola lajn proti veřejným GPS stopám OSM (#22); stopy v cache po týdnech
       - id: week
         run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: .osm-cache/gps.json
           key: gps-traces-v2-${{ steps.week.outputs.week }}
@@ -119,7 +119,7 @@ jobs:
             --geojson out/osm-clusters.geojson --trails out/osm-trails.geojson
           cat out/osm-report.md >> "$GITHUB_STEP_SUMMARY"
           cat out/osm-report.md
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: osm-report
           path: out/
